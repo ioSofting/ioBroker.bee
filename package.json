@@ -1,0 +1,55 @@
+{
+  "name": "iobroker.bee",
+  "version": "0.1.0",
+  "description": "Fleet agent for ioBroker: reports inventory to a beekeeper server and converges the system to the desired version profile",
+  "author": {
+    "name": "Denis Haev",
+    "email": "dogafox@gmail.com"
+  },
+  "contributors": [],
+  "homepage": "https://github.com/ioBroker/ioBroker.bee",
+  "keywords": [
+    "ioBroker",
+    "fleet",
+    "rollout",
+    "update",
+    "inventory"
+  ],
+  "license": "UNLICENSED",
+  "engines": {
+    "node": ">=20"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ioBroker/ioBroker.bee"
+  },
+  "main": "build/main.js",
+  "files": [
+    "admin/",
+    "build/",
+    "io-package.json",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "check-ts": "tsc -p tsconfig.json",
+    "watch": "tsc -p tsconfig.build.json --watch",
+    "test": "tsx --test test/*.test.ts",
+    "lint": "eslint -c eslint.config.mjs",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@iobroker/adapter-core": "^3.4.3",
+    "mqtt": "^5.16.0",
+    "semver": "^7.8.5"
+  },
+  "devDependencies": {
+    "@iobroker/eslint-config": "^2.3.4",
+    "@iobroker/types": "^7.2.2",
+    "@tsconfig/node20": "^20.1.10",
+    "@types/node": "^20.19.43",
+    "@types/semver": "^7.8.0",
+    "tsx": "^4.23.13",
+    "typescript": "^6.0.3"
+  }
+}

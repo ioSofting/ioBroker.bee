@@ -1,0 +1,236 @@
+{
+    "i18n": false,
+    "type": "tabs",
+    "items": {
+        "connection": {
+            "type": "panel",
+            "label": { "en": "Enrollment", "de": "Anmeldung" },
+            "items": {
+                "hdr1": {
+                    "type": "staticText",
+                    "text": {
+                        "en": "Enrollment URL and one-time token come with the factory image or from the fleet manager. After the first successful contact the device holds its own certificate; the token is used up.",
+                        "de": "Enrollment-URL und Einmal-Token kommen mit dem Werksimage oder vom Flottenverwalter. Nach dem ersten erfolgreichen Kontakt hat das Gerät ein eigenes Zertifikat; das Token ist verbraucht."
+                    },
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                },
+                "enrollUrl": {
+                    "type": "text",
+                    "label": { "en": "Enrollment URL", "de": "Enrollment-URL" },
+                    "placeholder": "https://beekeeper.example.com",
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 6,
+                    "lg": 6,
+                    "xl": 6,
+                    "newLine": true
+                },
+                "enrollToken": {
+                    "type": "password",
+                    "label": { "en": "Enrollment token", "de": "Enrollment-Token" },
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 6,
+                    "lg": 6,
+                    "xl": 6
+                },
+                "_status": {
+                    "type": "state",
+                    "oid": "info.status",
+                    "label": { "en": "Status", "de": "Status" },
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                }
+            }
+        },
+        "maintenance": {
+            "type": "panel",
+            "label": { "en": "Maintenance window", "de": "Wartungsfenster" },
+            "items": {
+                "hdr2": {
+                    "type": "staticText",
+                    "text": {
+                        "en": "Updates only run inside the maintenance window and when all conditions are met (e.g. installation not in use, battery charged, no roaming, vehicle standing).",
+                        "de": "Updates laufen nur im Wartungsfenster und wenn alle Bedingungen erfüllt sind (z. B. Anlage nicht in Benutzung, Batterie geladen, kein Roaming, Fahrzeug steht)."
+                    },
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                },
+                "windowStart": {
+                    "type": "text",
+                    "label": { "en": "Window start (HH:MM)", "de": "Fenster Beginn (HH:MM)" },
+                    "xs": 6,
+                    "sm": 6,
+                    "md": 3,
+                    "lg": 3,
+                    "xl": 3,
+                    "newLine": true
+                },
+                "windowEnd": {
+                    "type": "text",
+                    "label": { "en": "Window end (HH:MM)", "de": "Fenster Ende (HH:MM)" },
+                    "xs": 6,
+                    "sm": 6,
+                    "md": 3,
+                    "lg": 3,
+                    "xl": 3
+                },
+                "ignoreWindow": {
+                    "type": "checkbox",
+                    "label": { "en": "Ignore window (testing only)", "de": "Fenster ignorieren (nur für Tests)" },
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 6,
+                    "lg": 6,
+                    "xl": 6
+                },
+                "minFreeMb": {
+                    "type": "number",
+                    "min": 100,
+                    "label": { "en": "Minimum free space (MB)", "de": "Mindestens freier Speicher (MB)" },
+                    "xs": 12,
+                    "sm": 6,
+                    "md": 3,
+                    "lg": 3,
+                    "xl": 3,
+                    "newLine": true
+                },
+                "conditions": {
+                    "type": "table",
+                    "label": { "en": "Conditions for updates", "de": "Bedingungen für Updates" },
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12,
+                    "items": [
+                        {
+                            "type": "text",
+                            "attr": "label",
+                            "title": { "en": "Label", "de": "Bezeichnung" },
+                            "width": "25%"
+                        },
+                        {
+                            "type": "objectId",
+                            "attr": "stateId",
+                            "title": { "en": "State", "de": "Datenpunkt" },
+                            "width": "40%"
+                        },
+                        {
+                            "type": "select",
+                            "attr": "op",
+                            "title": { "en": "Operator", "de": "Vergleich" },
+                            "options": [
+                                { "label": "==", "value": "==" },
+                                { "label": "!=", "value": "!=" },
+                                { "label": ">=", "value": ">=" },
+                                { "label": ">", "value": ">" },
+                                { "label": "<=", "value": "<=" },
+                                { "label": "<", "value": "<" }
+                            ],
+                            "default": "==",
+                            "width": "15%"
+                        },
+                        {
+                            "type": "text",
+                            "attr": "value",
+                            "title": { "en": "Value", "de": "Wert" },
+                            "width": "20%"
+                        }
+                    ]
+                }
+            }
+        },
+        "advanced": {
+            "type": "panel",
+            "label": { "en": "Advanced", "de": "Erweitert" },
+            "items": {
+                "heartbeatMinutes": {
+                    "type": "number",
+                    "min": 5,
+                    "label": { "en": "Heartbeat interval (min)", "de": "Heartbeat-Intervall (min)" },
+                    "xs": 12,
+                    "sm": 6,
+                    "md": 3,
+                    "lg": 3,
+                    "xl": 3
+                },
+                "checkMinutes": {
+                    "type": "number",
+                    "min": 1,
+                    "label": { "en": "Check interval (min)", "de": "Prüfintervall (min)" },
+                    "xs": 12,
+                    "sm": 6,
+                    "md": 3,
+                    "lg": 3,
+                    "xl": 3
+                },
+                "keepaliveSeconds": {
+                    "type": "number",
+                    "min": 30,
+                    "label": { "en": "MQTT keepalive (s)", "de": "MQTT-Keepalive (s)" },
+                    "help": { "en": "Longer saves mobile data", "de": "Länger spart Mobilfunkvolumen" },
+                    "xs": 12,
+                    "sm": 6,
+                    "md": 3,
+                    "lg": 3,
+                    "xl": 3
+                },
+                "signalStateId": {
+                    "type": "objectId",
+                    "label": { "en": "State with signal quality (optional)", "de": "Datenpunkt mit Signalqualität (optional)" },
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 6,
+                    "lg": 6,
+                    "xl": 6,
+                    "newLine": true
+                },
+                "verifySeconds": {
+                    "type": "number",
+                    "min": 10,
+                    "label": { "en": "Observation after update (s)", "de": "Beobachtung nach Update (s)" },
+                    "help": { "en": "No new errors in the log during this time", "de": "In dieser Zeit keine neuen Fehler im Log" },
+                    "xs": 12,
+                    "sm": 6,
+                    "md": 3,
+                    "lg": 3,
+                    "xl": 3,
+                    "newLine": true
+                },
+                "startTimeoutSeconds": {
+                    "type": "number",
+                    "min": 30,
+                    "label": { "en": "Start timeout of instances (s)", "de": "Startfrist der Instanzen (s)" },
+                    "xs": 12,
+                    "sm": 6,
+                    "md": 3,
+                    "lg": 3,
+                    "xl": 3
+                },
+                "backupBeforeUpdate": {
+                    "type": "checkbox",
+                    "label": { "en": "Backup before every update", "de": "Sicherung vor jedem Update" },
+                    "help": { "en": "Disable for tests only", "de": "Nur für Tests abschalten" },
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 6,
+                    "lg": 6,
+                    "xl": 6
+                }
+            }
+        }
+    }
+}

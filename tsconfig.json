@@ -1,0 +1,23 @@
+// Root tsconfig: type-checks sources and tests (no emit)
+{
+    "extends": "@tsconfig/node20/tsconfig.json",
+    "compilerOptions": {
+        "noEmit": true,
+        "allowJs": false,
+        "skipLibCheck": true,
+        "noEmitOnError": true,
+        "outDir": "./build/",
+        "rootDir": ".",
+        "removeComments": false,
+        "module": "Node16",
+        "moduleResolution": "node16",
+        "resolveJsonModule": true,
+        "strict": true,
+        "target": "es2022",
+        "sourceMap": true,
+        "useUnknownInCatchVariables": false,
+        "types": ["@iobroker/types", "node"]
+    },
+    "include": ["src/**/*.ts", "test/**/*.ts"],
+    "exclude": ["build/**", "node_modules/**"]
+}

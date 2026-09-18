@@ -1,0 +1,390 @@
+{
+    "common": {
+        "name": "bee",
+        "version": "0.1.0",
+        "news": {
+            "0.1.0": {
+                "en": "Initial prototype: enrollment, inventory, desired state via MQTT, adapter rollout with preflight, backup, verification and rollback",
+                "de": "Erster Prototyp: Anmeldung, Inventar, Sollzustand über MQTT, Adapter-Rollout mit Vorprüfung, Sicherung, Verifikation und Rollback"
+            }
+        },
+        "titleLang": {
+            "en": "Fleet agent (beekeeper)",
+            "de": "Flotten-Agent (beekeeper)"
+        },
+        "desc": {
+            "en": "Reports the inventory of this system to a beekeeper fleet server and converges it to the assigned version profile",
+            "de": "Meldet das Inventar dieses Systems an einen beekeeper-Flottenserver und gleicht es auf das zugewiesene Versionsprofil ab"
+        },
+        "authors": [
+            "Denis Haev <dogafox@gmail.com>"
+        ],
+        "keywords": [
+            "fleet",
+            "rollout",
+            "update",
+            "inventory",
+            "beekeeper"
+        ],
+        "platform": "Javascript/Node.js",
+        "icon": "bee.svg",
+        "extIcon": "https://raw.githubusercontent.com/ioBroker/ioBroker.bee/main/admin/bee.svg",
+        "readme": "https://github.com/ioBroker/ioBroker.bee/blob/main/README.md",
+        "loglevel": "info",
+        "mode": "daemon",
+        "type": "general",
+        "tier": 1,
+        "compact": false,
+        "connectionType": "cloud",
+        "dataSource": "push",
+        "logTransporter": true,
+        "singletonHost": true,
+        "enabled": true,
+        "adminUI": {
+            "config": "json"
+        },
+        "license": "UNLICENSED",
+        "dependencies": [
+            {
+                "js-controller": ">=6.0.11"
+            }
+        ],
+        "notifications": [
+            {
+                "scope": "bee",
+                "name": {
+                    "en": "Fleet management",
+                    "de": "Flottenverwaltung"
+                },
+                "description": {
+                    "en": "Messages of the fleet agent for the owner of the system",
+                    "de": "Meldungen des Flotten-Agenten für den Endkunden der Anlage"
+                },
+                "categories": [
+                    {
+                        "category": "modeChanged",
+                        "name": {
+                            "en": "Own installation detected",
+                            "de": "Eigeninstallation erkannt"
+                        },
+                        "severity": "notify",
+                        "description": {
+                            "en": "Adapters were installed that are not part of the version profile. The system receives no automatic updates any more.",
+                            "de": "Es wurden Adapter installiert, die nicht zum Versionsprofil gehören. Die Anlage erhält keine automatischen Updates mehr."
+                        },
+                        "regex": [],
+                        "limit": 5
+                    },
+                    {
+                        "category": "updateAvailable",
+                        "name": {
+                            "en": "New software state available",
+                            "de": "Neuer Softwarestand verfügbar"
+                        },
+                        "severity": "info",
+                        "description": {
+                            "en": "The fleet management provides a new state. Self-managed systems are not updated automatically.",
+                            "de": "Die Flottenverwaltung stellt einen neuen Stand bereit. Eigenverantwortliche Anlagen werden nicht automatisch aktualisiert."
+                        },
+                        "regex": [],
+                        "limit": 5
+                    },
+                    {
+                        "category": "updated",
+                        "name": {
+                            "en": "System updated",
+                            "de": "Anlage aktualisiert"
+                        },
+                        "severity": "info",
+                        "description": {
+                            "en": "The fleet management updated this system",
+                            "de": "Die Flottenverwaltung hat diese Anlage aktualisiert"
+                        },
+                        "regex": [],
+                        "limit": 10
+                    },
+                    {
+                        "category": "rejected",
+                        "name": {
+                            "en": "Rejected by fleet server",
+                            "de": "Vom Flottenserver abgewiesen"
+                        },
+                        "severity": "alert",
+                        "description": {
+                            "en": "The fleet server does not know this device. The agent stopped itself.",
+                            "de": "Der Flottenserver kennt dieses Gerät nicht. Der Agent hat sich beendet."
+                        },
+                        "regex": [],
+                        "limit": 1
+                    }
+                ]
+            }
+        ]
+    },
+    "encryptedNative": [
+        "enrollToken"
+    ],
+    "protectedNative": [
+        "enrollToken"
+    ],
+    "native": {
+        "enrollUrl": "",
+        "enrollToken": "",
+        "windowStart": "02:00",
+        "windowEnd": "05:00",
+        "ignoreWindow": false,
+        "conditions": [],
+        "minFreeMb": 1024,
+        "signalStateId": "",
+        "heartbeatMinutes": 60,
+        "checkMinutes": 5,
+        "keepaliveSeconds": 300,
+        "verifySeconds": 120,
+        "startTimeoutSeconds": 300,
+        "backupBeforeUpdate": true
+    },
+    "objects": [],
+    "instanceObjects": [
+        {
+            "_id": "info",
+            "type": "channel",
+            "common": {
+                "name": {
+                    "en": "Information",
+                    "de": "Information"
+                }
+            },
+            "native": {}
+        },
+        {
+            "_id": "info.connection",
+            "type": "state",
+            "common": {
+                "role": "indicator.connected",
+                "name": {
+                    "en": "Connected to beekeeper",
+                    "de": "Mit beekeeper verbunden"
+                },
+                "type": "boolean",
+                "read": true,
+                "write": false,
+                "def": false
+            },
+            "native": {}
+        },
+        {
+            "_id": "info.status",
+            "type": "state",
+            "common": {
+                "role": "text",
+                "name": {
+                    "en": "Status",
+                    "de": "Status"
+                },
+                "type": "string",
+                "read": true,
+                "write": false,
+                "def": ""
+            },
+            "native": {}
+        },
+        {
+            "_id": "info.deviceId",
+            "type": "state",
+            "common": {
+                "role": "text",
+                "name": {
+                    "en": "Device ID",
+                    "de": "Geräte-ID"
+                },
+                "type": "string",
+                "read": true,
+                "write": false,
+                "def": ""
+            },
+            "native": {}
+        },
+        {
+            "_id": "info.assetId",
+            "type": "state",
+            "common": {
+                "role": "text",
+                "name": {
+                    "en": "Asset ID",
+                    "de": "Anlagen-ID"
+                },
+                "type": "string",
+                "read": true,
+                "write": false,
+                "def": ""
+            },
+            "native": {}
+        },
+        {
+            "_id": "info.mode",
+            "type": "state",
+            "common": {
+                "role": "text",
+                "name": {
+                    "en": "Mode (managed or self)",
+                    "de": "Modus (verwaltet oder eigenverantwortlich)"
+                },
+                "type": "string",
+                "read": true,
+                "write": false,
+                "def": ""
+            },
+            "native": {}
+        },
+        {
+            "_id": "info.profile",
+            "type": "state",
+            "common": {
+                "role": "text",
+                "name": {
+                    "en": "Desired profile",
+                    "de": "Sollprofil"
+                },
+                "type": "string",
+                "read": true,
+                "write": false,
+                "def": ""
+            },
+            "native": {}
+        },
+        {
+            "_id": "info.onTarget",
+            "type": "state",
+            "common": {
+                "role": "indicator",
+                "name": {
+                    "en": "System matches the profile",
+                    "de": "Anlage entspricht dem Profil"
+                },
+                "type": "boolean",
+                "read": true,
+                "write": false,
+                "def": false
+            },
+            "native": {}
+        },
+        {
+            "_id": "job",
+            "type": "channel",
+            "common": {
+                "name": {
+                    "en": "Current job",
+                    "de": "Aktueller Auftrag"
+                }
+            },
+            "native": {}
+        },
+        {
+            "_id": "job.state",
+            "type": "state",
+            "common": {
+                "role": "text",
+                "name": {
+                    "en": "Job state",
+                    "de": "Auftragszustand"
+                },
+                "type": "string",
+                "read": true,
+                "write": false,
+                "def": ""
+            },
+            "native": {}
+        },
+        {
+            "_id": "job.detail",
+            "type": "state",
+            "common": {
+                "role": "text",
+                "name": {
+                    "en": "Job detail",
+                    "de": "Auftragsdetail"
+                },
+                "type": "string",
+                "read": true,
+                "write": false,
+                "def": ""
+            },
+            "native": {}
+        },
+        {
+            "_id": "job.steps",
+            "type": "state",
+            "common": {
+                "role": "json",
+                "name": {
+                    "en": "Job steps",
+                    "de": "Auftragsschritte"
+                },
+                "type": "string",
+                "read": true,
+                "write": false,
+                "def": "[]"
+            },
+            "native": {}
+        },
+        {
+            "_id": "control",
+            "type": "channel",
+            "common": {
+                "name": {
+                    "en": "Control",
+                    "de": "Steuerung"
+                }
+            },
+            "native": {}
+        },
+        {
+            "_id": "control.halted",
+            "type": "state",
+            "common": {
+                "role": "indicator",
+                "name": {
+                    "en": "Emergency stop of the fleet active",
+                    "de": "Not-Aus der Flotte aktiv"
+                },
+                "type": "boolean",
+                "read": true,
+                "write": false,
+                "def": false
+            },
+            "native": {}
+        },
+        {
+            "_id": "control.refresh",
+            "type": "state",
+            "common": {
+                "role": "button",
+                "name": {
+                    "en": "Send inventory now",
+                    "de": "Inventar jetzt senden"
+                },
+                "type": "boolean",
+                "read": false,
+                "write": true,
+                "def": false
+            },
+            "native": {}
+        },
+        {
+            "_id": "control.check",
+            "type": "state",
+            "common": {
+                "role": "button",
+                "name": {
+                    "en": "Check desired state now",
+                    "de": "Sollzustand jetzt prüfen"
+                },
+                "type": "boolean",
+                "read": false,
+                "write": true,
+                "def": false
+            },
+            "native": {}
+        }
+    ]
+}
