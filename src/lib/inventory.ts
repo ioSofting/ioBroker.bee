@@ -38,7 +38,7 @@ async function npmVer(): Promise<string> {
 }
 
 /** Sectors written to the SD card since boot (field 7 of /sys/block/mmcblk0/stat) */
-async function sdWrites(): Promise<number | null> {
+export async function sdWrites(): Promise<number | null> {
     const stat = await readText('/sys/block/mmcblk0/stat');
     if (!stat) {
         return null;
@@ -134,7 +134,6 @@ export async function collectInventory(
             model,
             memTotal: os.totalmem(),
             diskTotal: disk?.total ?? 0,
-            sdWrites: await sdWrites(),
         },
         backup: { lastLocal: opts.lastBackup ?? null, offDevice },
     };

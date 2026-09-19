@@ -40,6 +40,8 @@ export interface StateMessage {
     temperature?: number;
     /** Error log lines since the previous heartbeat */
     logErrors?: number;
+    /** Sectors written to the SD card since boot, if readable (write load, wear of the card) */
+    sdWrites?: number | null;
     /** Local job state, if a job is active */
     jobState?: JobState;
     /** Values of configured signal states, e.g. LTE quality (no measured values of the end customer) */
@@ -57,7 +59,7 @@ export interface InstanceInventory {
     mode?: string;
 }
 
-/** Slowly changing inventory. Volatile metrics belong into StateMessage. */
+/** Slowly changing inventory. Volatile metrics belong into StateMessage, they would flood the history. */
 export interface Inventory {
     agentVersion: string;
     uuid: string;
@@ -77,8 +79,6 @@ export interface Inventory {
         model: string;
         memTotal: number;
         diskTotal: number;
-        /** Sectors written to the SD card since boot, if readable */
-        sdWrites?: number | null;
     };
     backup: {
         /** Last local backup created by the agent */

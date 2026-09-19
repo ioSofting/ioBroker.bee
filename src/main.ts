@@ -3,7 +3,7 @@ import { mkdirSync } from 'node:fs';
 import os from 'node:os';
 import { join } from 'node:path';
 import { enroll } from './lib/enrollment';
-import { collectInventory, cpuTemperature, diskInfo, installedVersions } from './lib/inventory';
+import { collectInventory, cpuTemperature, diskInfo, installedVersions, sdWrites } from './lib/inventory';
 import { JobManager, type JobFile } from './lib/jobs';
 import { checkDependencies, computePlan, foreignAdapters } from './lib/planner';
 import { preflight, type Condition } from './lib/preflight';
@@ -328,6 +328,7 @@ class BeeAdapter extends utils.Adapter {
             logErrors: this.errorsSinceHeartbeat,
             jobState: this.jobs?.job?.state,
             signal,
+            sdWrites: await sdWrites(),
         };
         this.errorsSinceHeartbeat = 0;
         await this.transport?.publish('state', msg);

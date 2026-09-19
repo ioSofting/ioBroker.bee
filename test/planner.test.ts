@@ -4,6 +4,8 @@ import { checkDependencies, computePlan, foreignAdapters, rollbackPlan } from '.
 import { compare, preflight } from '../src/lib/preflight';
 import type { DesiredMessage, ProfileAdapter } from '../src/lib/protocol';
 import { diffFlat, flatten, inWindow } from '../src/lib/util';
+import { trustedCas } from '../src/lib/transport';
+import { X509Certificate } from 'node:crypto';
 
 function desired(adapters: Record<string, ProfileAdapter>, extra: Partial<DesiredMessage> = {}): DesiredMessage {
     return {
@@ -142,5 +144,15 @@ describe('util', () => {
             set: { '/software/adapters/admin/version': '3' },
             unset: ['/software/adapters/web/version'],
         });
+    });
+});
+
+describe('transport', () => {
+    it('trusts the platform CA and the public roots shipped with Node.js', () => {
+        const list = trustedCas('PLATFORM-CA');
+        assert.equal(list.at(-1), 'PLATFORM-CA');
+        assert.ok(list.length > 100);
+        // Let's Encrypt root, as example of a public CA for the broker certificate
+        assert.ok(list.slice(0, -1).some(pem => new X509Certificate(pem).subject.includes('ISRG Root X1')));
     });
 });

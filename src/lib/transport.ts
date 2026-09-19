@@ -1,4 +1,5 @@
 import { EventEmitter } from 'node:events';
+import tls from 'node:tls';
 import mqtt, { type MqttClient } from 'mqtt';
 import {
     controlTopic,
@@ -29,6 +30,16 @@ export interface TransportEvents {
 
 const MIN_BACKOFF = 10_000;
 const MAX_BACKOFF = 24 * 3600_000;
+
+/**
+ * CAs the broker certificate may come from: the platform CA handed out at enrollment, plus the
+ * public root certificates shipped with Node.js (Mozilla list). So the broker can run with a
+ * certificate of the platform CA or of a public CA (e.g. Let's Encrypt), and the public roots
+ * are kept up to date with Node.js instead of a copy in this adapter.
+ */
+export function trustedCas(platformCa: string): string[] {
+    return [...tls.rootCertificates, platformCa];
+}
 
 export class Transport extends EventEmitter<TransportEvents> {
     private client: MqttClient | null = null;
@@ -100,7 +111,7 @@ export class Transport extends EventEmitter<TransportEvents> {
             clientId: this.creds.deviceId,
             key: this.creds.key,
             cert: this.creds.cert,
-            ca: this.creds.ca,
+            ca: trustedCas(this.creds.ca),
             rejectUnauthorized: true,
             protocolVersion: 4,
             clean: false,
