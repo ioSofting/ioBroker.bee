@@ -8,8 +8,9 @@
  *   fleet/<tenant>/<device>/state      device -> server  heartbeat, online flag (also Last Will)
  *   fleet/<tenant>/<device>/inventory  device -> server  full inventory or diff to the last one
  *   fleet/<tenant>/<device>/result     device -> server  progress and result of reconciliation
+ *   fleet/<tenant>/<device>/reply      device -> server  progress and result of a command (JobMessage.ref)
  *   fleet/<tenant>/<device>/desired    server -> device  desired state, RETAINED
- *   fleet/<tenant>/<device>/job        server -> device  one-shot requests (resync, refresh)
+ *   fleet/<tenant>/<device>/job        server -> device  one-shot requests (resync, refresh, tunnel, commands)
  *   fleet/<tenant>/control             server -> device  fleet-wide control (emergency stop), RETAINED
  *
  * Payloads are JSON, gzip-compressed. Receivers accept plain JSON as well.
@@ -20,7 +21,7 @@
 
 export const PROTOCOL_VERSION = 1;
 
-export type Topic = 'state' | 'inventory' | 'result' | 'desired' | 'job';
+export type Topic = 'state' | 'inventory' | 'result' | 'reply' | 'desired' | 'job';
 
 export function deviceTopic(tenantId: string, deviceId: string, topic: Topic): string {
     return `fleet/${tenantId}/${deviceId}/${topic}`;
@@ -106,6 +107,13 @@ export interface Inventory {
     accessTargets?: Partial<Record<AccessKind, AccessInstance[]>>;
     /** User the shell of the console runs as; only reported while the console is allowed */
     consoleUser?: string;
+    /**
+     * Updates of operating system packages as js-controller (6 and newer) lists them, see OsUpdates.
+     * Missing: unknown (older agent, older js-controller, no Linux). Not part of the history.
+     */
+    osUpdates?: OsUpdates;
+    /** Commands this agent understands (JobMessage.cmd); missing: none */
+    commands?: AgentCommand[];
     software: {
         jsController: string;
         node: string;
@@ -129,6 +137,43 @@ export interface Inventory {
         offDevice: boolean;
     };
 }
+
+/** A package of the operating system that can be upgraded, from a line of `apt list --upgradeable` */
+export interface OsPackage {
+    name: string;
+    /** Version after the upgrade */
+    version?: string;
+    /** Installed version */
+    from?: string;
+}
+
+export interface OsUpdates {
+    packages: OsPackage[];
+    /** When js-controller last listed them (it does on every update of the repository, admin does that daily) */
+    checkedAt: number | null;
+    /** The system asks for a reboot (/var/run/reboot-required) */
+    rebootRequired: boolean;
+}
+
+/**
+ * Parses a line of `apt list --upgradeable`, e.g.
+ * "openssl/stable-security 3.0.15-1~deb12u1 arm64 [upgradable from: 3.0.14-1~deb12u2]"
+ */
+export function parseOsPackage(line: string): OsPackage | null {
+    const m = /^([a-z0-9][a-z0-9+.-]*)\/\S*\s+(\S+)(?:.*\[[^\]:]*:\s*([^\]\s]+)\])?/i.exec(line.trim());
+    if (!m) {
+        return null;
+    }
+    return { name: m[1], version: m[2], ...(m[3] ? { from: m[3] } : {}) };
+}
+
+/** Instance id as the commands accept it, e.g. "javascript.0" */
+export const INSTANCE_ID = /^[a-z0-9][a-z0-9_-]*\.\d{1,4}$/;
+
+export type InstanceAction = 'start' | 'stop' | 'restart';
+
+/** Commands from the asset detail an agent may understand (Inventory.commands) */
+export type AgentCommand = 'instance' | 'restart' | 'osUpgrade';
 
 export interface InventoryMessage {
     v: number;
@@ -195,9 +240,31 @@ export interface ControlMessage {
 export interface JobMessage {
     v: number;
     ts: number;
-    cmd: 'resync' | 'refresh' | 'tunnel';
+    /**
+     * instance: start, stop or restart an instance on the host of the agent
+     * restart: restart ioBroker (js-controller with all instances)
+     * osUpgrade: upgrade packages of the operating system that js-controller listed (OsUpdates)
+     */
+    cmd: 'resync' | 'refresh' | 'tunnel' | 'instance' | 'restart' | 'osUpgrade';
     /** For cmd 'tunnel' */
     tunnel?: TunnelRequest;
+    /** Commands: the agent answers on topic reply with this reference */
+    ref?: string;
+    /** Who asked, for the log on the device */
+    by?: string;
+    /** For cmd 'instance' */
+    instance?: { id: string; action: InstanceAction };
+    /** For cmd 'osUpgrade': names out of OsUpdates.packages (the agent takes no others); restart ioBroker after it */
+    osUpgrade?: { packages: string[]; restart: boolean };
+}
+
+/** Answer to a command: 'running' first if it takes a while, then 'done' or 'error' */
+export interface ReplyMessage {
+    v: number;
+    ts: number;
+    ref: string;
+    state: 'running' | 'done' | 'error';
+    message?: string;
 }
 
 /**

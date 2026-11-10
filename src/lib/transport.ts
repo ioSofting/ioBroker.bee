@@ -10,6 +10,7 @@ import {
     type EnrollResponse,
     type JobMessage,
     type StateMessage,
+    type Topic,
 } from './protocol';
 import { decodePayload, encodePayload } from './util';
 
@@ -82,7 +83,7 @@ export class Transport extends EventEmitter<TransportEvents> {
         }
     }
 
-    private topic(t: 'state' | 'inventory' | 'result' | 'desired' | 'job'): string {
+    private topic(t: Topic): string {
         return deviceTopic(this.creds.tenantId, this.creds.deviceId, t);
     }
 
@@ -170,7 +171,7 @@ export class Transport extends EventEmitter<TransportEvents> {
         });
     }
 
-    async publish(topic: 'state' | 'inventory' | 'result', msg: unknown): Promise<boolean> {
+    async publish(topic: 'state' | 'inventory' | 'result' | 'reply', msg: unknown): Promise<boolean> {
         if (!this.client?.connected) {
             return false;
         }

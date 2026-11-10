@@ -1,8 +1,16 @@
 import * as utils from '@iobroker/adapter-core';
-import { mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync } from 'node:fs';
 import os from 'node:os';
 import { join } from 'node:path';
 import type { Duplex } from 'node:stream';
+import {
+    ACTION_DONE,
+    chooseOsPackages,
+    instanceRefusal,
+    osUpdatesFrom,
+    REBOOT_REQUIRED,
+    supportedCommands,
+} from './lib/commands';
 import { consoleUser, findScript, MAX_SHELLS, startShell } from './lib/console';
 import { enroll } from './lib/enrollment';
 import { collectInventory, cpuTemperature, diskInfo, installedVersions, sdWrites } from './lib/inventory';
@@ -20,6 +28,7 @@ import {
     type Inventory,
     type JobMessage,
     type JobState,
+    type ReplyMessage,
     type ResultMessage,
     type StateMessage,
     type TunnelRequest,
@@ -87,6 +96,8 @@ class BeeAdapter extends utils.Adapter {
     private errorLog: { ts: number; from: string; message: string }[] = [];
     private errorsSinceHeartbeat = 0;
     private reconciling = false;
+    /** A command of the fleet management is being carried out (one at a time) */
+    private commandRunning = false;
     private lastWaitReason = '';
     private unloading = false;
     /** Open remote access sessions by session id */
@@ -298,6 +309,132 @@ class BeeAdapter extends utils.Adapter {
             await this.sendInventory(true);
         } else if (msg.cmd === 'tunnel' && msg.tunnel) {
             await this.openTunnel(msg.tunnel, false);
+        } else if (msg.ref && (msg.cmd === 'instance' || msg.cmd === 'restart' || msg.cmd === 'osUpgrade')) {
+            await this.runCommand(msg);
+        }
+    }
+
+    // ------------------------------------------------------------------ commands of the fleet management
+
+    private async reply(ref: string, state: ReplyMessage['state'], message?: string): Promise<void> {
+        const msg: ReplyMessage = { v: PROTOCOL_VERSION, ts: Date.now(), ref, state, ...(message ? { message } : {}) };
+        await this.transport?.publish('reply', msg);
+    }
+
+    /** Sends the inventory again a while after a command, when the instances show its effect */
+    private inventorySoon(): void {
+        for (const ms of [5_000, 30_000]) {
+            this.timers.push(setTimeout(() => void this.sendInventory(false), ms));
+        }
+    }
+
+    private async runCommand(msg: JobMessage): Promise<void> {
+        const ref = msg.ref!;
+        const by = msg.by || 'Flottenverwaltung';
+        if (this.reconciling || this.jobs?.isActive()) {
+            await this.reply(ref, 'error', 'Während eines Auftrags (Update) nicht möglich');
+            return;
+        }
+        if (this.commandRunning) {
+            await this.reply(ref, 'error', 'Es läuft schon ein Befehl');
+            return;
+        }
+        this.commandRunning = true;
+        try {
+            if (msg.cmd === 'instance') {
+                await this.instanceCommand(ref, by, msg.instance);
+            } else if (msg.cmd === 'restart') {
+                this.log.warn(`Restart of ioBroker on request of ${by} (fleet management)`);
+                // the answer goes out first, the restart takes the agent down too
+                await this.reply(ref, 'done', 'ioBroker startet neu');
+                this.sendToHost(`system.host.${this.host}`, 'restartController', {});
+            } else if (msg.cmd === 'osUpgrade') {
+                await this.osUpgradeCommand(ref, by, msg.osUpgrade);
+            }
+        } catch (e) {
+            this.log.warn(`Command ${msg.cmd} of ${by} failed: ${e.message}`);
+            await this.reply(ref, 'error', e.message);
+        } finally {
+            this.commandRunning = false;
+        }
+    }
+
+    /** Start, stop or restart an instance on this host, the same way admin does it */
+    private async instanceCommand(ref: string, by: string, req: JobMessage['instance']): Promise<void> {
+        const id = req?.id;
+        const action = req?.action;
+        const objId = `system.adapter.${id}`;
+        const obj = typeof id === 'string' && /^[\w.-]+$/.test(id) ? await this.getForeignObjectAsync(objId) : null;
+        const refusal = instanceRefusal(id, action, this.namespace, obj, this.host || '');
+        if (refusal || !req) {
+            await this.reply(ref, 'error', refusal || 'Instanz fehlt');
+            return;
+        }
+        this.log.info(`Instance ${req.id}: ${req.action} on request of ${by} (fleet management)`);
+        const own = req.id === this.namespace;
+        if (own) {
+            // a restart of this instance ends this process: answer first
+            await this.reply(ref, 'done', `${req.id} startet neu`);
+        }
+        await this.extendForeignObjectAsync(
+            objId,
+            req.action === 'restart' ? {} : { common: { enabled: req.action === 'start' } },
+        );
+        if (!own) {
+            await this.reply(ref, 'done', `${req.id} ${ACTION_DONE[req.action]}`);
+            this.inventorySoon();
+        }
+    }
+
+    /** Upgrade OS packages through js-controller, only those it listed itself */
+    private async osUpgradeCommand(ref: string, by: string, req: JobMessage['osUpgrade']): Promise<void> {
+        const host = `system.host.${this.host}`;
+        const hostObj = await this.getForeignObjectAsync(host);
+        if (!supportedCommands(String(hostObj?.common?.installedVersion || '')).includes('osUpgrade')) {
+            await this.reply(ref, 'error', 'OS-Updates brauchen Linux und js-controller ab 6');
+            return;
+        }
+        const listed =
+            osUpdatesFrom(await this.getForeignStateAsync(`${host}.osPackageUpdates`), false)?.packages ?? [];
+        const { packages, unknown } = chooseOsPackages(listed, req?.packages);
+        if (!packages.length || unknown.length) {
+            await this.reply(
+                ref,
+                'error',
+                unknown.length ? `Nicht als aktualisierbar gelistet: ${unknown.join(', ')}` : 'Keine Pakete angegeben',
+            );
+            return;
+        }
+        const names = packages.map(p => p.name).join(', ');
+        this.log.warn(`Upgrade of OS packages ${names} on request of ${by} (fleet management)`);
+        await this.reply(ref, 'running', `apt: ${names}`);
+        // js-controller runs apt (with sudo if it is not root) and answers when it is through
+        const answer = (await Promise.race([
+            this.sendToHostAsync(host, 'upgradeOsPackages', {
+                packages: packages.map(p => ({ name: p.name })),
+                restart: !!req?.restart,
+            }),
+            new Promise(resolve => {
+                this.timers.push(
+                    setTimeout(
+                        () => resolve({ error: 'Keine Antwort von js-controller nach 30 Minuten' }),
+                        30 * 60_000,
+                    ),
+                );
+            }),
+        ])) as { success?: boolean; error?: string } | undefined;
+        if (answer?.success) {
+            this.log.info(`OS packages upgraded: ${names}`);
+            await this.reply(
+                ref,
+                'done',
+                `${packages.length} ${packages.length === 1 ? 'Paket' : 'Pakete'} aktualisiert${req?.restart ? ', ioBroker startet neu' : ''}`,
+            );
+            this.inventorySoon();
+        } else {
+            const error = answer?.error || 'js-controller meldet einen Fehler';
+            this.log.warn(`OS upgrade failed: ${error}`);
+            await this.reply(ref, 'error', error);
         }
     }
 
@@ -473,6 +610,16 @@ class BeeAdapter extends utils.Adapter {
         };
         if (inv.remoteAccess.includes('console')) {
             inv.consoleUser = consoleUser();
+        }
+        inv.commands = supportedCommands(inv.software.jsController);
+        if (inv.commands.includes('osUpgrade')) {
+            const updates = osUpdatesFrom(
+                await this.getForeignStateAsync(`system.host.${this.host}.osPackageUpdates`),
+                existsSync(REBOOT_REQUIRED),
+            );
+            if (updates) {
+                inv.osUpdates = updates;
+            }
         }
         return inv;
     }

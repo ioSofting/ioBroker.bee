@@ -35,7 +35,16 @@ A technician of the fleet manager can open admin or vis-2 of the system from the
 
 The owner can switch off each kind in the tab *Remote access*; the agent then refuses the session and the fleet management shows why. Running sessions are visible in `info.remoteAccess`. After a connection loss the agent reconnects until the session expires, also across restarts of the adapter. The server ends the session early when the technician ends it or the device is revoked.
 
-**Console.** Off until the owner allows it (*Allow the console*), and only on Linux with `script` of util-linux (part of every Debian). Then every terminal the technician opens in the browser is a login shell on this system, as the user ioBroker runs as (usually `iobroker`), started in the ioBroker directory. No native module: `script` gives the shell a pseudo terminal, `stty` sets the size of its window. At most 4 shells per session; when the session or the connection ends, the shells get SIGHUP. `info.remoteAccessBy` shows how many shells are open. Whatever the shell may do beyond the rights of that user belongs in a sudo allow list for single commands, not in a general sudo.
+**Console.** Off until the owner allows it (*Allow the console*), and only on Linux with `script` of util-linux (part of every Debian). Then every terminal the technician opens in the browser is a login shell on this system, as the user ioBroker runs as (usually `iobroker`), started in the ioBroker directory. No native module: `script` gives the shell a pseudo terminal, `stty` sets the size of its window. At most 4 shells per session; when the session or the connection ends, the shells get SIGHUP. `info.remoteAccessBy` shows how many shells are open. Whatever the shell may do beyond the rights of that user belongs in a sudo allow list for single commands, not in a general sudo. Note that the list the ioBroker installer writes (`/etc/sudoers.d/iobroker`) contains `apt`, `apt-get` and `dpkg` without password, which makes the console effectively root on a standard installation. Systems installed with `--hardened` have no sudo; there the OS updates below do not work either.
+
+### Commands from the fleet management
+
+From the asset detail a technician (permission `operate`) can start, stop and restart instances on this host, restart ioBroker, and install updates of operating system packages. The agent answers on the topic `reply`; the fleet management logs who did what.
+
+- Instances: the same way admin does it, through the instance object (`common.enabled`, or rewriting it for a restart). Only instances of this host; `bee` itself can be restarted but not stopped from afar.
+- Restart of ioBroker: host command `restartController` of js-controller.
+- OS updates: js-controller (6 and newer, Linux) lists upgradeable packages (`apt list --upgradeable`) on every update of the repository, admin triggers that daily, and writes them to `system.host.<host>.osPackageUpdates`. The agent reports this list in the inventory, together with `/var/run/reboot-required`, and on request passes the chosen packages to the host command `upgradeOsPackages`, which runs apt (with sudo if ioBroker does not run as root). Packages that js-controller did not list are refused.
+- Nothing of this while a job (update) is running, and one command at a time.
 
 ## Configuration
 
@@ -87,6 +96,7 @@ npm test          # unit tests of planner, preflight and diff
 
 - Console: a shell on this system for the fleet management, in the browser of the technician; off unless the owner allows it, Linux with `script` (util-linux) only
 - Enrollment URL preset to `https://bee.iobroker.click` (new instances)
+- Commands from the fleet management: start, stop and restart instances, restart ioBroker, install OS updates listed by js-controller (6 and newer)
 
 ### 0.2.0 (2026-11-10)
 
