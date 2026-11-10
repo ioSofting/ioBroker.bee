@@ -19,12 +19,16 @@ import { compareVersions } from './util';
 /** Exists on Debian and Ubuntu when an update asks for a reboot of the system */
 export const REBOOT_REQUIRED = '/var/run/reboot-required';
 
-/** What this system can do: OS updates need Linux and js-controller 6 (it lists them and runs apt) */
+/**
+ * What this system can do: OS updates need Linux and js-controller 6 (it lists them and runs apt);
+ * logs: list and upload log files
+ */
 export function supportedCommands(jsController: string, platform: string = process.platform): AgentCommand[] {
     const commands: AgentCommand[] = ['instance', 'restart'];
     if (platform === 'linux' && jsController && compareVersions(jsController, '6.0.0') >= 0) {
         commands.push('osUpgrade');
     }
+    commands.push('logs');
     return commands;
 }
 

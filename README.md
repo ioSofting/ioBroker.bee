@@ -61,6 +61,7 @@ From the asset detail a technician (permission `operate`) can start, stop and re
 - Restart of ioBroker: host command `restartController` of js-controller.
 - OS updates: js-controller (6 and newer, Linux) lists upgradeable packages (`apt list --upgradeable`) on every update of the repository, admin triggers that daily, and writes them to `system.host.<host>.osPackageUpdates`. The agent reports this list in the inventory, together with `/var/run/reboot-required`, and on request passes the chosen packages to the host command `upgradeOsPackages`, which runs apt (with sudo if ioBroker does not run as root). Packages that js-controller did not list are refused.
 - Nothing of this while a job (update) is running, and one command at a time.
+- Log files: the agent lists the files in the directories of the file transports of `iobroker.json` (as js-controller finds them for admin; only `*.log` and `*.gz`), and on request uploads one of them to its own server, compressed with gzip (a `.gz` file as it is), with the one-time ticket of the request and at most 50 MB compressed. The upload URL must belong to the server of the enrollment or the broker. This works also during a job, one upload at a time.
 
 ## Configuration
 
@@ -107,6 +108,10 @@ npm test          # unit tests of planner, preflight and diff
 `src/lib/protocol.ts` and `src/lib/tunnel.ts` are shared with the server and must stay identical to `beekeeper-server/src/protocol.ts` and `beekeeper-server/src/tunnel.ts`.
 
 ## Changelog
+
+### **WORK IN PROGRESS**
+
+- Log files of ioBroker for the fleet management: list them, upload one compressed on request
 
 ### 0.2.4 (2026-11-10)
 

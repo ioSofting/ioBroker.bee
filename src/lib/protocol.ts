@@ -177,7 +177,18 @@ export const INSTANCE_ID = /^[a-z0-9][a-z0-9_-]*\.\d{1,4}$/;
 export type InstanceAction = 'start' | 'stop' | 'restart';
 
 /** Commands from the asset detail an agent may understand (Inventory.commands) */
-export type AgentCommand = 'instance' | 'restart' | 'osUpgrade';
+export type AgentCommand = 'instance' | 'restart' | 'osUpgrade' | 'logs';
+
+/** A log file of ioBroker on the device, in the directory of a file transport of iobroker.json */
+export interface LogFile {
+    /** File name, e.g. "iobroker.2026-11-10.log" or "iobroker.2026-11-03.log.gz" */
+    name: string;
+    size: number;
+    mtime: number;
+}
+
+/** Largest log file the agent uploads, compressed (nginx in front of the server allows 52 MB) */
+export const MAX_LOG_UPLOAD_BYTES = 50 * 1024 * 1024;
 
 export interface InventoryMessage {
     v: number;
@@ -248,8 +259,10 @@ export interface JobMessage {
      * instance: start, stop or restart an instance on the host of the agent
      * restart: restart ioBroker (js-controller with all instances)
      * osUpgrade: upgrade packages of the operating system that js-controller listed (OsUpdates)
+     * logList: list the log files of ioBroker (answer: ReplyMessage.files)
+     * logFetch: upload one of them (command 'logs' of Inventory.commands for both)
      */
-    cmd: 'resync' | 'refresh' | 'tunnel' | 'instance' | 'restart' | 'osUpgrade';
+    cmd: 'resync' | 'refresh' | 'tunnel' | 'instance' | 'restart' | 'osUpgrade' | 'logList' | 'logFetch';
     /** For cmd 'tunnel' */
     tunnel?: TunnelRequest;
     /** Commands: the agent answers on topic reply with this reference */
@@ -260,6 +273,11 @@ export interface JobMessage {
     instance?: { id: string; action: InstanceAction };
     /** For cmd 'osUpgrade': names out of OsUpdates.packages (the agent takes no others); restart ioBroker after it */
     osUpgrade?: { packages: string[]; restart: boolean };
+    /**
+     * For cmd 'logFetch': upload the file (a name out of the list) compressed with gzip, "POST url" with the
+     * header "Authorization: Bearer <ticket>". The url must belong to the own server; the ticket is good once.
+     */
+    logFetch?: { file: string; url: string; ticket: string };
 }
 
 /** Answer to a command: 'running' first if it takes a while, then 'done' or 'error' */
@@ -269,6 +287,8 @@ export interface ReplyMessage {
     ref: string;
     state: 'running' | 'done' | 'error';
     message?: string;
+    /** For cmd 'logList': the log files, newest first */
+    files?: LogFile[];
 }
 
 /**

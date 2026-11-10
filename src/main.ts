@@ -17,6 +17,7 @@ import { instanceRunning, onlyWww } from './lib/instances';
 import { enroll } from './lib/enrollment';
 import { collectInventory, cpuTemperature, diskInfo, installedVersions, sdWrites } from './lib/inventory';
 import { JobManager, type JobFile } from './lib/jobs';
+import { findLogFile, listLogFiles, logDirs, uploadLog } from './lib/logs';
 import {
     engineConflicts,
     launchNodeUpdate,
@@ -26,7 +27,7 @@ import {
     serviceOf,
     unitActive,
 } from './lib/node';
-import { ensurePackage, packagesOf } from './lib/packages';
+import { ensurePackage, packagesOf, trustedPackageUrl } from './lib/packages';
 import { checkDependencies, computePlan, foreignAdapters } from './lib/planner';
 import { preflight, type Condition } from './lib/preflight';
 import {
@@ -119,6 +120,7 @@ class BeeAdapter extends utils.Adapter {
     private reconciling = false;
     /** A command of the fleet management is being carried out (one at a time) */
     private commandRunning = false;
+    private logUploading = false;
     private lastWaitReason = '';
     private unloading = false;
     /** Open remote access sessions by session id */
@@ -342,14 +344,81 @@ class BeeAdapter extends utils.Adapter {
             await this.openTunnel(msg.tunnel, false);
         } else if (msg.ref && (msg.cmd === 'instance' || msg.cmd === 'restart' || msg.cmd === 'osUpgrade')) {
             await this.runCommand(msg);
+        } else if (msg.ref && msg.cmd === 'logList') {
+            // only reads: also during a job or another command
+            await this.logListCommand(msg.ref);
+        } else if (msg.ref && msg.cmd === 'logFetch') {
+            // may take minutes on a mobile connection: the other messages go on meanwhile
+            void this.logFetchCommand(msg.ref, msg.by || 'Flottenverwaltung', msg.logFetch);
         }
     }
 
     // ------------------------------------------------------------------ commands of the fleet management
 
-    private async reply(ref: string, state: ReplyMessage['state'], message?: string): Promise<void> {
-        const msg: ReplyMessage = { v: PROTOCOL_VERSION, ts: Date.now(), ref, state, ...(message ? { message } : {}) };
+    private async reply(
+        ref: string,
+        state: ReplyMessage['state'],
+        message?: string,
+        files?: ReplyMessage['files'],
+    ): Promise<void> {
+        const msg: ReplyMessage = {
+            v: PROTOCOL_VERSION,
+            ts: Date.now(),
+            ref,
+            state,
+            ...(message ? { message } : {}),
+            ...(files ? { files } : {}),
+        };
         await this.transport?.publish('reply', msg);
+    }
+
+    /** Directories of the log files of ioBroker (file transports of iobroker.json) */
+    private logDirs(): string[] {
+        let config: unknown = null;
+        try {
+            config = utils.getConfig();
+        } catch (e) {
+            this.log.debug(`iobroker.json not readable: ${e.message}`);
+        }
+        return logDirs(config, join(utils.controllerDir, '..', '..'));
+    }
+
+    private async logListCommand(ref: string): Promise<void> {
+        try {
+            const files = await listLogFiles(this.logDirs());
+            await this.reply(ref, 'done', `${files.length} Log-Dateien`, files);
+        } catch (e) {
+            await this.reply(ref, 'error', e.message);
+        }
+    }
+
+    /** Uploads a log file to the own server, one at a time */
+    private async logFetchCommand(ref: string, by: string, req: JobMessage['logFetch']): Promise<void> {
+        try {
+            if (this.logUploading) {
+                throw new Error('Es wird schon eine Log-Datei übertragen');
+            }
+            if (!req || typeof req.url !== 'string' || typeof req.ticket !== 'string') {
+                throw new Error('Unvollständige Anfrage');
+            }
+            if (!trustedPackageUrl(req.url, [this.config.enrollUrl, this.creds?.mqttUrl || ''])) {
+                throw new Error(`${req.url} gehört nicht zum Flottenserver`);
+            }
+            const file = await findLogFile(this.logDirs(), req.file);
+            if (!file) {
+                throw new Error(`Log-Datei ${String(req.file)} gibt es nicht`);
+            }
+            this.logUploading = true;
+            this.log.info(`Log file ${req.file} is uploaded on request of ${by} (fleet management)`);
+            await this.reply(ref, 'running', `${req.file} wird komprimiert übertragen`);
+            const bytes = await uploadLog(file, req.url, req.ticket, trustedCas(this.creds?.ca || ''));
+            await this.reply(ref, 'done', `${req.file}: ${(bytes / 1024 / 1024).toFixed(1)} MB übertragen`);
+        } catch (e) {
+            this.log.warn(`Log file ${String(req?.file)} for ${by}: ${e.message}`);
+            await this.reply(ref, 'error', e.message);
+        } finally {
+            this.logUploading = false;
+        }
     }
 
     /** Sends the inventory again a while after a command, when the instances show its effect */
