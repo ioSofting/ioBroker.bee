@@ -79,6 +79,15 @@ interface Persisted {
     notified: Record<string, number>;
 }
 
+/** Host of the broker for the status, e.g. "bee.iobroker.click" */
+function hostOf(url: string | undefined): string {
+    try {
+        return new URL(url || '').hostname || 'der Flottenverwaltung';
+    } catch {
+        return 'der Flottenverwaltung';
+    }
+}
+
 class BeeAdapter extends utils.Adapter {
     declare config: BeeConfig;
     private dataDir = '';
@@ -266,7 +275,7 @@ class BeeAdapter extends utils.Adapter {
     private async onConnected(): Promise<void> {
         this.log.info('Connected to beekeeper');
         await this.setState('info.connection', true, true);
-        await this.setState('info.status', 'Verbunden', true);
+        await this.setState('info.status', `Verbunden mit ${hostOf(this.creds?.mqttUrl)}`, true);
         await this.heartbeat();
         await this.sendInventory(true);
         // results produced while offline
@@ -585,7 +594,8 @@ class BeeAdapter extends utils.Adapter {
                     t =>
                         `${ACCESS_LABEL[t.kind]}${t.instance ? ` (${t.instance})` : ''}${this.shellText(t)}: ${t.by}, ${t.purpose} (bis ${new Date(t.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`,
                 )
-                .join('; '),
+                // in the settings an empty value would show the label alone
+                .join('; ') || 'keiner',
             true,
         );
     }

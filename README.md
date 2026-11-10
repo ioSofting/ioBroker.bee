@@ -72,7 +72,7 @@ From the asset detail a technician (permission `operate`) can start, stop and re
 | `job.state`, `job.detail`, `job.steps` | current or last job |
 | `control.halted` | emergency stop of the fleet is active |
 | `control.refresh`, `control.check` | buttons: send inventory, check desired state now |
-| `info.remoteAccess`, `info.remoteAccessBy` | remote access running now, and by whom with which purpose |
+| `info.remoteAccess`, `info.remoteAccessBy` | remote access running now, and by whom with which purpose (`keiner` if none; scripts should use `info.remoteAccess`) |
 
 Files in `iobroker-data/bee.0/`: `device.json` (certificate and key, mode 0600), `desired.json`, `job.json`, `runner.json`, `runner.log` (complete CLI output of all jobs), `tunnels.json` (running remote access sessions, resumed after a restart).
 
@@ -91,6 +91,12 @@ npm test          # unit tests of planner, preflight and diff
 `src/lib/protocol.ts` and `src/lib/tunnel.ts` are shared with the server and must stay identical to `beekeeper-server/src/protocol.ts` and `beekeeper-server/src/tunnel.ts`.
 
 ## Changelog
+
+### **WORK IN PROGRESS**
+
+- Settings, tab *Remote access*: "Remote access in progress" instead of "Access right now", and `info.remoteAccessBy` says `keiner` when nobody accesses the system
+- Settings, tab *Enrollment*: the connection to the fleet management in green or red, the status (now naming the server) next to it
+- Instances without a process (mode `none` or `extension`) refuse start, stop and restart
 
 ### 0.2.3 (2026-11-10)
 

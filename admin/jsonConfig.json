@@ -53,16 +53,34 @@
                     "lg": 12,
                     "xl": 12
                 },
+                "_connection": {
+                    "type": "state",
+                    "oid": "info.connection",
+                    "label": { "en": "Fleet management", "de": "Flottenverwaltung" },
+                    "trueText": { "en": "connected", "de": "verbunden" },
+                    "falseText": { "en": "not connected", "de": "nicht verbunden" },
+                    "trueTextStyle": { "color": "#4caf50", "fontWeight": "bold" },
+                    "falseTextStyle": { "color": "#f44336", "fontWeight": "bold" },
+                    "narrow": true,
+                    "addColon": true,
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 4,
+                    "lg": 3,
+                    "xl": 3
+                },
                 "_status": {
                     "type": "state",
                     "oid": "info.status",
                     "label": { "en": "Status", "de": "Status" },
-                    "newLine": true,
+                    "narrow": true,
+                    "addColon": true,
                     "xs": 12,
                     "sm": 12,
-                    "md": 12,
-                    "lg": 12,
-                    "xl": 12
+                    "md": 8,
+                    "lg": 9,
+                    "xl": 9
                 }
             }
         },
@@ -126,7 +144,7 @@
                 "_remoteAccessBy": {
                     "type": "state",
                     "oid": "info.remoteAccessBy",
-                    "label": { "en": "Access right now", "de": "Zugriff gerade" },
+                    "label": { "en": "Remote access in progress", "de": "Laufender Fernzugriff" },
                     "newLine": true,
                     "xs": 12,
                     "sm": 12,

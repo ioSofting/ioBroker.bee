@@ -312,7 +312,7 @@
                 "type": "string",
                 "read": true,
                 "write": false,
-                "def": ""
+                "def": "keiner"
             },
             "native": {}
         },

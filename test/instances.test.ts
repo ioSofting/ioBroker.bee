@@ -76,6 +76,8 @@ describe('instances', () => {
         assert.equal(onlyWww(instance('vis.0', { name: 'vis', onlyWWW: true })), false);
         assert.equal(onlyWww(instance('javascript.0', { name: 'javascript' })), false);
         assert.match(instanceRefusal('material.0', 'start', 'bee.0', material, 'pi')!, /keinen eigenen Prozess/);
+        const none = instance('alias-manager.0', { name: 'alias-manager', mode: 'none', enabled: false });
+        assert.match(instanceRefusal('alias-manager.0', 'start', 'bee.0', none, 'pi')!, /Modus none/);
     });
 
     it('does not restart a web extension (web would ignore it), but starts and stops it', () => {

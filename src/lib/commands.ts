@@ -89,6 +89,9 @@ export function instanceRefusal(
     if (onlyWww(obj)) {
         return `${id} hat keinen eigenen Prozess (nur Dateien für web)`;
     }
+    if (obj.common.mode === 'none' || obj.common.mode === 'extension') {
+        return `${id} hat keinen eigenen Prozess (Modus ${obj.common.mode})`;
+    }
     if (id === own && action === 'stop') {
         return 'bee stoppen trennt die Anlage von der Flottenverwaltung; das geht nur am Gerät';
     }
