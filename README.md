@@ -83,6 +83,7 @@ npm test          # unit tests of planner, preflight and diff
 ### **WORK IN PROGRESS**
 
 - Remote access to admin and vis-2 through a tunnel to the fleet server, switchable per kind by the owner
+- Versions set per asset by the fleet server, also adapter packages (tgz) loaded from the own server, checked by SHA-256 and installed with `iobroker url`
 
 ### 0.1.0 (2026-09-18)
 

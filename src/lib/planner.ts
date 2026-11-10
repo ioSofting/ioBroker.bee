@@ -28,19 +28,39 @@ export function foreignAdapters(desired: DesiredMessage, installed: Installed): 
         .sort();
 }
 
-/** Steps to reach the profile. The agent (bee) is always updated last. */
-export function computePlan(desired: DesiredMessage, installed: Installed, selfName = 'bee'): JobStep[] {
+/**
+ * Steps to reach the profile. The agent (bee) is always updated last.
+ *
+ * @param desired desired state of the server
+ * @param installed installed versions
+ * @param selfName name of the agent adapter
+ * @param from where the adapters were installed from (installedFrom); with a package of the server and the
+ *     same version installed from somewhere else, the package is installed once more (a build that kept
+ *     the version number). Only given as long as that was not tried yet for this job.
+ */
+export function computePlan(
+    desired: DesiredMessage,
+    installed: Installed,
+    selfName = 'bee',
+    from?: Record<string, string | undefined>,
+): JobStep[] {
     const steps: JobStep[] = [];
     if (!desired.profile) {
         return steps;
     }
     for (const [name, target] of Object.entries(desired.profile.adapters)) {
         const current = installed[name];
-        if (current === target.version) {
+        const source = from?.[name];
+        const otherBuild = !!target.tarball && !!source && !source.includes(target.tarball.sha256);
+        if (current === target.version && !otherBuild) {
             continue;
         }
         steps.push({
-            action: !current ? 'install' : compareVersions(current, target.version) < 0 ? 'upgrade' : 'downgrade',
+            action: !current
+                ? 'install'
+                : current === target.version || compareVersions(current, target.version) < 0
+                  ? 'upgrade'
+                  : 'downgrade',
             adapter: name,
             from: current ?? null,
             to: target.version,

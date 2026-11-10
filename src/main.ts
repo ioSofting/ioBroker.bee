@@ -5,6 +5,7 @@ import { join } from 'node:path';
 import { enroll } from './lib/enrollment';
 import { collectInventory, cpuTemperature, diskInfo, installedVersions, sdWrites } from './lib/inventory';
 import { JobManager, type JobFile } from './lib/jobs';
+import { ensurePackage, packagesOf } from './lib/packages';
 import { checkDependencies, computePlan, foreignAdapters } from './lib/planner';
 import { preflight, type Condition } from './lib/preflight';
 import {
@@ -587,7 +588,13 @@ class BeeAdapter extends utils.Adapter {
         }
         const inv = await this.inventory();
         const installed = installedVersions(inv);
-        const plan = computePlan(d, installed, this.name);
+        const key = `${d.profile.hash}:${d.retry}`;
+        // a package with the version number of what is installed: once per job, never in a loop
+        const from =
+            this.persisted.results[key] === 'done'
+                ? undefined
+                : Object.fromEntries(Object.entries(inv.software.adapters).map(([n, a]) => [n, a.installedFrom]));
+        const plan = computePlan(d, installed, this.name, from);
         await this.setState('info.onTarget', plan.length === 0, true);
 
         if (d.mode === 'self') {
@@ -617,7 +624,6 @@ class BeeAdapter extends utils.Adapter {
             await this.setState('info.status', `Eigeninstallation erkannt: ${foreign.join(', ')}`, true);
             return;
         }
-        const key = `${d.profile.hash}:${d.retry}`;
         if (this.persisted.results[key] === 'blocked') {
             return;
         }
@@ -659,10 +665,28 @@ class BeeAdapter extends utils.Adapter {
             }
             return;
         }
+        // packages of the server for single assets: loaded before anything changes
+        const files: Record<string, string> = {};
+        for (const [adapter, tarball] of Object.entries(packagesOf(d, plan))) {
+            try {
+                files[adapter] = await ensurePackage(join(this.dataDir, 'packages'), tarball, {
+                    serverUrls: [this.config.enrollUrl, this.creds?.mqttUrl || ''],
+                    ca: trustedCas(this.creds?.ca || ''),
+                });
+            } catch (e) {
+                const reason = `Paket für ${adapter} nicht ladbar: ${e.message}`;
+                this.log.warn(reason);
+                if (reason !== this.lastWaitReason) {
+                    this.lastWaitReason = reason;
+                    await this.report('waiting', reason, plan);
+                }
+                return;
+            }
+        }
         this.lastWaitReason = '';
         this.log.info(`Starting job for ${d.profile.name}: ${plan.map(s => `${s.action} ${s.adapter}`).join(', ')}`);
         await this.report('preflight', `${plan.length} Schritte geplant, Vorprüfung bestanden`, plan);
-        await this.jobs!.start(d, plan, this.config.backupBeforeUpdate !== false);
+        await this.jobs!.start(d, plan, this.config.backupBeforeUpdate !== false, files);
     }
 
     // ------------------------------------------------------------------ states, notifications

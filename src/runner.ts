@@ -21,6 +21,8 @@ export interface RunnerFile {
     /** If this file exists, no further step is started (emergency stop) */
     haltFile: string;
     logFile: string;
+    /** Packages of the fleet server per adapter (local tgz) instead of npm; only when applying */
+    files?: Record<string, string>;
     phase: 'start' | 'running' | 'done' | 'failed' | 'halted';
     pid?: number;
     error?: string;
@@ -35,19 +37,31 @@ function save(file: string, data: RunnerFile): void {
     renameSync(`${file}.tmp`, file);
 }
 
-export function cliArgs(step: JobStep): string[] {
+/**
+ * Calls of the CLI for one step, one after the other
+ *
+ * @param step step of the job
+ * @param file local package (tgz) to install from instead of npm
+ */
+export function cliArgs(step: JobStep, file?: string): string[][] {
+    if (file && step.adapter && step.action !== 'remove' && step.action !== 'backup') {
+        // the name is given: it cannot be taken from the file name <sha256>.tgz
+        const url = ['url', file, step.adapter];
+        // "url" only installs the package; "add" then creates the instance from it, without npm
+        return step.action === 'install' ? [url, ['add', step.adapter]] : [url];
+    }
     switch (step.action) {
         case 'backup':
-            return ['backup'];
+            return [['backup']];
         case 'install':
             // installs the package and creates one instance
-            return ['add', `${step.adapter}@${step.to}`];
+            return [['add', `${step.adapter}@${step.to}`]];
         case 'upgrade':
-            return ['upgrade', `${step.adapter}@${step.to}`, '--yes'];
+            return [['upgrade', `${step.adapter}@${step.to}`, '--yes']];
         case 'downgrade':
-            return ['upgrade', `${step.adapter}@${step.to}`, '--yes', '--force'];
+            return [['upgrade', `${step.adapter}@${step.to}`, '--yes', '--force']];
         case 'remove':
-            return ['del', step.adapter!];
+            return [['del', step.adapter!]];
     }
 }
 
@@ -137,7 +151,14 @@ async function main(path: string): Promise<void> {
         step.status = 'running';
         step.ts = Date.now();
         save(path, file);
-        const result = await run(file, cliArgs(step));
+        let result = { code: 0, output: '' };
+        for (const args of cliArgs(step, step.adapter ? file.files?.[step.adapter] : undefined)) {
+            const r = await run(file, args);
+            result = { code: r.code, output: result.output + r.output };
+            if (r.code !== 0) {
+                break;
+            }
+        }
         const mismatch = result.code === 0 ? checkResult(file, step) : null;
         if (mismatch) {
             appendFileSync(file.logFile, `\n[check] ${mismatch}\n`);

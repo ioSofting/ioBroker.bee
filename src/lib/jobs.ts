@@ -112,10 +112,15 @@ export class JobManager {
         }
     }
 
-    private async spawnRunner(mode: RunnerFile['mode'], steps: JobStep[]): Promise<void> {
+    private async spawnRunner(
+        mode: RunnerFile['mode'],
+        steps: JobStep[],
+        files?: Record<string, string>,
+    ): Promise<void> {
         const file: RunnerFile = {
             mode,
             steps,
+            ...(files && Object.keys(files).length ? { files } : {}),
             iobroker: this.deps.iobrokerJs,
             cwd: this.deps.cwd,
             haltFile: this.haltFile,
@@ -133,7 +138,20 @@ export class JobManager {
         this.deps.log.info(`Runner started (${mode}, ${steps.length} steps, pid ${child.pid})`);
     }
 
-    async start(desired: DesiredMessage, steps: JobStep[], withBackup: boolean): Promise<void> {
+    /**
+     * Starts a job
+     *
+     * @param desired desired state
+     * @param steps plan
+     * @param withBackup backup first
+     * @param files local packages per adapter instead of npm (the rollback takes npm)
+     */
+    async start(
+        desired: DesiredMessage,
+        steps: JobStep[],
+        withBackup: boolean,
+        files: Record<string, string> = {},
+    ): Promise<void> {
         const profile = desired.profile!;
         const all: JobStep[] = withBackup ? [{ action: 'backup', status: 'pending' }, ...steps] : steps;
         this.job = {
@@ -150,7 +168,7 @@ export class JobManager {
             createdAt: Date.now(),
         };
         await this.save();
-        await this.spawnRunner('apply', all);
+        await this.spawnRunner('apply', all, files);
         await this.setState(withBackup ? 'backup' : 'rollout', withBackup ? 'Sicherung wird erstellt' : 'Ausrollen');
     }
 

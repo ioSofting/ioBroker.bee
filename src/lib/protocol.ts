@@ -151,6 +151,11 @@ export interface ProfileAdapter {
     globalDependencies?: Record<string, string>[];
     /** engines.node of this version */
     node?: string;
+    /**
+     * Install from this package of the fleet server instead of npm (uploaded tgz, set per asset).
+     * The agent downloads it only from its own server and checks the SHA-256 before installing.
+     */
+    tarball?: { url: string; sha256: string; size: number };
 }
 
 export interface DesiredProfile {
