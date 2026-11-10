@@ -30,6 +30,7 @@ If the owner installs adapters that are not part of the profile, the agent repor
 | Tab | Setting | Meaning |
 | --- | --- | --- |
 | Enrollment | Enrollment URL, token | from the factory image or the fleet manager; the token is stored encrypted |
+| | comment | free text shown in the fleet management next to the installation, e.g. `Womo Mercedes KA-1525`; sent on enrollment and with the inventory. It helps to recognize the installation but proves nothing: the identity is the device certificate |
 | Maintenance window | start, end | daily window for updates, may span midnight (e.g. 22:00–05:00) |
 | | conditions | table of `state operator value`, e.g. `victron.0.soc >= 50`, `modem.0.roaming == false`, `presence.0.home == false` |
 | | minimum free space | for download, unpacking and backup |

@@ -27,6 +27,26 @@ export function controlTopic(tenantId: string): string {
     return `fleet/${tenantId}/control`;
 }
 
+/** Longest comment a device reports (Inventory.comment, EnrollRequest.comment) */
+export const MAX_COMMENT_LENGTH = 200;
+
+/**
+ * Comment as both sides handle it: one line, no control characters, trimmed and shortened.
+ * Empty or not a string: undefined.
+ */
+export function normalizeComment(value: unknown): string | undefined {
+    if (typeof value !== 'string') {
+        return undefined;
+    }
+    const s = value
+        .replace(/\p{Cc}+/gu, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .slice(0, MAX_COMMENT_LENGTH)
+        .trim();
+    return s || undefined;
+}
+
 /** Heartbeat. Small, sent periodically and on connect. `online: false` is the Last Will. */
 export interface StateMessage {
     v: number;
@@ -64,6 +84,12 @@ export interface Inventory {
     agentVersion: string;
     uuid: string;
     hostname: string;
+    /**
+     * Free text from the instance configuration of the agent, e.g. "Womo Mercedes KA-1525".
+     * Helps people recognize the installation; reported by the device itself, so it is no proof
+     * of identity (that is the client certificate). Not part of the history.
+     */
+    comment?: string;
     software: {
         jsController: string;
         node: string;
@@ -182,6 +208,8 @@ export interface EnrollRequest {
     uuid: string;
     hostname?: string;
     agentVersion?: string;
+    /** See Inventory.comment: shown right after enrollment, before the first inventory */
+    comment?: string;
 }
 
 export interface EnrollResponse {

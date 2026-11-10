@@ -130,6 +130,7 @@
     "native": {
         "enrollUrl": "",
         "enrollToken": "",
+        "comment": "",
         "windowStart": "02:00",
         "windowEnd": "05:00",
         "ignoreWindow": false,

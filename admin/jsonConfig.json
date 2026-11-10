@@ -38,6 +38,21 @@
                     "lg": 6,
                     "xl": 6
                 },
+                "comment": {
+                    "type": "text",
+                    "label": { "en": "Comment", "de": "Kommentar" },
+                    "help": {
+                        "en": "Shown in the fleet management next to this installation, e.g. \"Womo Mercedes KA-1525\" (max. 200 characters)",
+                        "de": "Erscheint in der Flottenverwaltung bei dieser Anlage, z. B. \"Womo Mercedes KA-1525\" (höchstens 200 Zeichen)"
+                    },
+                    "maxLength": 200,
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                },
                 "_status": {
                     "type": "state",
                     "oid": "info.status",

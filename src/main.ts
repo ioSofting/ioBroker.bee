@@ -8,6 +8,7 @@ import { JobManager, type JobFile } from './lib/jobs';
 import { checkDependencies, computePlan, foreignAdapters } from './lib/planner';
 import { preflight, type Condition } from './lib/preflight';
 import {
+    normalizeComment,
     PROTOCOL_VERSION,
     type ControlMessage,
     type DesiredMessage,
@@ -24,6 +25,8 @@ import { diffFlat, flatten, readJson, writeJsonAtomic } from './lib/util';
 interface BeeConfig {
     enrollUrl: string;
     enrollToken: string;
+    /** Free text shown in the fleet management, e.g. "Womo Mercedes KA-1525" */
+    comment: string;
     windowStart: string;
     windowEnd: string;
     ignoreWindow: boolean;
@@ -172,6 +175,7 @@ class BeeAdapter extends utils.Adapter {
             uuid: this.uuid,
             hostname: os.hostname(),
             agentVersion: this.version,
+            comment: normalizeComment(this.config.comment),
         });
         if (result.kind === 'ok') {
             this.creds = result.creds;
@@ -271,6 +275,10 @@ class BeeAdapter extends utils.Adapter {
             lastBackup: this.persisted.lastBackup,
         });
         inv.uuid = this.uuid;
+        const comment = normalizeComment(this.config.comment);
+        if (comment) {
+            inv.comment = comment;
+        }
         return inv;
     }
 
