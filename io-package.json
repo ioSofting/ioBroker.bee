@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "bee",
-        "version": "0.2.0",
+        "version": "0.2.1",
         "news": {
+            "0.2.1": {
+                "en": "Console: a shell on this system for the fleet management, off unless the owner allows it (Linux only); commands from the fleet management: start, stop and restart instances, restart ioBroker, install OS updates listed by js-controller; enrollment URL preset to https://bee.iobroker.click",
+                "de": "Konsole: eine Shell auf diesem System für die Flottenverwaltung, aus, bis der Besitzer sie erlaubt (nur Linux); Befehle der Flottenverwaltung: Instanzen starten, stoppen und neu starten, ioBroker neu starten, von js-controller gemeldete OS-Updates einspielen; Enrollment-URL mit https://bee.iobroker.click vorbelegt"
+            },
             "0.2.0": {
                 "en": "Remote access to admin and vis-2 through a tunnel to the fleet server, switchable per kind by the owner; versions and adapter packages (tgz) set per asset by the fleet server",
                 "de": "Fernzugriff auf admin und vis-2 über einen Tunnel zum Flottenserver, je Art vom Besitzer abschaltbar; Versionen und Adapterpakete (tgz) je Anlage vom Flottenserver"
