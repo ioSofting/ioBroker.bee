@@ -1,6 +1,6 @@
 {
   "name": "iobroker.bee",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Fleet agent for ioBroker: reports inventory to a beekeeper server and converges the system to the desired version profile",
   "author": {
     "name": "Denis Haev",
@@ -27,8 +27,7 @@
   "files": [
     "admin/",
     "build/",
-    "io-package.json",
-    "LICENSE"
+    "io-package.json"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
