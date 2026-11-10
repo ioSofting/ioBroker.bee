@@ -1,0 +1,86 @@
+# Checks every push and pull request. A tag vX.Y.Z (or vX.Y.Z-beta.N) publishes the version on npm
+# through trusted publishing (OIDC, no token): the package iobroker.bee trusts this workflow file of
+# ioBroker/ioBroker.bee. Prereleases get the npm tag "next".
+#
+# Release: version in package.json, io-package.json (with news) and package-lock.json, changelog in the
+# README as "### X.Y.Z (date)", commit, then: git tag vX.Y.Z && git push origin vX.Y.Z
+
+name: Test and Release
+
+on:
+    push:
+        branches: [main]
+        tags:
+            - 'v[0-9]+.[0-9]+.[0-9]+'
+            - 'v[0-9]+.[0-9]+.[0-9]+-**'
+    pull_request: {}
+
+concurrency:
+    group: ${{ github.ref }}
+    cancel-in-progress: true
+
+jobs:
+    check-and-test:
+        runs-on: ubuntu-latest
+        strategy:
+            matrix:
+                node-version: [20.x, 22.x, 24.x]
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: ${{ matrix.node-version }}
+                  cache: npm
+            - run: npm ci
+            - run: npm run check-ts
+            - run: npm run lint
+            - run: npm test
+            - run: npm run build
+
+    deploy:
+        needs: [check-and-test]
+        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
+        runs-on: ubuntu-latest
+        permissions:
+            # GitHub release
+            contents: write
+            # npm trusted publishing (OIDC)
+            id-token: write
+        steps:
+            - uses: actions/checkout@v4
+            - uses: actions/setup-node@v4
+              with:
+                  node-version: 24.x
+                  registry-url: https://registry.npmjs.org
+            # trusted publishing needs npm 11.5.1 or newer
+            - run: npm install -g npm@latest
+            - run: npm ci
+
+            - name: Tag, package.json and io-package.json name the same version
+              run: |
+                  TAG="${GITHUB_REF_NAME#v}"
+                  PKG=$(node -p "require('./package.json').version")
+                  IO=$(node -p "require('./io-package.json').common.version")
+                  if [ "$TAG" != "$PKG" ] || [ "$TAG" != "$IO" ]; then
+                      echo "Tag $TAG, package.json $PKG, io-package.json $IO"
+                      exit 1
+                  fi
+
+            - name: Publish on npm
+              # prepublishOnly builds; provenance is added by npm for a public repository
+              run: |
+                  if [[ "$GITHUB_REF_NAME" == *-* ]]; then
+                      npm publish --tag next
+                  else
+                      npm publish
+                  fi
+
+            - name: GitHub release with the changelog of this version
+              env:
+                  GH_TOKEN: ${{ github.token }}
+              run: |
+                  TAG="${GITHUB_REF_NAME#v}"
+                  awk -v v="### ${TAG}" 'index($0, v) == 1 { f = 1; next } /^##/ { if (f) exit } f' README.md > notes.md
+                  PRE=""
+                  if [[ "$TAG" == *-* ]]; then PRE="--prerelease"; fi
+                  gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file notes.md $PRE
