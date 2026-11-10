@@ -92,6 +92,10 @@ npm test          # unit tests of planner, preflight and diff
 
 ## Changelog
 
+### **WORK IN PROGRESS**
+
+- Instances that run as a web extension inside a web instance (`common.webExtension` and `native.webInstance`, e.g. mcp) have no process of their own; they count as running when their web instance runs, as in admin. Before, the fleet management showed them as not running, and the check after an update of such an adapter would have rolled it back.
+
 ### 0.2.2 (2026-11-10)
 
 - Console: a shell on this system for the fleet management, in the browser of the technician; off unless the owner allows it, Linux with `script` (util-linux) only

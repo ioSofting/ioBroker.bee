@@ -81,6 +81,8 @@ export interface InstanceInventory {
     enabled: boolean;
     alive: boolean;
     mode?: string;
+    /** Runs as a web extension inside this web instance ("*": every one), without a process of its own */
+    webInstance?: string;
 }
 
 /** Slowly changing inventory. Volatile metrics belong into StateMessage, they would flood the history. */

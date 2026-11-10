@@ -6,6 +6,7 @@ import {
     type OsPackage,
     type OsUpdates,
 } from './protocol';
+import { webExtensionOf, webText } from './instances';
 import { compareVersions } from './util';
 
 /**
@@ -90,6 +91,11 @@ export function instanceRefusal(
     }
     if (action === 'restart' && !obj.common.enabled) {
         return `Instanz ${id} ist ausgeschaltet; starten statt neu starten`;
+    }
+    const web = webExtensionOf(obj);
+    if (action === 'restart' && web) {
+        // web ignores a write of the object that changes nothing
+        return `${id} läuft als Erweiterung in ${webText(web)} und hat keinen eigenen Prozess; dafür ${webText(web)} neu starten`;
     }
     return null;
 }

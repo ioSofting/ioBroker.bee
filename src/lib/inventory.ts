@@ -1,6 +1,7 @@
 import { execFile } from 'node:child_process';
 import { readFile, statfs } from 'node:fs/promises';
 import os from 'node:os';
+import { instanceRunning, webExtensionOf } from './instances';
 import type { AdapterInventory, InstanceInventory, Inventory } from './protocol';
 
 /**
@@ -97,14 +98,27 @@ export async function collectInventory(
     });
     const instances: Record<string, InstanceInventory> = {};
     let offDevice = false;
+    // web instances on any host, for extensions that run in every one of them
+    const webInstances = (): Promise<string[]> =>
+        Promise.resolve(
+            instanceRows.rows
+                .map(r => r.value as ioBroker.InstanceObject | undefined)
+                .filter(o => o?.common.name === 'web' && o.common.enabled)
+                .map(o => o!._id.replace(/^system\.adapter\./, '')),
+        );
     for (const row of instanceRows.rows) {
         const obj = row.value as ioBroker.InstanceObject | undefined;
         if (!obj || obj.common.host !== adapter.host) {
             continue;
         }
         const id = obj._id.replace(/^system\.adapter\./, '');
-        const alive = await adapter.getForeignStateAsync(`${obj._id}.alive`);
-        instances[id] = { enabled: !!obj.common.enabled, alive: !!alive?.val, mode: obj.common.mode };
+        const web = webExtensionOf(obj);
+        instances[id] = {
+            enabled: !!obj.common.enabled,
+            alive: await instanceRunning(obj, sid => adapter.getForeignStateAsync(sid), webInstances),
+            mode: obj.common.mode,
+            ...(web ? { webInstance: web } : {}),
+        };
         if (obj.common.name === 'backitup' && obj.common.enabled) {
             const native = obj.native as Record<string, unknown>;
             offDevice ||= OFF_DEVICE_KEYS.some(k => native[k] === true);

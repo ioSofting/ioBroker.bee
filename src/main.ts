@@ -12,6 +12,7 @@ import {
     supportedCommands,
 } from './lib/commands';
 import { consoleUser, findScript, MAX_SHELLS, startShell } from './lib/console';
+import { instanceRunning } from './lib/instances';
 import { enroll } from './lib/enrollment';
 import { collectInventory, cpuTemperature, diskInfo, installedVersions, sdWrites } from './lib/inventory';
 import { JobManager, type JobFile } from './lib/jobs';
@@ -710,10 +711,23 @@ class BeeAdapter extends utils.Adapter {
             if (obj.common.mode !== 'daemon') {
                 continue;
             }
-            const alive = await this.getForeignStateAsync(`${obj._id}.alive`);
-            list.push({ id: obj._id.replace('system.adapter.', ''), alive: !!alive?.val });
+            const alive = await instanceRunning(
+                obj,
+                id => this.getForeignStateAsync(id),
+                () => this.webInstances(),
+            );
+            list.push({ id: obj._id.replace('system.adapter.', ''), alive });
         }
         return list;
+    }
+
+    /** Enabled web instances, e.g. ["web.0"], for web extensions that run in every one of them */
+    private async webInstances(): Promise<string[]> {
+        const res = await this.getObjectViewAsync('system', 'instance', {
+            startkey: 'system.adapter.web.',
+            endkey: 'system.adapter.web.香',
+        });
+        return res.rows.filter(r => r.value?.common.enabled).map(r => r.id.replace('system.adapter.', ''));
     }
 
     // ------------------------------------------------------------------ reconciliation
