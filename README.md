@@ -108,7 +108,7 @@ npm test          # unit tests of planner, preflight and diff
 
 ## Changelog
 
-### **WORK IN PROGRESS**
+### 0.2.4 (2026-11-10)
 
 - Settings, tab *Remote access*: "Remote access in progress" instead of "Access right now", and `info.remoteAccessBy` says `keiner` when nobody accesses the system
 - Settings, tab *Enrollment*: the connection to the fleet management in green or red, the status (now naming the server) next to it

@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "bee",
-        "version": "0.2.3",
+        "version": "0.2.4",
         "news": {
+            "0.2.4": {
+                "en": "Updates Node.js to the major line of the profile as the first step of a job, and goes back to the old version if the instances do not run again under the new one; settings show the connection in color and the server; instances without a process refuse commands",
+                "de": "Hebt Node.js als ersten Schritt eines Auftrags auf die Hauptversion des Profils und kehrt zur alten Version zurück, wenn die Instanzen unter der neuen nicht wieder laufen; die Einstellungen zeigen die Verbindung farbig und den Server; Instanzen ohne Prozess lehnen Befehle ab"
+            },
             "0.2.3": {
                 "en": "Instances running as a web extension inside a web instance (e.g. mcp) and adapters with only files for web (e.g. material) have no process of their own and are no longer reported as not running; the check after an update no longer rolls them back",
                 "de": "Instanzen, die als Web-Erweiterung in einer web-Instanz laufen (etwa mcp), und Adapter nur mit Dateien für web (etwa material) haben keinen eigenen Prozess und gelten nicht mehr als nicht laufend; die Prüfung nach einem Update rollt sie nicht mehr zurück"
