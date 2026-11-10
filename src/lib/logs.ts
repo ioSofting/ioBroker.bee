@@ -1,5 +1,5 @@
-import { createReadStream } from 'node:fs';
-import { readdir, stat } from 'node:fs/promises';
+import { createReadStream, existsSync, readFileSync } from 'node:fs';
+import { lstat, readdir } from 'node:fs/promises';
 import http from 'node:http';
 import https from 'node:https';
 import { basename, isAbsolute, join, normalize, resolve } from 'node:path';
@@ -18,7 +18,40 @@ import { MAX_LOG_UPLOAD_BYTES, type LogFile } from './protocol';
 const MAX_FILES = 200;
 
 /**
- * Directories of the file transports in iobroker.json (log.transport.*.filename, e.g. "log/iobroker")
+ * Path of iobroker.json, found like js-controller does (getConfigFileName): IOBROKER_DATA_DIR, iobroker-data
+ * next to node_modules, then the places of a development installation. Not utils.getConfig() of adapter-core:
+ * that reads only conf/iobroker.json of js-controller, which a normal installation does not have.
+ *
+ * @param controllerDir directory of js-controller, e.g. /opt/iobroker/node_modules/iobroker.js-controller
+ * @param env environment of the process
+ * @returns null if there is none
+ */
+export function configFile(controllerDir: string, env: NodeJS.ProcessEnv = process.env): string | null {
+    const dataDir = env.IOBROKER_DATA_DIR;
+    const candidates = [
+        ...(dataDir ? [join(isAbsolute(dataDir) ? dataDir : join(controllerDir, dataDir), 'iobroker.json')] : []),
+        join(controllerDir, '..', '..', 'iobroker-data', 'iobroker.json'),
+        join(controllerDir, 'conf', 'iobroker.json'),
+        join(controllerDir, 'data', 'iobroker.json'),
+    ];
+    return candidates.find(f => existsSync(f)) ?? null;
+}
+
+/**
+ * Content of iobroker.json
+ *
+ * @param controllerDir see configFile
+ * @param env see configFile
+ * @returns null if there is none; throws if it is not readable
+ */
+export function readConfig(controllerDir: string, env: NodeJS.ProcessEnv = process.env): unknown {
+    const file = configFile(controllerDir, env);
+    return file ? JSON.parse(readFileSync(file, 'utf8')) : null;
+}
+
+/**
+ * Directories of the file transports in iobroker.json (log.transport.*.filename, e.g. "log/iobroker").
+ * Without any (no iobroker.json, no file transport) the default of js-controller: log below the root.
  *
  * @param config content of iobroker.json
  * @param root directory of ioBroker, e.g. /opt/iobroker; relative names are below it
@@ -34,7 +67,7 @@ export function logDirs(config: unknown, root: string): string[] {
         const dir = filename.includes('/') ? filename.slice(0, filename.lastIndexOf('/')) || '/' : '.';
         dirs.add(isAbsolute(dir) || /^[A-Za-z]:/.test(dir) ? normalize(dir) : resolve(root, dir));
     }
-    return [...dirs];
+    return dirs.size ? [...dirs] : [resolve(root, 'log')];
 }
 
 /** A file name the fleet management may ask for: no path, a log or a compressed log */
@@ -49,7 +82,8 @@ export function validLogName(name: unknown): name is string {
 }
 
 /**
- * The log files in these directories, newest first
+ * The log files in these directories, newest first. Without symbolic links: iobroker.current.log only
+ * points to the file of today.
  *
  * @param dirs see logDirs
  */
@@ -67,7 +101,7 @@ export async function listLogFiles(dirs: string[]): Promise<LogFile[]> {
                 continue;
             }
             try {
-                const s = await stat(join(dir, name));
+                const s = await lstat(join(dir, name));
                 if (s.isFile()) {
                     files.set(name, { name, size: s.size, mtime: Math.round(s.mtimeMs) });
                 }
@@ -91,7 +125,7 @@ export async function findLogFile(dirs: string[], name: unknown): Promise<string
     }
     for (const dir of dirs) {
         try {
-            if ((await stat(join(dir, name))).isFile()) {
+            if ((await lstat(join(dir, name))).isFile()) {
                 return join(dir, name);
             }
         } catch {

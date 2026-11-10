@@ -17,7 +17,7 @@ import { instanceRunning, onlyWww } from './lib/instances';
 import { enroll } from './lib/enrollment';
 import { collectInventory, cpuTemperature, diskInfo, installedVersions, sdWrites } from './lib/inventory';
 import { JobManager, type JobFile } from './lib/jobs';
-import { findLogFile, listLogFiles, logDirs, uploadLog } from './lib/logs';
+import { findLogFile, listLogFiles, logDirs, readConfig, uploadLog } from './lib/logs';
 import {
     engineConflicts,
     launchNodeUpdate,
@@ -376,17 +376,18 @@ class BeeAdapter extends utils.Adapter {
     private logDirs(): string[] {
         let config: unknown = null;
         try {
-            config = utils.getConfig();
+            config = readConfig(utils.controllerDir);
         } catch (e) {
-            this.log.debug(`iobroker.json not readable: ${e.message}`);
+            this.log.warn(`iobroker.json not readable: ${e.message}`);
         }
         return logDirs(config, join(utils.controllerDir, '..', '..'));
     }
 
     private async logListCommand(ref: string): Promise<void> {
         try {
-            const files = await listLogFiles(this.logDirs());
-            await this.reply(ref, 'done', `${files.length} Log-Dateien`, files);
+            const dirs = this.logDirs();
+            const files = await listLogFiles(dirs);
+            await this.reply(ref, 'done', `${files.length} Log-Dateien in ${dirs.join(', ')}`, files);
         } catch (e) {
             await this.reply(ref, 'error', e.message);
         }

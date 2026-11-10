@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
-import { mkdirSync, mkdtempSync, rmSync, utimesSync, writeFileSync } from 'node:fs';
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, utimesSync, writeFileSync } from 'node:fs';
 import http from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
 import { join, normalize, resolve } from 'node:path';
 import { after, describe, it } from 'node:test';
 import { gunzipSync, gzipSync } from 'node:zlib';
-import { findLogFile, listLogFiles, logDirs, uploadLog, validLogName } from '../src/lib/logs';
+import { configFile, findLogFile, listLogFiles, logDirs, readConfig, uploadLog, validLogName } from '../src/lib/logs';
 
 const temp = mkdtempSync(join(tmpdir(), 'bee-logs-'));
 after(() => rmSync(temp, { recursive: true, force: true }));
@@ -26,7 +26,28 @@ describe('logs', () => {
         };
         assert.deepEqual(logDirs(config, root), [join(root, 'log'), normalize('/var/log/iob')]);
         assert.deepEqual(logDirs({ log: { transport: { file1: { type: 'file' } } } }, root), [join(root, 'log')]);
-        assert.deepEqual(logDirs(null, root), []);
+        // no iobroker.json or no file transport: the default of js-controller
+        assert.deepEqual(logDirs(null, root), [join(root, 'log')]);
+        assert.deepEqual(logDirs({ log: { transport: { syslog1: { type: 'syslog' } } } }, root), [join(root, 'log')]);
+    });
+
+    it('finds iobroker.json like js-controller, not in conf of js-controller only', () => {
+        const root = join(temp, 'root');
+        const controller = join(root, 'node_modules', 'iobroker.js-controller');
+        mkdirSync(join(controller, 'conf'), { recursive: true });
+        assert.equal(configFile(controller, {}), null);
+        assert.equal(readConfig(controller, {}), null);
+
+        mkdirSync(join(root, 'iobroker-data'));
+        writeFileSync(join(root, 'iobroker-data', 'iobroker.json'), '{"log":{"transport":{"f":{"type":"file"}}}}');
+        writeFileSync(join(controller, 'conf', 'iobroker.json'), '{}');
+        assert.equal(configFile(controller, {}), join(root, 'iobroker-data', 'iobroker.json'));
+        assert.deepEqual(readConfig(controller, {}), { log: { transport: { f: { type: 'file' } } } });
+
+        const other = join(temp, 'data-elsewhere');
+        mkdirSync(other);
+        writeFileSync(join(other, 'iobroker.json'), '{}');
+        assert.equal(configFile(controller, { IOBROKER_DATA_DIR: other }), join(other, 'iobroker.json'));
     });
 
     it('takes only plain names of log files', () => {
@@ -48,6 +69,11 @@ describe('logs', () => {
         writeFileSync(join(a, 'iobroker-audit.json'), '{}');
         writeFileSync(join(b, 'iobroker.2026-11-01.log.gz'), gzipSync('x'));
         mkdirSync(join(b, 'dir.log'));
+        try {
+            symlinkSync(join(a, 'iobroker.2026-11-10.log'), join(a, 'iobroker.current.log'));
+        } catch {
+            // Windows without the right for symbolic links
+        }
         utimesSync(join(a, 'iobroker.2026-11-09.log'), new Date('2026-11-09'), new Date('2026-11-09'));
         utimesSync(join(a, 'iobroker.2026-11-10.log'), new Date('2026-11-10'), new Date('2026-11-10'));
         utimesSync(join(b, 'iobroker.2026-11-01.log.gz'), new Date('2026-11-01'), new Date('2026-11-01'));
