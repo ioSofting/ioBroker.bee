@@ -25,7 +25,7 @@ Fleet agent for ioBroker. It connects a delivered ioBroker system (in a house, a
 
 If the owner installs adapters that are not part of the profile, the agent reports them, stops automatic updates and informs the owner via an ioBroker notification. The fleet manager sees the installation in the deviation list and can bring it back to managed mode (removing the own adapters or tolerating them as exceptions).
 
-### Remote access to admin and vis-2
+### Remote access to admin, vis-2 and the console
 
 A technician of the fleet manager can open admin or vis-2 of the system from the fleet management, without ioBroker.pro and without open ports on the device:
 
@@ -35,11 +35,13 @@ A technician of the fleet manager can open admin or vis-2 of the system from the
 
 The owner can switch off each kind in the tab *Remote access*; the agent then refuses the session and the fleet management shows why. Running sessions are visible in `info.remoteAccess`. After a connection loss the agent reconnects until the session expires, also across restarts of the adapter. The server ends the session early when the technician ends it or the device is revoked.
 
+**Console.** Off until the owner allows it (*Allow the console*), and only on Linux with `script` of util-linux (part of every Debian). Then every terminal the technician opens in the browser is a login shell on this system, as the user ioBroker runs as (usually `iobroker`), started in the ioBroker directory. No native module: `script` gives the shell a pseudo terminal, `stty` sets the size of its window. At most 4 shells per session; when the session or the connection ends, the shells get SIGHUP. `info.remoteAccessBy` shows how many shells are open. Whatever the shell may do beyond the rights of that user belongs in a sudo allow list for single commands, not in a general sudo.
+
 ## Configuration
 
 | Tab | Setting | Meaning |
 | --- | --- | --- |
-| Enrollment | Enrollment URL, token | from the factory image or the fleet manager; the token is stored encrypted |
+| Enrollment | Enrollment URL, token | from the factory image or the fleet manager; the URL is preset to `https://bee.iobroker.click`, the token is stored encrypted |
 | | comment | free text shown in the fleet management next to the installation, e.g. `Womo Mercedes KA-1525`; sent on enrollment and with the inventory. It helps to recognize the installation but proves nothing: the identity is the device certificate |
 | Maintenance window | start, end | daily window for updates, may span midnight (e.g. 22:00–05:00) |
 | | conditions | table of `state operator value`, e.g. `victron.0.soc >= 50`, `modem.0.roaming == false`, `presence.0.home == false` |
@@ -48,6 +50,7 @@ The owner can switch off each kind in the tab *Remote access*; the agent then re
 | | observation after update, start timeout | verification of a rollout |
 | | backup before every update | only disable for tests |
 | Remote access | allow admin, allow vis-2 | whether the fleet manager may open the interface remotely (both allowed by default) |
+| | allow the console | a shell on this system for the fleet manager (off by default, Linux only) |
 
 ## States
 
@@ -66,7 +69,7 @@ Files in `iobroker-data/bee.0/`: `device.json` (certificate and key, mode 0600),
 
 ## Not in this version
 
-Platform updates of js-controller and Node.js (with a systemd watchdog outside ioBroker), vis-2 project distribution, remote console (PTY), signed artifacts. See the concept of the beekeeper project.
+Platform updates of js-controller and Node.js (with a systemd watchdog outside ioBroker), vis-2 project distribution, recording of console sessions, signed artifacts. See the concept of the beekeeper project.
 
 ## Development
 
@@ -79,6 +82,11 @@ npm test          # unit tests of planner, preflight and diff
 `src/lib/protocol.ts` and `src/lib/tunnel.ts` are shared with the server and must stay identical to `beekeeper-server/src/protocol.ts` and `beekeeper-server/src/tunnel.ts`.
 
 ## Changelog
+
+### **WORK IN PROGRESS**
+
+- Console: a shell on this system for the fleet management, in the browser of the technician; off unless the owner allows it, Linux with `script` (util-linux) only
+- Enrollment URL preset to `https://bee.iobroker.click` (new instances)
 
 ### 0.2.0 (2026-11-10)
 

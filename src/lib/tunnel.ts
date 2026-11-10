@@ -9,7 +9,8 @@
  *
  *   type (1 byte) | stream id (4 bytes, big endian) | payload
  *
- *   OPEN   server -> agent  new stream; the agent connects it to the local web interface
+ *   OPEN   server -> agent  new stream; the agent connects it to the local web interface, or starts a shell
+ *                            (console, see CONSOLE)
  *   DATA   both             bytes of the stream, at most MAX_PAYLOAD
  *   END    both             no more bytes in this direction (half close)
  *   RESET  both             abort; payload: reason (UTF-8)
@@ -43,6 +44,61 @@ export const CLOSE = {
     /** Another connection of the same session took over */
     REPLACED: 4009,
 } as const;
+
+/**
+ * A stream of a console session carries messages instead of raw bytes, because besides the bytes of the
+ * terminal the size of the window travels too:
+ *
+ *   type (1 byte) | length (4 bytes, big endian) | payload
+ *
+ *   DATA    both             bytes of the terminal: input of the browser, output of the shell
+ *   RESIZE  server -> agent  columns (2 bytes) | rows (2 bytes)
+ *   EXIT    agent -> server  the shell ended; payload: exit code or signal (UTF-8)
+ */
+export const CONSOLE = { DATA: 1, RESIZE: 2, EXIT: 3 } as const;
+const MAX_CONSOLE_MESSAGE = 1024 * 1024;
+
+export function consoleMessage(type: number, payload: Buffer = Buffer.alloc(0)): Buffer {
+    const buf = Buffer.allocUnsafe(5 + payload.length);
+    buf[0] = type;
+    buf.writeUInt32BE(payload.length, 1);
+    payload.copy(buf, 5);
+    return buf;
+}
+
+export function resizeMessage(cols: number, rows: number): Buffer {
+    const payload = Buffer.allocUnsafe(4);
+    payload.writeUInt16BE(cols, 0);
+    payload.writeUInt16BE(rows, 2);
+    return consoleMessage(CONSOLE.RESIZE, payload);
+}
+
+/** Splits the bytes of a console stream into messages */
+export class ConsoleReader {
+    private buf: Buffer = Buffer.alloc(0);
+
+    constructor(private readonly onMessage: (type: number, payload: Buffer) => void) {}
+
+    /** @returns false if the stream is broken (message too large); then nothing more comes out */
+    push(chunk: Buffer): boolean {
+        this.buf = this.buf.length ? Buffer.concat([this.buf, chunk]) : chunk;
+        while (this.buf.length >= 5) {
+            const length = this.buf.readUInt32BE(1);
+            if (length > MAX_CONSOLE_MESSAGE) {
+                this.buf = Buffer.alloc(0);
+                return false;
+            }
+            if (this.buf.length < 5 + length) {
+                break;
+            }
+            const type = this.buf[0];
+            const payload = this.buf.subarray(5, 5 + length);
+            this.buf = this.buf.subarray(5 + length);
+            this.onMessage(type, payload);
+        }
+        return true;
+    }
+}
 
 function frame(type: number, id: number, payload?: Buffer): Buffer {
     const buf = Buffer.allocUnsafe(5 + (payload?.length ?? 0));

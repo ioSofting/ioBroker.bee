@@ -21,7 +21,7 @@
                 "enrollUrl": {
                     "type": "text",
                     "label": { "en": "Enrollment URL", "de": "Enrollment-URL" },
-                    "placeholder": "https://beekeeper.example.com",
+                    "placeholder": "https://bee.iobroker.click",
                     "xs": 12,
                     "sm": 12,
                     "md": 6,
@@ -73,8 +73,8 @@
                 "hdr3": {
                     "type": "staticText",
                     "text": {
-                        "en": "Service staff of the fleet management can open admin or vis-2 of this system from afar, without ioBroker.pro and without open ports: on request, this adapter connects to the fleet server for the duration of the access. Every access is logged with person and purpose, and is shown below while it lasts. Changing these settings ends running accesses.",
-                        "de": "Servicepersonal der Flottenverwaltung kann admin oder vis-2 dieses Systems aus der Ferne öffnen, ohne ioBroker.pro und ohne offene Ports: auf Anforderung verbindet sich dieser Adapter für die Dauer des Zugriffs mit dem Flottenserver. Jeder Zugriff wird mit Person und Zweck protokolliert und unten angezeigt, solange er läuft. Eine Änderung dieser Einstellungen beendet laufende Zugriffe."
+                        "en": "Service staff of the fleet management can open admin or vis-2 of this system from afar, without ioBroker.pro and without open ports: on request, this adapter connects to the fleet server for the duration of the access. Every access is logged with person and purpose, and is shown below while it lasts. Changing these settings ends running accesses. The console is off until you allow it here.",
+                        "de": "Servicepersonal der Flottenverwaltung kann admin oder vis-2 dieses Systems aus der Ferne öffnen, ohne ioBroker.pro und ohne offene Ports: auf Anforderung verbindet sich dieser Adapter für die Dauer des Zugriffs mit dem Flottenserver. Jeder Zugriff wird mit Person und Zweck protokolliert und unten angezeigt, solange er läuft. Eine Änderung dieser Einstellungen beendet laufende Zugriffe. Die Konsole ist aus, bis Sie sie hier erlauben."
                     },
                     "xs": 12,
                     "sm": 12,
@@ -103,6 +103,20 @@
                         "en": "vis-2 shows the values of this system, e.g. consumption",
                         "de": "vis-2 zeigt die Werte dieses Systems, z. B. Verbräuche"
                     },
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 6,
+                    "lg": 6,
+                    "xl": 6
+                },
+                "allowConsole": {
+                    "type": "checkbox",
+                    "label": { "en": "Allow the console (a shell on this system)", "de": "Konsole erlauben (Shell auf diesem System)" },
+                    "help": {
+                        "en": "Only Linux. The shell runs as the user of ioBroker: full access to ioBroker, its data and, depending on the setup, to the system",
+                        "de": "Nur Linux. Die Shell läuft als Nutzer von ioBroker: voller Zugriff auf ioBroker, seine Daten und, je nach Einrichtung, auf das System"
+                    },
+                    "newLine": true,
                     "xs": 12,
                     "sm": 12,
                     "md": 6,

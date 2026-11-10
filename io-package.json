@@ -132,11 +132,12 @@
         "enrollToken"
     ],
     "native": {
-        "enrollUrl": "",
+        "enrollUrl": "https://bee.iobroker.click",
         "enrollToken": "",
         "comment": "",
         "allowAdmin": true,
         "allowVis": true,
+        "allowConsole": false,
         "windowStart": "02:00",
         "windowEnd": "05:00",
         "ignoreWindow": false,

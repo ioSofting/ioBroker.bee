@@ -2,6 +2,8 @@ import * as utils from '@iobroker/adapter-core';
 import { mkdirSync } from 'node:fs';
 import os from 'node:os';
 import { join } from 'node:path';
+import type { Duplex } from 'node:stream';
+import { consoleUser, findScript, MAX_SHELLS, startShell } from './lib/console';
 import { enroll } from './lib/enrollment';
 import { collectInventory, cpuTemperature, diskInfo, installedVersions, sdWrites } from './lib/inventory';
 import { JobManager, type JobFile } from './lib/jobs';
@@ -32,6 +34,7 @@ import {
     type AccessTarget,
 } from './lib/remote';
 import { Transport, trustedCas } from './lib/transport';
+import { CONSOLE, consoleMessage } from './lib/tunnel';
 import { diffFlat, flatten, readJson, writeJsonAtomic } from './lib/util';
 
 interface BeeConfig {
@@ -42,6 +45,8 @@ interface BeeConfig {
     /** Remote access from the fleet management to admin, and to web/vis-2 */
     allowAdmin: boolean;
     allowVis: boolean;
+    /** A shell on this system for the fleet management (off unless the owner switches it on) */
+    allowConsole: boolean;
     windowStart: string;
     windowEnd: string;
     ignoreWindow: boolean;
@@ -86,6 +91,8 @@ class BeeAdapter extends utils.Adapter {
     private unloading = false;
     /** Open remote access sessions by session id */
     private readonly tunnels = new Map<string, TunnelClient>();
+    /** Running shells of the console per session */
+    private readonly shells = new Map<string, number>();
 
     public constructor(options: Partial<utils.AdapterOptions> = {}) {
         super({ ...options, name: 'bee' });
@@ -305,7 +312,42 @@ class BeeAdapter extends utils.Adapter {
         if (this.config.allowVis !== false) {
             kinds.push('vis');
         }
+        if (this.config.allowConsole === true && findScript()) {
+            kinds.push('console');
+        }
         return kinds;
+    }
+
+    /** One shell for a stream of a console session, at most MAX_SHELLS at the same time */
+    private openShell(t: TunnelRequest, stream: Duplex): void {
+        const running = this.shells.get(t.id) ?? 0;
+        if (running >= MAX_SHELLS) {
+            stream.end(
+                Buffer.concat([
+                    consoleMessage(CONSOLE.DATA, Buffer.from(`Höchstens ${MAX_SHELLS} Shells je Sitzung.\r\n`)),
+                    consoleMessage(CONSOLE.EXIT, Buffer.from('zu viele Shells')),
+                ]),
+            );
+            return;
+        }
+        this.shells.set(t.id, running + 1);
+        void this.updateAccessStates();
+        startShell(stream, {
+            cwd: join(utils.controllerDir, '..', '..'),
+            log: this.log,
+            by: t.by,
+            onEnd: () => {
+                const n = (this.shells.get(t.id) ?? 1) - 1;
+                if (n > 0) {
+                    this.shells.set(t.id, n);
+                } else {
+                    this.shells.delete(t.id);
+                }
+                if (!this.unloading) {
+                    void this.updateAccessStates();
+                }
+            },
+        });
     }
 
     /**
@@ -325,8 +367,17 @@ class BeeAdapter extends utils.Adapter {
         }
         let refusal: string | null = null;
         let target: AccessTarget | null = null;
+        const isConsole = t.kind === 'console';
         if (!this.allowedAccess().includes(t.kind)) {
-            refusal = `Fernzugriff auf ${ACCESS_LABEL[t.kind]} ist am Gerät abgeschaltet`;
+            refusal = !isConsole
+                ? `Fernzugriff auf ${ACCESS_LABEL[t.kind]} ist am Gerät abgeschaltet`
+                : this.config.allowConsole === true
+                  ? 'Die Konsole braucht Linux mit script (util-linux)'
+                  : 'Die Konsole ist am Gerät nicht freigegeben';
+        } else if (isConsole) {
+            if (this.tunnels.size >= 4) {
+                refusal = 'Zu viele gleichzeitige Fernzugriffe auf dem Gerät';
+            }
         } else {
             // only an instance of this kind on this host, whatever the server asks for
             target = chooseTarget(await findTargets(this, t.kind), t.instance);
@@ -340,12 +391,14 @@ class BeeAdapter extends utils.Adapter {
         }
         const client = new TunnelClient(t, {
             target,
+            ...(isConsole && !refusal ? { handler: (stream: Duplex) => this.openShell(t, stream) } : {}),
             refusal,
             ca: trustedCas(this.creds?.ca || ''),
             log: this.log,
             onEnd: (c, reason) => {
                 if (this.tunnels.get(t.id) === c) {
                     this.tunnels.delete(t.id);
+                    this.shells.delete(t.id);
                     this.log.info(`Remote access to ${ACCESS_LABEL[t.kind]} by ${t.by} ended (${reason})`);
                 }
                 if (!this.unloading) {
@@ -359,7 +412,7 @@ class BeeAdapter extends utils.Adapter {
         } else {
             this.tunnels.set(t.id, client);
             this.log.info(
-                `Remote access to ${ACCESS_LABEL[t.kind]} (${target!.instance}) ${resumed ? 'resumed' : 'opened'} by ${t.by} until ${new Date(t.expiresAt).toLocaleTimeString()}: ${t.purpose}`,
+                `Remote access to ${ACCESS_LABEL[t.kind]}${target ? ` (${target.instance})` : ''} ${resumed ? 'resumed' : 'opened'} by ${t.by} until ${new Date(t.expiresAt).toLocaleTimeString()}: ${t.purpose}`,
             );
         }
         client.start();
@@ -374,6 +427,15 @@ class BeeAdapter extends utils.Adapter {
         );
     }
 
+    /** " (2 Shells offen)" for a console */
+    private shellText(t: TunnelRequest): string {
+        if (t.kind !== 'console') {
+            return '';
+        }
+        const n = this.shells.get(t.id) ?? 0;
+        return n ? ` (${n} ${n === 1 ? 'Shell' : 'Shells'} offen)` : '';
+    }
+
     /** Shows the owner who is connected right now, and why */
     private async updateAccessStates(): Promise<void> {
         const active = [...this.tunnels.values()].map(c => c.req);
@@ -383,7 +445,7 @@ class BeeAdapter extends utils.Adapter {
             active
                 .map(
                     t =>
-                        `${ACCESS_LABEL[t.kind]}${t.instance ? ` (${t.instance})` : ''}: ${t.by}, ${t.purpose} (bis ${new Date(t.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`,
+                        `${ACCESS_LABEL[t.kind]}${t.instance ? ` (${t.instance})` : ''}${this.shellText(t)}: ${t.by}, ${t.purpose} (bis ${new Date(t.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`,
                 )
                 .join('; '),
             true,
@@ -409,6 +471,9 @@ class BeeAdapter extends utils.Adapter {
             admin: describeTargets(await findTargets(this, 'admin')),
             vis: describeTargets(await findTargets(this, 'vis')),
         };
+        if (inv.remoteAccess.includes('console')) {
+            inv.consoleUser = consoleUser();
+        }
         return inv;
     }
 

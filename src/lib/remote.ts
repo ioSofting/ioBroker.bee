@@ -8,6 +8,7 @@ import { CLOSE, Mux, REFUSE_HEADER, type TunnelStream } from './tunnel';
  * Remote access to admin and vis-2 without ioBroker.pro and without open ports: on request of the server
  * (job "tunnel") the agent opens a WebSocket to the server and carries the connections of the browser to
  * the local web interface. Only to that one: the target is chosen here, never by the server.
+ * For the console every stream is a shell instead (console.ts).
  */
 
 /** A local web interface, with the address to connect to (stays on the device) */
@@ -15,14 +16,14 @@ export interface AccessTarget extends AccessInstance {
     host: string;
 }
 
-export const ACCESS_LABEL: Record<AccessKind, string> = { admin: 'admin', vis: 'vis-2' };
+export const ACCESS_LABEL: Record<AccessKind, string> = { admin: 'admin', vis: 'vis-2', console: 'Konsole' };
 
 /**
  * Local web interfaces for a kind: the enabled admin instances, or web instances for vis-2 (only with vis-2
  * installed), on this host, in the order of the instance number.
  */
 export async function findTargets(adapter: ioBroker.Adapter, kind: AccessKind): Promise<AccessTarget[]> {
-    if (kind === 'vis' && !(await adapter.getForeignObjectAsync('system.adapter.vis-2'))) {
+    if (kind === 'console' || (kind === 'vis' && !(await adapter.getForeignObjectAsync('system.adapter.vis-2')))) {
         return [];
     }
     const name = kind === 'admin' ? 'admin' : 'web';
@@ -88,8 +89,10 @@ export function trustedTunnelUrl(url: string, serverUrls: string[]): boolean {
 }
 
 export interface TunnelClientOptions {
-    /** Where the streams go; null together with a refusal */
+    /** Where the streams go; null together with a refusal, or with a handler */
     target: AccessTarget | null;
+    /** Takes each stream instead of a target (the console) */
+    handler?: (stream: TunnelStream) => void;
     /** Reason to refuse the session instead of opening the tunnel */
     refusal: string | null;
     /** Trusted CAs for the server certificate */
@@ -218,6 +221,10 @@ export class TunnelClient {
     }
 
     private onStream(stream: TunnelStream): void {
+        if (this.opts.handler) {
+            this.opts.handler(stream);
+            return;
+        }
         const t = this.opts.target;
         if (!t) {
             stream.destroy(new Error('no target'));

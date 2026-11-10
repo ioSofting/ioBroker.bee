@@ -104,6 +104,8 @@ export interface Inventory {
      * it takes the first instance. Not part of the history.
      */
     accessTargets?: Partial<Record<AccessKind, AccessInstance[]>>;
+    /** User the shell of the console runs as; only reported while the console is allowed */
+    consoleUser?: string;
     software: {
         jsController: string;
         node: string;
@@ -198,9 +200,12 @@ export interface JobMessage {
     tunnel?: TunnelRequest;
 }
 
-/** Web interfaces reachable through the tunnel: admin, or web with vis-2 */
-export type AccessKind = 'admin' | 'vis';
-export const ACCESS_KINDS: AccessKind[] = ['admin', 'vis'];
+/**
+ * Kinds of remote access through the tunnel: the web interfaces admin, and web with vis-2, and a shell on the
+ * device (console; off unless the owner switches it on, see tunnel.ts for its messages)
+ */
+export type AccessKind = 'admin' | 'vis' | 'console';
+export const ACCESS_KINDS: AccessKind[] = ['admin', 'vis', 'console'];
 
 /** A local web interface the agent can carry a remote access to (Inventory.accessTargets) */
 export interface AccessInstance {
