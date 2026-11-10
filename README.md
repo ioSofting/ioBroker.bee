@@ -92,7 +92,7 @@ npm test          # unit tests of planner, preflight and diff
 
 ## Changelog
 
-### **WORK IN PROGRESS**
+### 0.2.3 (2026-11-10)
 
 - Instances that run as a web extension inside a web instance (`common.webExtension` and `native.webInstance`, e.g. mcp) have no process of their own; they count as running when their web instance runs, as in admin. Before, the fleet management showed them as not running, and the check after an update of such an adapter would have rolled it back.
 - Instances of adapters that only bring files for web (`common.onlyWWW`, e.g. material) have no process either: no longer reported as not running, not checked after an update, no commands.

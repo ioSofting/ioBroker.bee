@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "bee",
-        "version": "0.2.2",
+        "version": "0.2.3",
         "news": {
+            "0.2.3": {
+                "en": "Instances running as a web extension inside a web instance (e.g. mcp) and adapters with only files for web (e.g. material) have no process of their own and are no longer reported as not running; the check after an update no longer rolls them back",
+                "de": "Instanzen, die als Web-Erweiterung in einer web-Instanz laufen (etwa mcp), und Adapter nur mit Dateien für web (etwa material) haben keinen eigenen Prozess und gelten nicht mehr als nicht laufend; die Prüfung nach einem Update rollt sie nicht mehr zurück"
+            },
             "0.2.2": {
                 "en": "Console: a shell on this system for the fleet management, off unless the owner allows it (Linux only); commands from the fleet management: start, stop and restart instances, restart ioBroker, install OS updates listed by js-controller; enrollment URL preset to https://bee.iobroker.click",
                 "de": "Konsole: eine Shell auf diesem System für die Flottenverwaltung, aus, bis der Besitzer sie erlaubt (nur Linux); Befehle der Flottenverwaltung: Instanzen starten, stoppen und neu starten, ioBroker neu starten, von js-controller gemeldete OS-Updates einspielen; Enrollment-URL mit https://bee.iobroker.click vorbelegt"
