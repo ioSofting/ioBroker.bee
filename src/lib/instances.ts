@@ -56,6 +56,16 @@ export async function instanceRunning(
     return false;
 }
 
+/**
+ * An adapter that only brings files for web (common.onlyWWW, e.g. material): js-controller starts no
+ * process for it, except for the old vis.
+ *
+ * @param obj the object system.adapter.<id>
+ */
+export function onlyWww(obj: ioBroker.InstanceObject): boolean {
+    return !!obj.common.onlyWWW && obj.common.name !== 'vis';
+}
+
 /** "web.0", or "web" for every web instance */
 export function webText(web: string): string {
     return web === '*' ? 'web' : web;

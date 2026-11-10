@@ -6,7 +6,7 @@ import {
     type OsPackage,
     type OsUpdates,
 } from './protocol';
-import { webExtensionOf, webText } from './instances';
+import { onlyWww, webExtensionOf, webText } from './instances';
 import { compareVersions } from './util';
 
 /**
@@ -85,6 +85,9 @@ export function instanceRefusal(
     }
     if (obj.common.host !== host) {
         return `Instanz ${id} gehört zum Host ${obj.common.host}, nicht zu ${host}`;
+    }
+    if (onlyWww(obj)) {
+        return `${id} hat keinen eigenen Prozess (nur Dateien für web)`;
     }
     if (id === own && action === 'stop') {
         return 'bee stoppen trennt die Anlage von der Flottenverwaltung; das geht nur am Gerät';

@@ -12,7 +12,7 @@ import {
     supportedCommands,
 } from './lib/commands';
 import { consoleUser, findScript, MAX_SHELLS, startShell } from './lib/console';
-import { instanceRunning } from './lib/instances';
+import { instanceRunning, onlyWww } from './lib/instances';
 import { enroll } from './lib/enrollment';
 import { collectInventory, cpuTemperature, diskInfo, installedVersions, sdWrites } from './lib/inventory';
 import { JobManager, type JobFile } from './lib/jobs';
@@ -707,8 +707,8 @@ class BeeAdapter extends utils.Adapter {
             if (!obj?.common.enabled || obj.common.host !== this.host) {
                 continue;
             }
-            // scheduled instances are not running permanently
-            if (obj.common.mode !== 'daemon') {
+            // scheduled instances are not running permanently, and for files for web nothing runs at all
+            if (obj.common.mode !== 'daemon' || onlyWww(obj)) {
                 continue;
             }
             const alive = await instanceRunning(

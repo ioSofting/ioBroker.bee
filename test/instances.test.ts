@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { instanceRefusal } from '../src/lib/commands';
-import { instanceRunning, webExtensionOf } from '../src/lib/instances';
+import { instanceRunning, onlyWww, webExtensionOf } from '../src/lib/instances';
 
 const instance = (
     id: string,
@@ -68,6 +68,14 @@ describe('instances', () => {
             true,
             'mcp with its own web server',
         );
+    });
+
+    it('knows adapters with only files for web, except the old vis', () => {
+        const material = instance('material.0', { name: 'material', onlyWWW: true });
+        assert.equal(onlyWww(material), true);
+        assert.equal(onlyWww(instance('vis.0', { name: 'vis', onlyWWW: true })), false);
+        assert.equal(onlyWww(instance('javascript.0', { name: 'javascript' })), false);
+        assert.match(instanceRefusal('material.0', 'start', 'bee.0', material, 'pi')!, /keinen eigenen Prozess/);
     });
 
     it('does not restart a web extension (web would ignore it), but starts and stops it', () => {

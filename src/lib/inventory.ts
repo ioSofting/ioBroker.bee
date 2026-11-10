@@ -1,7 +1,7 @@
 import { execFile } from 'node:child_process';
 import { readFile, statfs } from 'node:fs/promises';
 import os from 'node:os';
-import { instanceRunning, webExtensionOf } from './instances';
+import { instanceRunning, onlyWww, webExtensionOf } from './instances';
 import type { AdapterInventory, InstanceInventory, Inventory } from './protocol';
 
 /**
@@ -118,6 +118,7 @@ export async function collectInventory(
             alive: await instanceRunning(obj, sid => adapter.getForeignStateAsync(sid), webInstances),
             mode: obj.common.mode,
             ...(web ? { webInstance: web } : {}),
+            ...(onlyWww(obj) ? { onlyWWW: true } : {}),
         };
         if (obj.common.name === 'backitup' && obj.common.enabled) {
             const native = obj.native as Record<string, unknown>;

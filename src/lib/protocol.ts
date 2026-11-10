@@ -83,6 +83,8 @@ export interface InstanceInventory {
     mode?: string;
     /** Runs as a web extension inside this web instance ("*": every one), without a process of its own */
     webInstance?: string;
+    /** Only files for web (common.onlyWWW): js-controller starts no process for it */
+    onlyWWW?: boolean;
 }
 
 /** Slowly changing inventory. Volatile metrics belong into StateMessage, they would flood the history. */
