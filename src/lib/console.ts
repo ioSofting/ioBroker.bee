@@ -155,6 +155,9 @@ export function startShell(stream: Duplex, opts: ShellOptions): void {
     }, 50);
 
     const stop = (): void => {
+        // nobody waits for a drain any more: read the pipes to their end, or the end of the shell is never seen
+        child.stdout?.resume();
+        child.stderr?.resume();
         if (killTimer || ended) {
             return;
         }
@@ -168,6 +171,10 @@ export function startShell(stream: Duplex, opts: ShellOptions): void {
     };
 
     const forward = (chunk: Buffer): void => {
+        if (stream.destroyed || !stream.writable) {
+            // the browser is gone, the shell is being hung up: drop what it still writes
+            return;
+        }
         if (!stream.write(consoleMessage(CONSOLE.DATA, chunk))) {
             // the browser is slow: hold the shell back
             child.stdout?.pause();

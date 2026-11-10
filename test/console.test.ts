@@ -99,4 +99,18 @@ describe('console', () => {
         stream.destroy();
         await waitFor(() => ended !== null, 'end of the shell', 6000);
     });
+
+    it(
+        'also ends a shell that is still writing when the stream goes',
+        { skip: noScript, timeout: 30_000 },
+        async () => {
+            let ended: string | null = null;
+            const { stream, output } = shellThroughTunnel(result => (ended = result));
+            // output keeps coming after the stream is gone; the agent must not wait for a drain then
+            type(stream, 'yes flood\n');
+            await waitFor(() => output().length > 100_000, 'output of the shell');
+            stream.destroy();
+            await waitFor(() => ended !== null, 'end of the shell', 8000);
+        },
+    );
 });
