@@ -66,6 +66,62 @@
                 }
             }
         },
+        "remote": {
+            "type": "panel",
+            "label": { "en": "Remote access", "de": "Fernzugriff" },
+            "items": {
+                "hdr3": {
+                    "type": "staticText",
+                    "text": {
+                        "en": "Service staff of the fleet management can open admin or vis-2 of this system from afar, without ioBroker.pro and without open ports: on request, this adapter connects to the fleet server for the duration of the access. Every access is logged with person and purpose, and is shown below while it lasts. Changing these settings ends running accesses.",
+                        "de": "Servicepersonal der Flottenverwaltung kann admin oder vis-2 dieses Systems aus der Ferne öffnen, ohne ioBroker.pro und ohne offene Ports: auf Anforderung verbindet sich dieser Adapter für die Dauer des Zugriffs mit dem Flottenserver. Jeder Zugriff wird mit Person und Zweck protokolliert und unten angezeigt, solange er läuft. Eine Änderung dieser Einstellungen beendet laufende Zugriffe."
+                    },
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                },
+                "allowAdmin": {
+                    "type": "checkbox",
+                    "label": { "en": "Allow remote access to admin", "de": "Fernzugriff auf admin erlauben" },
+                    "help": {
+                        "en": "admin means full access to the system",
+                        "de": "admin bedeutet vollen Zugriff auf das System"
+                    },
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 6,
+                    "lg": 6,
+                    "xl": 6
+                },
+                "allowVis": {
+                    "type": "checkbox",
+                    "label": { "en": "Allow remote access to vis-2 (web)", "de": "Fernzugriff auf vis-2 (web) erlauben" },
+                    "help": {
+                        "en": "vis-2 shows the values of this system, e.g. consumption",
+                        "de": "vis-2 zeigt die Werte dieses Systems, z. B. Verbräuche"
+                    },
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 6,
+                    "lg": 6,
+                    "xl": 6
+                },
+                "_remoteAccessBy": {
+                    "type": "state",
+                    "oid": "info.remoteAccessBy",
+                    "label": { "en": "Access right now", "de": "Zugriff gerade" },
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                }
+            }
+        },
         "maintenance": {
             "type": "panel",
             "label": { "en": "Maintenance window", "de": "Wartungsfenster" },

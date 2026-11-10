@@ -13,6 +13,9 @@
  *   fleet/<tenant>/control             server -> device  fleet-wide control (emergency stop), RETAINED
  *
  * Payloads are JSON, gzip-compressed. Receivers accept plain JSON as well.
+ *
+ * Remote access to admin and vis-2 does not run over MQTT: on a job "tunnel" the agent opens a
+ * WebSocket to TUNNEL_PATH of the server and carries the connections of the browser (see tunnel.ts).
  */
 
 export const PROTOCOL_VERSION = 1;
@@ -90,6 +93,11 @@ export interface Inventory {
      * of identity (that is the client certificate). Not part of the history.
      */
     comment?: string;
+    /**
+     * Web interfaces the owner allows to reach through the tunnel (instance configuration of the agent).
+     * Missing: the agent cannot open a tunnel at all. Not part of the history.
+     */
+    remoteAccess?: AccessKind[];
     software: {
         jsController: string;
         node: string;
@@ -174,7 +182,34 @@ export interface ControlMessage {
 export interface JobMessage {
     v: number;
     ts: number;
-    cmd: 'resync' | 'refresh';
+    cmd: 'resync' | 'refresh' | 'tunnel';
+    /** For cmd 'tunnel' */
+    tunnel?: TunnelRequest;
+}
+
+/** Web interfaces reachable through the tunnel: admin, or web with vis-2 */
+export type AccessKind = 'admin' | 'vis';
+export const ACCESS_KINDS: AccessKind[] = ['admin', 'vis'];
+
+/** WebSocket path of the tunnel endpoint on the server */
+export const TUNNEL_PATH = '/tunnel';
+
+/**
+ * Request to open a tunnel for one access session. The agent connects to `url` with the header
+ * "Authorization: Bearer <ticket>" and carries the connections to the local web interface of `kind`.
+ * After a connection loss it reconnects until `expiresAt`; a regular close by the server ends the session.
+ */
+export interface TunnelRequest {
+    /** Access session */
+    id: string;
+    kind: AccessKind;
+    /** wss://<server>/tunnel */
+    url: string;
+    ticket: string;
+    expiresAt: number;
+    /** Who opens the access and why; shown on the device */
+    by: string;
+    purpose: string;
 }
 
 export type JobState =

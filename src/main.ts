@@ -10,6 +10,7 @@ import { preflight, type Condition } from './lib/preflight';
 import {
     normalizeComment,
     PROTOCOL_VERSION,
+    type AccessKind,
     type ControlMessage,
     type DesiredMessage,
     type EnrollResponse,
@@ -18,8 +19,10 @@ import {
     type JobState,
     type ResultMessage,
     type StateMessage,
+    type TunnelRequest,
 } from './lib/protocol';
-import { Transport } from './lib/transport';
+import { ACCESS_LABEL, findTarget, trustedTunnelUrl, TunnelClient, type AccessTarget } from './lib/remote';
+import { Transport, trustedCas } from './lib/transport';
 import { diffFlat, flatten, readJson, writeJsonAtomic } from './lib/util';
 
 interface BeeConfig {
@@ -27,6 +30,9 @@ interface BeeConfig {
     enrollToken: string;
     /** Free text shown in the fleet management, e.g. "Womo Mercedes KA-1525" */
     comment: string;
+    /** Remote access from the fleet management to admin, and to web/vis-2 */
+    allowAdmin: boolean;
+    allowVis: boolean;
     windowStart: string;
     windowEnd: string;
     ignoreWindow: boolean;
@@ -69,6 +75,8 @@ class BeeAdapter extends utils.Adapter {
     private reconciling = false;
     private lastWaitReason = '';
     private unloading = false;
+    /** Open remote access sessions by session id */
+    private readonly tunnels = new Map<string, TunnelClient>();
 
     public constructor(options: Partial<utils.AdapterOptions> = {}) {
         super({ ...options, name: 'bee' });
@@ -115,8 +123,13 @@ class BeeAdapter extends utils.Adapter {
         await this.updateInfoStates();
 
         this.creds = await readJson<EnrollResponse>(join(this.dataDir, 'device.json'));
+        await this.updateAccessStates();
         if (this.creds) {
             this.startTransport();
+            // sessions that were open before a restart (e.g. after a change of the settings)
+            for (const t of (await readJson<TunnelRequest[]>(join(this.dataDir, 'tunnels.json'))) || []) {
+                await this.openTunnel(t, true);
+            }
         } else {
             await this.tryEnroll();
         }
@@ -140,6 +153,10 @@ class BeeAdapter extends utils.Adapter {
             this.timers.forEach(t => clearInterval(t));
             if (this.enrollTimer) {
                 clearTimeout(this.enrollTimer);
+            }
+            // the sessions stay in tunnels.json and are resumed after the restart
+            for (const client of [...this.tunnels.values()]) {
+                client.stop('agent stops');
             }
             // js-controller kills slow adapters; the Last Will covers a disconnect that does not finish in time
             await Promise.race([this.transport?.stop(), new Promise(resolve => setTimeout(resolve, 800))]);
@@ -263,7 +280,102 @@ class BeeAdapter extends utils.Adapter {
     private async onJob(msg: JobMessage): Promise<void> {
         if (msg.cmd === 'resync' || msg.cmd === 'refresh') {
             await this.sendInventory(true);
+        } else if (msg.cmd === 'tunnel' && msg.tunnel) {
+            await this.openTunnel(msg.tunnel, false);
         }
+    }
+
+    // ------------------------------------------------------------------ remote access
+
+    /** Kinds of remote access the owner allows in the instance settings */
+    private allowedAccess(): AccessKind[] {
+        const kinds: AccessKind[] = [];
+        if (this.config.allowAdmin !== false) {
+            kinds.push('admin');
+        }
+        if (this.config.allowVis !== false) {
+            kinds.push('vis');
+        }
+        return kinds;
+    }
+
+    /**
+     * Opens the tunnel of an access session, or refuses it with a reason the operator sees.
+     *
+     * @param t request of the server
+     * @param resumed the session was open before a restart of the agent
+     */
+    private async openTunnel(t: TunnelRequest, resumed: boolean): Promise<void> {
+        if (this.tunnels.has(t.id) || t.expiresAt <= Date.now() || this.unloading) {
+            // repeated delivery of the job, or over
+            return;
+        }
+        if (!trustedTunnelUrl(t.url, [this.config.enrollUrl, this.creds?.mqttUrl || ''])) {
+            this.log.warn(`Remote access: tunnel URL ${t.url} does not belong to the fleet server, ignored`);
+            return;
+        }
+        let refusal: string | null = null;
+        let target: AccessTarget | null = null;
+        if (!this.allowedAccess().includes(t.kind)) {
+            refusal = `Fernzugriff auf ${ACCESS_LABEL[t.kind]} ist am Gerät abgeschaltet`;
+        } else {
+            target = await findTarget(this, t.kind);
+            if (!target) {
+                refusal = `Keine aktive ${t.kind === 'admin' ? 'admin' : 'web'}-Instanz auf dem Gerät`;
+            } else if (this.tunnels.size >= 4) {
+                refusal = 'Zu viele gleichzeitige Fernzugriffe auf dem Gerät';
+            }
+        }
+        const client = new TunnelClient(t, {
+            target,
+            refusal,
+            ca: trustedCas(this.creds?.ca || ''),
+            log: this.log,
+            onEnd: (c, reason) => {
+                if (this.tunnels.get(t.id) === c) {
+                    this.tunnels.delete(t.id);
+                    this.log.info(`Remote access to ${ACCESS_LABEL[t.kind]} by ${t.by} ended (${reason})`);
+                }
+                if (!this.unloading) {
+                    void this.saveTunnels();
+                    void this.updateAccessStates();
+                }
+            },
+        });
+        if (refusal) {
+            this.log.warn(`Remote access to ${ACCESS_LABEL[t.kind]} by ${t.by} refused: ${refusal}`);
+        } else {
+            this.tunnels.set(t.id, client);
+            this.log.info(
+                `Remote access to ${ACCESS_LABEL[t.kind]} (${target!.instance}) ${resumed ? 'resumed' : 'opened'} by ${t.by} until ${new Date(t.expiresAt).toLocaleTimeString()}: ${t.purpose}`,
+            );
+        }
+        client.start();
+        await this.saveTunnels();
+        await this.updateAccessStates();
+    }
+
+    private async saveTunnels(): Promise<void> {
+        await writeJsonAtomic(
+            join(this.dataDir, 'tunnels.json'),
+            [...this.tunnels.values()].map(c => c.req),
+        );
+    }
+
+    /** Shows the owner who is connected right now, and why */
+    private async updateAccessStates(): Promise<void> {
+        const active = [...this.tunnels.values()].map(c => c.req);
+        await this.setState('info.remoteAccess', active.length > 0, true);
+        await this.setState(
+            'info.remoteAccessBy',
+            active
+                .map(
+                    t =>
+                        `${ACCESS_LABEL[t.kind]}: ${t.by}, ${t.purpose} (bis ${new Date(t.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`,
+                )
+                .join('; '),
+            true,
+        );
     }
 
     // ------------------------------------------------------------------ inventory and heartbeat
@@ -279,6 +391,8 @@ class BeeAdapter extends utils.Adapter {
         if (comment) {
             inv.comment = comment;
         }
+        // also tells the server that this agent can open a tunnel at all
+        inv.remoteAccess = this.allowedAccess();
         return inv;
     }
 

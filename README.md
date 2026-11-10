@@ -25,6 +25,16 @@ Fleet agent for ioBroker. It connects a delivered ioBroker system (in a house, a
 
 If the owner installs adapters that are not part of the profile, the agent reports them, stops automatic updates and informs the owner via an ioBroker notification. The fleet manager sees the installation in the deviation list and can bring it back to managed mode (removing the own adapters or tolerating them as exceptions).
 
+### Remote access to admin and vis-2
+
+A technician of the fleet manager can open admin or vis-2 of the system from the fleet management, without ioBroker.pro and without open ports on the device:
+
+1. The server sends the job `tunnel` over MQTT with a one-time ticket, the kind (admin or vis-2), the technician, the purpose and the end of the session (at most 4 hours).
+2. The agent checks that the tunnel URL belongs to its own server (same host as enrollment or broker, `wss://` only) and opens an outgoing WebSocket to it.
+3. The server carries the connections of the technician's browser through this WebSocket. The agent connects them to the first enabled admin instance (or web instance for vis-2) on this host and nowhere else: the target is chosen by the agent, never by the server.
+
+The owner can switch off each kind in the tab *Remote access*; the agent then refuses the session and the fleet management shows why. Running sessions are visible in `info.remoteAccess`. After a connection loss the agent reconnects until the session expires, also across restarts of the adapter. The server ends the session early when the technician ends it or the device is revoked.
+
 ## Configuration
 
 | Tab | Setting | Meaning |
@@ -37,6 +47,7 @@ If the owner installs adapters that are not part of the profile, the agent repor
 | Advanced | heartbeat, check interval, MQTT keepalive | trade-off between reaction time and mobile data |
 | | observation after update, start timeout | verification of a rollout |
 | | backup before every update | only disable for tests |
+| Remote access | allow admin, allow vis-2 | whether the fleet manager may open the interface remotely (both allowed by default) |
 
 ## States
 
@@ -49,8 +60,9 @@ If the owner installs adapters that are not part of the profile, the agent repor
 | `job.state`, `job.detail`, `job.steps` | current or last job |
 | `control.halted` | emergency stop of the fleet is active |
 | `control.refresh`, `control.check` | buttons: send inventory, check desired state now |
+| `info.remoteAccess`, `info.remoteAccessBy` | remote access running now, and by whom with which purpose |
 
-Files in `iobroker-data/bee.0/`: `device.json` (certificate and key, mode 0600), `desired.json`, `job.json`, `runner.json`, `runner.log` (complete CLI output of all jobs).
+Files in `iobroker-data/bee.0/`: `device.json` (certificate and key, mode 0600), `desired.json`, `job.json`, `runner.json`, `runner.log` (complete CLI output of all jobs), `tunnels.json` (running remote access sessions, resumed after a restart).
 
 ## Not in this version
 
@@ -64,9 +76,13 @@ npm run build
 npm test          # unit tests of planner, preflight and diff
 ```
 
-`src/lib/protocol.ts` is shared with the server and must stay identical to `beekeeper-server/src/protocol.ts`.
+`src/lib/protocol.ts` and `src/lib/tunnel.ts` are shared with the server and must stay identical to `beekeeper-server/src/protocol.ts` and `beekeeper-server/src/tunnel.ts`.
 
 ## Changelog
+
+### **WORK IN PROGRESS**
+
+- Remote access to admin and vis-2 through a tunnel to the fleet server, switchable per kind by the owner
 
 ### 0.1.0 (2026-09-18)
 
