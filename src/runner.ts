@@ -23,7 +23,8 @@ export interface RunnerFile {
     logFile: string;
     /** Packages of the fleet server per adapter (local tgz) instead of npm; only when applying */
     files?: Record<string, string>;
-    phase: 'start' | 'running' | 'done' | 'failed' | 'halted';
+    /** node: stopped at the step for Node.js, the adapter does that one and starts the runner again */
+    phase: 'start' | 'running' | 'done' | 'failed' | 'halted' | 'node';
     pid?: number;
     error?: string;
     startedAt?: number;
@@ -53,6 +54,9 @@ export function cliArgs(step: JobStep, file?: string): string[][] {
     switch (step.action) {
         case 'backup':
             return [['backup']];
+        case 'node':
+            // not with the CLI, see node.ts
+            return [];
         case 'install':
             // installs the package and creates one instance
             return [['add', `${step.adapter}@${step.to}`]];
@@ -146,6 +150,11 @@ async function main(path: string): Promise<void> {
         if (file.mode === 'apply' && step.action !== 'backup' && existsSync(file.haltFile)) {
             file.phase = 'halted';
             file.steps.filter(s => s.status === 'pending').forEach(s => (s.status = 'skipped'));
+            break;
+        }
+        if (step.action === 'node') {
+            // it stops ioBroker: the adapter runs it as root and starts the runner again for the rest
+            file.phase = 'node';
             break;
         }
         step.status = 'running';

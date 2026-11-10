@@ -319,8 +319,12 @@ export type JobState =
 
 export const TERMINAL_JOB_STATES: JobState[] = ['done', 'blocked'];
 
+/**
+ * A step of a job. node: Node.js to the major line of the profile (from: process.version, to: the major,
+ * e.g. "22"); it comes right after the backup and stays when a later step fails.
+ */
 export interface JobStep {
-    action: 'backup' | 'install' | 'upgrade' | 'downgrade' | 'remove';
+    action: 'backup' | 'node' | 'install' | 'upgrade' | 'downgrade' | 'remove';
     adapter?: string;
     from?: string | null;
     to?: string | null;

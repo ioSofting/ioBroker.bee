@@ -1,4 +1,5 @@
 import semver from 'semver';
+import { nodeStep } from './node';
 import type { DesiredMessage, JobStep } from './protocol';
 import { compareVersions } from './util';
 
@@ -29,7 +30,7 @@ export function foreignAdapters(desired: DesiredMessage, installed: Installed): 
 }
 
 /**
- * Steps to reach the profile. The agent (bee) is always updated last.
+ * Steps to reach the profile. Node.js comes first, the agent (bee) always last.
  *
  * @param desired desired state of the server
  * @param installed installed versions
@@ -37,12 +38,14 @@ export function foreignAdapters(desired: DesiredMessage, installed: Installed): 
  * @param from where the adapters were installed from (installedFrom); with a package of the server and the
  *     same version installed from somewhere else, the package is installed once more (a build that kept
  *     the version number). Only given as long as that was not tried yet for this job.
+ * @param node the running Node.js (process.version); with it a step to the major line of the profile
  */
 export function computePlan(
     desired: DesiredMessage,
     installed: Installed,
     selfName = 'bee',
     from?: Record<string, string | undefined>,
+    node?: string,
 ): JobStep[] {
     const steps: JobStep[] = [];
     if (!desired.profile) {
@@ -74,13 +77,16 @@ export function computePlan(
     }
     // removals first (frees space), then installs/updates alphabetically, the agent last
     const rank = (s: JobStep): number => (s.adapter === selfName ? 2 : s.action === 'remove' ? 0 : 1);
-    return steps.sort((a, b) => rank(a) - rank(b) || a.adapter!.localeCompare(b.adapter!));
+    steps.sort((a, b) => rank(a) - rank(b) || a.adapter!.localeCompare(b.adapter!));
+    // Node.js before everything else: the new versions may need it
+    const step = node ? nodeStep(desired.profile.node, node) : null;
+    return step ? [step, ...steps] : steps;
 }
 
-/** Steps that restore the previous state after a failed rollout (reverse order) */
+/** Steps that restore the previous state after a failed rollout (reverse order); Node.js stays */
 export function rollbackPlan(steps: JobStep[]): JobStep[] {
     return steps
-        .filter(s => s.action !== 'backup' && s.status === 'ok')
+        .filter(s => s.action !== 'backup' && s.action !== 'node' && s.status === 'ok')
         .reverse()
         .map(s => {
             if (s.action === 'install') {
@@ -103,12 +109,18 @@ export function rollbackPlan(steps: JobStep[]): JobStep[] {
  * Checks the dependencies of all target versions against the state after the plan
  * (io-package.json dependencies, globalDependencies and engines.node of the target version).
  *
+ * @param desired desired state of the server
+ * @param installed installed versions
+ * @param env versions on the system
+ * @param env.jsController installed js-controller
+ * @param env.node running Node.js
+ * @param env.nodeMajor the major line the plan brings Node.js to before the adapters
  * @returns list of violations; empty if everything fits
  */
 export function checkDependencies(
     desired: DesiredMessage,
     installed: Installed,
-    env: { jsController: string; node: string },
+    env: { jsController: string; node: string; nodeMajor?: number },
 ): string[] {
     const errors: string[] = [];
     if (!desired.profile) {
@@ -125,8 +137,14 @@ export function checkDependencies(
         if (installed[name] === a.version) {
             continue;
         }
-        if (a.node && semver.validRange(a.node) && !semver.satisfies(env.node, a.node)) {
-            errors.push(`${name}@${a.version} verlangt Node ${a.node}, installiert ist ${env.node}`);
+        if (a.node && semver.validRange(a.node)) {
+            if (env.nodeMajor) {
+                if (!semver.intersects(a.node, `^${env.nodeMajor}.0.0`)) {
+                    errors.push(`${name}@${a.version} verlangt Node ${a.node}, geplant ist Node ${env.nodeMajor}`);
+                }
+            } else if (!semver.satisfies(env.node, a.node)) {
+                errors.push(`${name}@${a.version} verlangt Node ${a.node}, installiert ist ${env.node}`);
+            }
         }
         for (const dep of [...(a.dependencies || []), ...(a.globalDependencies || [])]) {
             for (const [depName, range] of Object.entries(dep)) {

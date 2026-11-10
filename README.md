@@ -13,8 +13,24 @@ Fleet agent for ioBroker. It connects a delivered ioBroker system (in a house, a
 3. **Desired state instead of commands.** The server publishes the desired profile as a retained message. A system that was offline for months reads the current profile, not a backlog of orders.
 4. **Reconciliation.** The agent compares the profile with the installed versions and plans install, upgrade, downgrade (and removal only when the server asks for it on return to managed mode). It never touches adapters that are not in the profile.
 5. **Preflight.** Emergency stop, dependencies of the target versions (`io-package.json` of the target version, `engines.node`), free space, maintenance window and configurable conditions on ioBroker states (installation not in use, battery charged, no roaming, vehicle standing, …). Conditions that change by themselves mean *waiting*, everything that needs a human means *blocked*.
-6. **Execution.** A detached runner process performs backup (`iobroker backup`) and the steps (`iobroker add/upgrade/del`) one by one. It survives restarts of the adapter, including the update of the agent itself, which always comes last.
+6. **Execution.** A detached runner process performs backup (`iobroker backup`) and the steps (`iobroker add/upgrade/del`) one by one. It survives restarts of the adapter, including the update of the agent itself, which always comes last. A new major line of Node.js comes right after the backup, see below.
 7. **Verification.** Versions must match, all enabled daemon instances of the changed adapters must be alive, and no new errors may appear in their log during the observation time. Otherwise the agent rolls back the changed adapters to their previous versions and reports *blocked*. A blocked job is not repeated until the fleet manager releases a new attempt.
+
+### Node.js
+
+The profile names the major line of Node.js (e.g. `22`). If this system runs an older one, the plan starts with a step `node`. Never downwards: a newer Node.js than in the profile stays. Within a major line Node.js is updated with the OS updates.
+
+The update stops ioBroker, so the agent cannot do it itself. It starts `scripts/node-update.sh` as root in a systemd unit of its own (`sudo -n systemd-run`, allowed by the installer of ioBroker), so stopping ioBroker does not end it. The script
+
+1. stops the ioBroker service, points the NodeSource source (`/etc/apt/sources.list.d/nodesource.sources` or `.list`) to the new line and installs the newest `nodejs` of it, with the capabilities the old binary had (ports below 1024, raw sockets),
+2. starts ioBroker and waits for the verdict of the agent: under the new Node.js the agent checks that every instance that ran before runs again (at least 10 minutes, or the start timeout if longer) and then writes `node-verdict.json`,
+3. without a positive verdict in time it stops ioBroker, puts the source back, installs the old package again and starts ioBroker.
+
+Afterwards the runner continues with the adapters. A failed adapter later rolls back the adapters, Node.js stays. If the old version came back, the job is *blocked* with the reason. Adapters with native modules are rebuilt by js-controller when they start.
+
+Preflight blocks with a reason unless all of this holds: Linux, ioBroker runs as a systemd service, sudo without password for `systemd-run` (not with `--hardened`), Node.js is `/usr/bin/node` of the package `nodejs` from NodeSource, architecture amd64 or arm64, `nodejs` not on hold, an off-device backup target (BackItUp), and no installed package (js-controller, adapters that the job does not change) excludes the new line in `engines.node`.
+
+Limits: a power loss while the script works leaves the system as far as the script got; the agent then reports *blocked* and `node-update.log` tells where it stopped.
 
 ### Behaviour without server
 
@@ -74,11 +90,11 @@ From the asset detail a technician (permission `operate`) can start, stop and re
 | `control.refresh`, `control.check` | buttons: send inventory, check desired state now |
 | `info.remoteAccess`, `info.remoteAccessBy` | remote access running now, and by whom with which purpose (`keiner` if none; scripts should use `info.remoteAccess`) |
 
-Files in `iobroker-data/bee.0/`: `device.json` (certificate and key, mode 0600), `desired.json`, `job.json`, `runner.json`, `runner.log` (complete CLI output of all jobs), `tunnels.json` (running remote access sessions, resumed after a restart).
+Files in `iobroker-data/bee.0/`: `device.json` (certificate and key, mode 0600), `desired.json`, `job.json`, `runner.json`, `runner.log` (complete CLI output of all jobs), `tunnels.json` (running remote access sessions, resumed after a restart), and for an update of Node.js `node-update.sh` (copy of the script), `node-status.json`, `node-verdict.json` and `node-update.log` (complete output of the script).
 
 ## Not in this version
 
-Platform updates of js-controller and Node.js (with a systemd watchdog outside ioBroker), vis-2 project distribution, recording of console sessions, signed artifacts. See the concept of the beekeeper project.
+Updates of js-controller through the fleet (with a watchdog outside ioBroker), vis-2 project distribution, recording of console sessions, signed artifacts. See the concept of the beekeeper project.
 
 ## Development
 
@@ -97,6 +113,7 @@ npm test          # unit tests of planner, preflight and diff
 - Settings, tab *Remote access*: "Remote access in progress" instead of "Access right now", and `info.remoteAccessBy` says `keiner` when nobody accesses the system
 - Settings, tab *Enrollment*: the connection to the fleet management in green or red, the status (now naming the server) next to it
 - Instances without a process (mode `none` or `extension`) refuse start, stop and restart
+- Updates Node.js to the major line of the profile, as the first step of a job: a script as root in a systemd unit of its own, back to the old version if the instances do not run again under the new one (see *Node.js*)
 
 ### 0.2.3 (2026-11-10)
 

@@ -2,7 +2,9 @@ import { spawn } from 'node:child_process';
 import { existsSync } from 'node:fs';
 import { rm } from 'node:fs/promises';
 import { join } from 'node:path';
+import semver from 'semver';
 import type { DesiredMessage, JobState, JobStep } from './protocol';
+import { nodeUnit, readNodeStatus, readVerdict, writeVerdict } from './node';
 import { rollbackPlan } from './planner';
 import type { RunnerFile } from '../runner';
 import { readJson, writeJsonAtomic } from './util';
@@ -11,9 +13,10 @@ import { readJson, writeJsonAtomic } from './util';
  * Job lifecycle on the installation: backup -> rollout -> verify -> done, or rollback -> blocked.
  * The job is persisted, so a restart of the adapter (e.g. during its own update) continues
  * where it left off. The actual CLI work runs in the detached runner.
+ * A step for Node.js (phase node) runs between backup and the adapters as a script as root, see node.ts.
  */
 
-export type JobPhase = 'apply' | 'verify' | 'rollback' | 'finished';
+export type JobPhase = 'apply' | 'node' | 'verify' | 'rollback' | 'finished';
 
 export interface JobFile {
     key: string;
@@ -31,6 +34,10 @@ export interface JobFile {
     failure?: string;
     /** Rollback was caused by the emergency stop: wait instead of blocking */
     halted?: boolean;
+    /** Packages of the server per adapter, for the runner after the step for Node.js */
+    files?: Record<string, string>;
+    /** Step for Node.js: unit of the script, its start, instances that ran before */
+    node?: { unit: string; startedAt: number; instances: string[] };
 }
 
 export interface JobDeps {
@@ -47,6 +54,12 @@ export interface JobDeps {
     /** error log lines of the given adapters since ts */
     errorsSince: (ts: number, adapters: string[]) => { from: string; message: string }[];
     onFinished: (job: JobFile, result: 'done' | 'blocked' | 'waiting') => Promise<void>;
+    /** Instances that run now (enabled daemons of this host) */
+    running: () => Promise<string[]>;
+    /** Starts the script for Node.js (launchNodeUpdate); throws if it did not start */
+    launchNode: (target: string, unit: string, waitSeconds: number) => Promise<void>;
+    /** Whether the unit of the script still runs */
+    unitActive: (unit: string) => Promise<boolean>;
 }
 
 function pidAlive(pid: number | undefined): boolean {
@@ -160,12 +173,13 @@ export class JobManager {
             profileName: profile.name,
             profileHash: profile.hash,
             retry: desired.retry,
-            targets: Object.fromEntries(steps.map(s => [s.adapter!, s.to ?? null])),
+            targets: Object.fromEntries(steps.filter(s => s.adapter).map(s => [s.adapter!, s.to ?? null])),
             state: 'preflight',
             detail: '',
             steps: all,
             phase: 'apply',
             createdAt: Date.now(),
+            ...(Object.keys(files).length ? { files } : {}),
         };
         await this.save();
         await this.spawnRunner('apply', all, files);
@@ -181,6 +195,8 @@ export class JobManager {
         try {
             if (this.job.phase === 'apply' || this.job.phase === 'rollback') {
                 await this.pollRunner();
+            } else if (this.job.phase === 'node') {
+                await this.pollNode();
             } else if (this.job.phase === 'verify') {
                 await this.verify();
             }
@@ -197,7 +213,11 @@ export class JobManager {
         if (!runner) {
             return;
         }
-        const finished = runner.phase === 'done' || runner.phase === 'failed' || runner.phase === 'halted';
+        const finished =
+            runner.phase === 'done' ||
+            runner.phase === 'failed' ||
+            runner.phase === 'halted' ||
+            runner.phase === 'node';
         if (!finished && runner.phase === 'running' && !pidAlive(runner.pid)) {
             // runner died (power loss, reboot)
             runner.phase = 'failed';
@@ -217,7 +237,9 @@ export class JobManager {
 
         if (job.phase === 'apply') {
             job.steps = runner.steps;
-            if (runner.phase === 'done') {
+            if (runner.phase === 'node') {
+                await this.startNode();
+            } else if (runner.phase === 'done') {
                 job.phase = 'verify';
                 job.verifyStartedAt = Date.now();
                 await this.setState('verify', 'Instanzen und Log werden geprüft');
@@ -240,6 +262,111 @@ export class JobManager {
             }
         }
         await this.finish(job.halted && ok ? 'waiting' : 'blocked', detail);
+    }
+
+    /** Time the agent gives the instances under the new Node.js; the script waits 15 minutes longer */
+    private get nodeWaitSeconds(): number {
+        return Math.max(this.deps.startTimeoutSeconds, 600);
+    }
+
+    private async startNode(): Promise<void> {
+        const job = this.job!;
+        const step = job.steps.find(s => s.action === 'node' && s.status === 'pending')!;
+        step.status = 'running';
+        step.ts = Date.now();
+        job.phase = 'node';
+        job.node = { unit: nodeUnit(), startedAt: Date.now(), instances: await this.deps.running() };
+        // saved before: the script stops ioBroker and with it this process
+        await this.setState('rollout', `Node.js ${step.to} wird installiert, ioBroker startet dafür neu`);
+        try {
+            await this.deps.launchNode(step.to!, job.node.unit, this.nodeWaitSeconds + 900);
+        } catch (e) {
+            await this.nodeFailed(`Node.js ${step.to} nicht gestartet: ${e.message}`);
+        }
+    }
+
+    /** The script for Node.js runs, or ran while this process was gone */
+    private async pollNode(): Promise<void> {
+        const job = this.job!;
+        const step = job.steps.find(s => s.action === 'node')!;
+        const node = job.node!;
+        const dir = this.deps.dataDir;
+        const status = await readNodeStatus(dir);
+        if (status?.state === 'restored') {
+            await this.nodeFailed(`Node.js ${step.to}: ${status.detail}; Node.js ${step.from} wiederhergestellt`);
+            return;
+        }
+        if (status?.state === 'failed') {
+            await this.nodeFailed(`Node.js ${step.to}: ${status.detail}`);
+            return;
+        }
+        const verdict = await readVerdict(dir);
+        if (status?.state === 'ok' || verdict?.ok) {
+            await this.nodeDone();
+            return;
+        }
+        const interrupted = `Node.js ${step.to}: Skript wurde unterbrochen, jetzt läuft Node.js ${process.version}; siehe node-update.log`;
+        if (status?.state !== 'waiting') {
+            // running: the script works (this process normally does not live that long)
+            if (Date.now() - node.startedAt > 60_000 && !(await this.deps.unitActive(node.unit))) {
+                await this.nodeFailed(interrupted);
+            }
+            return;
+        }
+        if (verdict) {
+            // negative: the script goes back to the old version and restarts ioBroker
+            return;
+        }
+        if (!(await this.deps.unitActive(node.unit))) {
+            await this.nodeFailed(interrupted);
+            return;
+        }
+        if (String(semver.major(process.version)) !== step.to) {
+            await writeVerdict(dir, false, `Der Agent läuft weiter unter Node.js ${process.version}`);
+            return;
+        }
+        const running = new Set(await this.deps.running());
+        const down = node.instances.filter(id => !running.has(id));
+        if (!down.length) {
+            await writeVerdict(dir, true);
+            await this.nodeDone();
+        } else if (Date.now() - status.ts > this.nodeWaitSeconds * 1000) {
+            await writeVerdict(dir, false, `Unter Node.js ${process.version} laufen nicht: ${down.join(', ')}`);
+            await this.setState('rollout', `Instanzen starten nicht, zurück zu Node.js ${step.from}`);
+        } else {
+            await this.setState('rollout', `Node.js ${process.version}: warte auf ${down.join(', ')}`);
+        }
+    }
+
+    /** Node.js is new: the rest of the steps, or the verification */
+    private async nodeDone(): Promise<void> {
+        const job = this.job!;
+        const step = job.steps.find(s => s.action === 'node')!;
+        step.status = 'ok';
+        step.detail = `${step.from} → ${process.version}`;
+        this.deps.log.info(`Node.js updated: ${step.detail}`);
+        if (job.steps.some(s => s.status === 'pending')) {
+            job.phase = 'apply';
+            await this.save();
+            await this.spawnRunner('apply', job.steps, job.files);
+            await this.setState('rollout', `Node.js ${process.version}, weiter mit den Adaptern`);
+        } else {
+            job.phase = 'verify';
+            job.verifyStartedAt = Date.now();
+            await this.setState('verify', 'Instanzen und Log werden geprüft');
+        }
+    }
+
+    /** Nothing after the backup has changed (the script went back to the old version, if it got so far) */
+    private async nodeFailed(reason: string): Promise<void> {
+        const job = this.job!;
+        const step = job.steps.find(s => s.action === 'node')!;
+        step.status = 'error';
+        step.detail = reason;
+        job.steps.filter(s => s.status === 'pending').forEach(s => (s.status = 'skipped'));
+        job.failure = reason;
+        this.deps.log.warn(reason);
+        await this.finish('blocked', reason);
     }
 
     private async startRollback(reason: string, halted = false): Promise<void> {

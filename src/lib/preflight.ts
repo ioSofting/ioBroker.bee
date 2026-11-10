@@ -27,6 +27,8 @@ export interface PreflightInput {
     diskPath: string;
     minFreeMb: number;
     dependencyErrors: string[];
+    /** Why Node.js cannot be updated, if the plan has a step for it */
+    nodeErrors?: { target: string; errors: string[] };
 }
 
 export type PreflightResult = { ok: true } | { ok: false; kind: 'wait' | 'block'; reason: string };
@@ -84,6 +86,13 @@ export async function preflight(input: PreflightInput): Promise<PreflightResult>
     }
     if (input.dependencyErrors.length) {
         return { ok: false, kind: 'block', reason: `Abhängigkeiten: ${input.dependencyErrors.join('; ')}` };
+    }
+    if (input.nodeErrors?.errors.length) {
+        return {
+            ok: false,
+            kind: 'block',
+            reason: `Update auf Node.js ${input.nodeErrors.target} nicht möglich: ${input.nodeErrors.errors.join('; ')}`,
+        };
     }
     const free = await freeDiskMb(input.diskPath);
     if (free !== null && free < input.minFreeMb) {

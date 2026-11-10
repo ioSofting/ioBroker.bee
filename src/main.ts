@@ -1,5 +1,6 @@
 import * as utils from '@iobroker/adapter-core';
 import { existsSync, mkdirSync } from 'node:fs';
+import { readFile } from 'node:fs/promises';
 import os from 'node:os';
 import { join } from 'node:path';
 import type { Duplex } from 'node:stream';
@@ -16,6 +17,15 @@ import { instanceRunning, onlyWww } from './lib/instances';
 import { enroll } from './lib/enrollment';
 import { collectInventory, cpuTemperature, diskInfo, installedVersions, sdWrites } from './lib/inventory';
 import { JobManager, type JobFile } from './lib/jobs';
+import {
+    engineConflicts,
+    launchNodeUpdate,
+    nodeBlockers,
+    nodeFacts,
+    readEngines,
+    serviceOf,
+    unitActive,
+} from './lib/node';
 import { ensurePackage, packagesOf } from './lib/packages';
 import { checkDependencies, computePlan, foreignAdapters } from './lib/planner';
 import { preflight, type Condition } from './lib/preflight';
@@ -29,6 +39,7 @@ import {
     type Inventory,
     type JobMessage,
     type JobState,
+    type JobStep,
     type ReplyMessage,
     type ResultMessage,
     type StateMessage,
@@ -150,6 +161,16 @@ class BeeAdapter extends utils.Adapter {
             errorsSince: (ts, adapters) =>
                 this.errorLog.filter(e => e.ts >= ts && adapters.some(a => e.from.startsWith(`${a}.`))),
             onFinished: (job, result) => this.onJobFinished(job, result),
+            running: async () => (await this.instancesOf()).filter(i => i.alive).map(i => i.id),
+            launchNode: async (target, unit, waitSeconds) => {
+                const service = serviceOf(await readFile('/proc/self/cgroup', 'utf8').catch(() => ''));
+                if (!service) {
+                    throw new Error('ioBroker läuft nicht als systemd-Dienst');
+                }
+                this.log.warn(`Node.js is updated to ${target}: ioBroker (${service}) restarts (fleet management)`);
+                await launchNodeUpdate({ dir: this.dataDir, target, service, unit, waitSeconds });
+            },
+            unitActive: unit => unitActive(unit),
         });
         await this.jobs.load();
         await this.jobs.setHalt(!!this.control?.halt);
@@ -706,10 +727,16 @@ class BeeAdapter extends utils.Adapter {
         }
     }
 
-    private async instancesOf(adapter: string): Promise<{ id: string; alive: boolean }[]> {
+    /**
+     * Enabled instances with a process of their own on this host and whether they run
+     *
+     * @param adapter only of this adapter; missing: all
+     */
+    private async instancesOf(adapter?: string): Promise<{ id: string; alive: boolean }[]> {
+        const prefix = adapter ? `system.adapter.${adapter}.` : 'system.adapter.';
         const res = await this.getObjectViewAsync('system', 'instance', {
-            startkey: `system.adapter.${adapter}.`,
-            endkey: `system.adapter.${adapter}.香`,
+            startkey: prefix,
+            endkey: `${prefix}香`,
         });
         const list: { id: string; alive: boolean }[] = [];
         for (const row of res.rows) {
@@ -830,7 +857,7 @@ class BeeAdapter extends utils.Adapter {
             this.persisted.results[key] === 'done'
                 ? undefined
                 : Object.fromEntries(Object.entries(inv.software.adapters).map(([n, a]) => [n, a.installedFrom]));
-        const plan = computePlan(d, installed, this.name, from);
+        const plan = computePlan(d, installed, this.name, from, process.version);
         await this.setState('info.onTarget', plan.length === 0, true);
 
         if (d.mode === 'self') {
@@ -872,6 +899,7 @@ class BeeAdapter extends utils.Adapter {
         }
         // drift after an earlier success (e.g. manual change): converge again
         delete this.persisted.results[key];
+        const nodeTarget = plan.find(s => s.action === 'node')?.to ?? undefined;
 
         const pf = await preflight({
             now: new Date(),
@@ -889,7 +917,11 @@ class BeeAdapter extends utils.Adapter {
             dependencyErrors: checkDependencies(d, installed, {
                 jsController: inv.software.jsController,
                 node: process.version,
+                nodeMajor: nodeTarget ? Number(nodeTarget) : undefined,
             }),
+            nodeErrors: nodeTarget
+                ? { target: nodeTarget, errors: await this.nodeErrors(nodeTarget, inv, plan) }
+                : undefined,
         });
         if (!pf.ok) {
             if (pf.kind === 'block') {
@@ -923,6 +955,23 @@ class BeeAdapter extends utils.Adapter {
         this.log.info(`Starting job for ${d.profile.name}: ${plan.map(s => `${s.action} ${s.adapter}`).join(', ')}`);
         await this.report('preflight', `${plan.length} Schritte geplant, Vorprüfung bestanden`, plan);
         await this.jobs!.start(d, plan, this.config.backupBeforeUpdate !== false, files);
+    }
+
+    /**
+     * Why Node.js cannot go to the major line: the system, and installed packages that exclude it
+     * (those the plan changes are checked with their new version by checkDependencies)
+     *
+     * @param target major line
+     * @param inv inventory
+     * @param plan steps of the job
+     */
+    private async nodeErrors(target: string, inv: Inventory, plan: JobStep[]): Promise<string[]> {
+        const changed = new Set(plan.map(s => s.adapter));
+        const names = ['js-controller', ...Object.keys(inv.software.adapters).filter(n => !changed.has(n))];
+        return [
+            ...nodeBlockers(await nodeFacts(inv.backup.offDevice)),
+            ...engineConflicts(Number(target), readEngines(join(utils.controllerDir, '..', '..'), names)),
+        ];
     }
 
     // ------------------------------------------------------------------ states, notifications

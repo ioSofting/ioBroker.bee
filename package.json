@@ -27,7 +27,8 @@
   "files": [
     "admin/",
     "build/",
-    "io-package.json"
+    "io-package.json",
+    "scripts/"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
