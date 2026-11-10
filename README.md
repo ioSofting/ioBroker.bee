@@ -31,7 +31,7 @@ A technician of the fleet manager can open admin or vis-2 of the system from the
 
 1. The server sends the job `tunnel` over MQTT with a one-time ticket, the kind (admin or vis-2), the technician, the purpose and the end of the session (at most 4 hours).
 2. The agent checks that the tunnel URL belongs to its own server (same host as enrollment or broker, `wss://` only) and opens an outgoing WebSocket to it.
-3. The server carries the connections of the technician's browser through this WebSocket. The agent connects them to the first enabled admin instance (or web instance for vis-2) on this host and nowhere else: the target is chosen by the agent, never by the server.
+3. The server carries the connections of the technician's browser through this WebSocket. The agent connects them to an enabled admin instance (or web instance for vis-2, only with vis-2 installed) on this host and nowhere else. It reports these instances with port, HTTPS and login mode in the inventory; with several, the technician chooses one, and the agent accepts only one from its own list.
 
 The owner can switch off each kind in the tab *Remote access*; the agent then refuses the session and the fleet management shows why. Running sessions are visible in `info.remoteAccess`. After a connection loss the agent reconnects until the session expires, also across restarts of the adapter. The server ends the session early when the technician ends it or the device is revoked.
 

@@ -21,7 +21,15 @@ import {
     type StateMessage,
     type TunnelRequest,
 } from './lib/protocol';
-import { ACCESS_LABEL, findTarget, trustedTunnelUrl, TunnelClient, type AccessTarget } from './lib/remote';
+import {
+    ACCESS_LABEL,
+    chooseTarget,
+    describeTargets,
+    findTargets,
+    trustedTunnelUrl,
+    TunnelClient,
+    type AccessTarget,
+} from './lib/remote';
 import { Transport, trustedCas } from './lib/transport';
 import { diffFlat, flatten, readJson, writeJsonAtomic } from './lib/util';
 
@@ -319,9 +327,12 @@ class BeeAdapter extends utils.Adapter {
         if (!this.allowedAccess().includes(t.kind)) {
             refusal = `Fernzugriff auf ${ACCESS_LABEL[t.kind]} ist am Gerät abgeschaltet`;
         } else {
-            target = await findTarget(this, t.kind);
+            // only an instance of this kind on this host, whatever the server asks for
+            target = chooseTarget(await findTargets(this, t.kind), t.instance);
             if (!target) {
-                refusal = `Keine aktive ${t.kind === 'admin' ? 'admin' : 'web'}-Instanz auf dem Gerät`;
+                refusal = t.instance
+                    ? `Instanz ${t.instance} ist auf dem Gerät nicht aktiv`
+                    : `Keine aktive ${t.kind === 'admin' ? 'admin' : 'web'}-Instanz auf dem Gerät`;
             } else if (this.tunnels.size >= 4) {
                 refusal = 'Zu viele gleichzeitige Fernzugriffe auf dem Gerät';
             }
@@ -371,7 +382,7 @@ class BeeAdapter extends utils.Adapter {
             active
                 .map(
                     t =>
-                        `${ACCESS_LABEL[t.kind]}: ${t.by}, ${t.purpose} (bis ${new Date(t.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`,
+                        `${ACCESS_LABEL[t.kind]}${t.instance ? ` (${t.instance})` : ''}: ${t.by}, ${t.purpose} (bis ${new Date(t.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`,
                 )
                 .join('; '),
             true,
@@ -393,6 +404,10 @@ class BeeAdapter extends utils.Adapter {
         }
         // also tells the server that this agent can open a tunnel at all
         inv.remoteAccess = this.allowedAccess();
+        inv.accessTargets = {
+            admin: describeTargets(await findTargets(this, 'admin')),
+            vis: describeTargets(await findTargets(this, 'vis')),
+        };
         return inv;
     }
 

@@ -1,7 +1,7 @@
 import net from 'node:net';
 import tls from 'node:tls';
 import WebSocket from 'ws';
-import type { AccessKind, TunnelRequest } from './protocol';
+import type { AccessInstance, AccessKind, TunnelRequest } from './protocol';
 import { CLOSE, Mux, REFUSE_HEADER, type TunnelStream } from './tunnel';
 
 /**
@@ -10,36 +10,60 @@ import { CLOSE, Mux, REFUSE_HEADER, type TunnelStream } from './tunnel';
  * the local web interface. Only to that one: the target is chosen here, never by the server.
  */
 
-export interface AccessTarget {
+/** A local web interface, with the address to connect to (stays on the device) */
+export interface AccessTarget extends AccessInstance {
     host: string;
-    port: number;
-    /** The local interface speaks HTTPS (instance setting "secure") */
-    secure: boolean;
-    instance: string;
 }
 
 export const ACCESS_LABEL: Record<AccessKind, string> = { admin: 'admin', vis: 'vis-2' };
 
-/** Local web interface for a kind: the first enabled admin instance, or web instance for vis-2, on this host */
-export async function findTarget(adapter: ioBroker.Adapter, kind: AccessKind): Promise<AccessTarget | null> {
+/**
+ * Local web interfaces for a kind: the enabled admin instances, or web instances for vis-2 (only with vis-2
+ * installed), on this host, in the order of the instance number.
+ */
+export async function findTargets(adapter: ioBroker.Adapter, kind: AccessKind): Promise<AccessTarget[]> {
+    if (kind === 'vis' && !(await adapter.getForeignObjectAsync('system.adapter.vis-2'))) {
+        return [];
+    }
     const name = kind === 'admin' ? 'admin' : 'web';
     const res = await adapter.getObjectViewAsync('system', 'instance', {
         startkey: `system.adapter.${name}.`,
         endkey: `system.adapter.${name}.香`,
     });
-    const obj = res.rows
+    return res.rows
         .map(r => r.value as ioBroker.InstanceObject | undefined)
         .filter((o): o is ioBroker.InstanceObject => !!o?.common.enabled && o.common.host === adapter.host)
-        .sort((a, b) => a._id.localeCompare(b._id, undefined, { numeric: true }))[0];
-    if (!obj) {
-        return null;
-    }
-    const native = obj.native as { port?: number | string; secure?: boolean; bind?: string };
-    const port = parseInt(String(native.port || (kind === 'admin' ? 8081 : 8082)), 10);
-    // an interface listening on all addresses is reached over loopback
-    const bind = (native.bind || '').trim();
-    const host = !bind || bind === '0.0.0.0' || bind === '::' ? '127.0.0.1' : bind;
-    return { host, port, secure: !!native.secure, instance: obj._id.replace(/^system\.adapter\./, '') };
+        .sort((a, b) => a._id.localeCompare(b._id, undefined, { numeric: true }))
+        .map(obj => {
+            const native = obj.native as {
+                port?: number | string;
+                secure?: boolean;
+                bind?: string;
+                auth?: boolean;
+                defaultUser?: string;
+            };
+            // an interface listening on all addresses is reached over loopback
+            const bind = (native.bind || '').trim();
+            const defaultUser = (native.defaultUser || 'admin').replace(/^system\.user\./, '');
+            return {
+                instance: obj._id.replace(/^system\.adapter\./, ''),
+                host: !bind || bind === '0.0.0.0' || bind === '::' ? '127.0.0.1' : bind,
+                port: parseInt(String(native.port || (kind === 'admin' ? 8081 : 8082)), 10),
+                secure: !!native.secure,
+                auth: !!native.auth,
+                ...(native.auth ? {} : { defaultUser }),
+            };
+        });
+}
+
+/** What the server learns about the targets: without the local address */
+export function describeTargets(targets: AccessTarget[]): AccessInstance[] {
+    return targets.map(({ host: _host, ...t }) => t);
+}
+
+/** The instance asked for, or the first one; null if it is not among the targets */
+export function chooseTarget(targets: AccessTarget[], instance: string | undefined): AccessTarget | null {
+    return (instance ? targets.find(t => t.instance === instance) : targets[0]) ?? null;
 }
 
 /** Is the tunnel URL one of our own server? The job came over the broker, this is a second check. */

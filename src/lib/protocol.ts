@@ -98,6 +98,12 @@ export interface Inventory {
      * Missing: the agent cannot open a tunnel at all. Not part of the history.
      */
     remoteAccess?: AccessKind[];
+    /**
+     * Enabled instances per kind on the host of the agent (admin; web for vis-2, only with vis-2 installed),
+     * to choose from when opening a remote access. An empty list: nothing to offer. Missing: older agent,
+     * it takes the first instance. Not part of the history.
+     */
+    accessTargets?: Partial<Record<AccessKind, AccessInstance[]>>;
     software: {
         jsController: string;
         node: string;
@@ -191,6 +197,19 @@ export interface JobMessage {
 export type AccessKind = 'admin' | 'vis';
 export const ACCESS_KINDS: AccessKind[] = ['admin', 'vis'];
 
+/** A local web interface the agent can carry a remote access to (Inventory.accessTargets) */
+export interface AccessInstance {
+    /** e.g. "admin.1", "web.0" */
+    instance: string;
+    port: number;
+    /** HTTPS (instance setting "secure") */
+    secure: boolean;
+    /** Login required (instance setting "auth") */
+    auth: boolean;
+    /** Without login every request runs as this user (instance setting "defaultUser") */
+    defaultUser?: string;
+}
+
 /** WebSocket path of the tunnel endpoint on the server */
 export const TUNNEL_PATH = '/tunnel';
 
@@ -210,6 +229,8 @@ export interface TunnelRequest {
     /** Who opens the access and why; shown on the device */
     by: string;
     purpose: string;
+    /** Instance to connect to, one of Inventory.accessTargets of this kind; missing: the first one */
+    instance?: string;
 }
 
 export type JobState =

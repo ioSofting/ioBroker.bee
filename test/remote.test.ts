@@ -4,7 +4,7 @@ import type { AddressInfo } from 'node:net';
 import { after, before, describe, it } from 'node:test';
 import WebSocket, { WebSocketServer } from 'ws';
 import type { TunnelRequest } from '../src/lib/protocol';
-import { findTarget, trustedTunnelUrl, TunnelClient } from '../src/lib/remote';
+import { chooseTarget, describeTargets, findTargets, trustedTunnelUrl, TunnelClient } from '../src/lib/remote';
 import { CLOSE, Mux, REFUSE_HEADER } from '../src/lib/tunnel';
 
 const silent = {
@@ -97,7 +97,7 @@ describe('remote access tunnel of the agent', () => {
         events.length = 0;
         const ended: string[] = [];
         const client = new TunnelClient(request(), {
-            target: { host: '127.0.0.1', port: localPort, secure: false, instance: 'admin.0' },
+            target: { host: '127.0.0.1', port: localPort, secure: false, auth: false, instance: 'admin.0' },
             refusal: null,
             ca: [],
             log: silent,
@@ -145,7 +145,7 @@ describe('remote access tunnel of the agent', () => {
         events.length = 0;
         const ended: string[] = [];
         new TunnelClient(request({ id: 'acc_3' }), {
-            target: { host: '127.0.0.1', port: localPort, secure: false, instance: 'admin.0' },
+            target: { host: '127.0.0.1', port: localPort, secure: false, auth: false, instance: 'admin.0' },
             refusal: null,
             ca: [],
             log: silent,
@@ -170,30 +170,49 @@ describe('remote access tunnel of the agent', () => {
         assert.equal(trustedTunnelUrl('not a url', servers), false);
     });
 
-    it('finds the local interface of admin and web', async () => {
+    it('finds the local interfaces of admin and web', async () => {
         const rows = [
-            { value: { _id: 'system.adapter.admin.1', common: { enabled: true, host: 'h' }, native: { port: 9000 } } },
+            {
+                value: {
+                    _id: 'system.adapter.admin.1',
+                    common: { enabled: true, host: 'h' },
+                    native: { port: 9000, auth: true },
+                },
+            },
             {
                 value: {
                     _id: 'system.adapter.admin.0',
                     common: { enabled: true, host: 'h' },
-                    native: { port: 8081, bind: '0.0.0.0', secure: true },
+                    native: { port: 8081, bind: '0.0.0.0', secure: true, defaultUser: 'system.user.user' },
                 },
             },
-            { value: { _id: 'system.adapter.web.0', common: { enabled: false, host: 'h' }, native: { port: 8082 } } },
+            { value: { _id: 'system.adapter.admin.2', common: { enabled: true, host: 'other' }, native: { port: 1 } } },
+            { value: { _id: 'system.adapter.admin.3', common: { enabled: false, host: 'h' }, native: { port: 2 } } },
+            { value: { _id: 'system.adapter.web.0', common: { enabled: true, host: 'h' }, native: { port: 8082 } } },
         ];
+        let visInstalled = false;
         const adapter = {
             host: 'h',
             getObjectViewAsync: async (_d: string, _v: string, p: { startkey: string }) => ({
                 rows: rows.filter(r => r.value._id.startsWith(p.startkey)),
             }),
+            getForeignObjectAsync: async (id: string) => (id === 'system.adapter.vis-2' && visInstalled ? {} : null),
         } as unknown as ioBroker.Adapter;
-        assert.deepEqual(await findTarget(adapter, 'admin'), {
-            host: '127.0.0.1',
-            port: 8081,
-            secure: true,
-            instance: 'admin.0',
-        });
-        assert.equal(await findTarget(adapter, 'vis'), null, 'disabled web instance');
+        const admin = await findTargets(adapter, 'admin');
+        assert.deepEqual(describeTargets(admin), [
+            { instance: 'admin.0', port: 8081, secure: true, auth: false, defaultUser: 'user' },
+            { instance: 'admin.1', port: 9000, secure: false, auth: true },
+        ]);
+        assert.equal(admin[0].host, '127.0.0.1', 'all addresses: loopback');
+        assert.equal(chooseTarget(admin, undefined)?.instance, 'admin.0', 'first one without choice');
+        assert.equal(chooseTarget(admin, 'admin.1')?.port, 9000);
+        assert.equal(chooseTarget(admin, 'admin.2'), null, 'other host');
+        assert.equal(chooseTarget(admin, 'web.0'), null, 'other kind');
+        assert.deepEqual(await findTargets(adapter, 'vis'), [], 'web without vis-2 is no vis-2');
+        visInstalled = true;
+        assert.deepEqual(
+            (await findTargets(adapter, 'vis')).map(t => t.instance),
+            ['web.0'],
+        );
     });
 });
