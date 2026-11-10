@@ -109,7 +109,7 @@ npm test          # unit tests of planner, preflight and diff
 
 ## Changelog
 
-### **WORK IN PROGRESS**
+### 0.2.5 (2026-11-10)
 
 - Log files of ioBroker for the fleet management: list them, upload one compressed on request
 

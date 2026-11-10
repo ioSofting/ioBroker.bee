@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "bee",
-        "version": "0.2.4",
+        "version": "0.2.5",
         "news": {
+            "0.2.5": {
+                "en": "Log files of ioBroker for the fleet management: lists them and uploads one compressed on request",
+                "de": "Log-Dateien von ioBroker für die Flottenverwaltung: listet sie auf und überträgt auf Anforderung eine davon komprimiert"
+            },
             "0.2.4": {
                 "en": "Updates Node.js to the major line of the profile as the first step of a job, and goes back to the old version if the instances do not run again under the new one; settings show the connection in color and the server; instances without a process refuse commands",
                 "de": "Hebt Node.js als ersten Schritt eines Auftrags auf die Hauptversion des Profils und kehrt zur alten Version zurück, wenn die Instanzen unter der neuen nicht wieder laufen; die Einstellungen zeigen die Verbindung farbig und den Server; Instanzen ohne Prozess lehnen Befehle ab"
