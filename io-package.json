@@ -1,9 +1,9 @@
 {
     "common": {
         "name": "bee",
-        "version": "0.2.1",
+        "version": "0.2.2",
         "news": {
-            "0.2.1": {
+            "0.2.2": {
                 "en": "Console: a shell on this system for the fleet management, off unless the owner allows it (Linux only); commands from the fleet management: start, stop and restart instances, restart ioBroker, install OS updates listed by js-controller; enrollment URL preset to https://bee.iobroker.click",
                 "de": "Konsole: eine Shell auf diesem System für die Flottenverwaltung, aus, bis der Besitzer sie erlaubt (nur Linux); Befehle der Flottenverwaltung: Instanzen starten, stoppen und neu starten, ioBroker neu starten, von js-controller gemeldete OS-Updates einspielen; Enrollment-URL mit https://bee.iobroker.click vorbelegt"
             },

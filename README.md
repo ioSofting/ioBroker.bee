@@ -92,7 +92,7 @@ npm test          # unit tests of planner, preflight and diff
 
 ## Changelog
 
-### 0.2.1 (2026-11-10)
+### 0.2.2 (2026-11-10)
 
 - Console: a shell on this system for the fleet management, in the browser of the technician; off unless the owner allows it, Linux with `script` (util-linux) only
 - Enrollment URL preset to `https://bee.iobroker.click` (new instances)
