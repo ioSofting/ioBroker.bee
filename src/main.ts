@@ -57,7 +57,15 @@ import {
 } from './lib/remote';
 import { Transport, trustedCas } from './lib/transport';
 import { CONSOLE, consoleMessage } from './lib/tunnel';
-import { diffFlat, flatten, readJson, writeJsonAtomic } from './lib/util';
+import { diffFlat, flatten, readJson, sleep, writeJsonAtomic } from './lib/util';
+import {
+    adapterCommandPaths,
+    adapterCommandState,
+    adapterRefusal,
+    adapterStep,
+    clearAdapterCommand,
+    startAdapterCommand,
+} from './lib/adapterCommand';
 
 interface BeeConfig {
     enrollUrl: string;
@@ -120,6 +128,8 @@ class BeeAdapter extends utils.Adapter {
     private reconciling = false;
     /** A command of the fleet management is being carried out (one at a time) */
     private commandRunning = false;
+    /** Waits for the runner of the command 'adapter' (also one started before a restart of the agent) */
+    private adapterWaiting = false;
     private logUploading = false;
     private lastWaitReason = '';
     private unloading = false;
@@ -307,6 +317,8 @@ class BeeAdapter extends utils.Adapter {
         } else if (this.persisted.lastResult) {
             await this.transport?.publish('result', this.persisted.lastResult);
         }
+        // an adapter installed on request, e.g. the agent itself: the answer comes from the new process
+        void this.waitAdapterCommand();
     }
 
     private async onDesired(msg: DesiredMessage | null): Promise<void> {
@@ -342,7 +354,10 @@ class BeeAdapter extends utils.Adapter {
             await this.sendInventory(true);
         } else if (msg.cmd === 'tunnel' && msg.tunnel) {
             await this.openTunnel(msg.tunnel, false);
-        } else if (msg.ref && (msg.cmd === 'instance' || msg.cmd === 'restart' || msg.cmd === 'osUpgrade')) {
+        } else if (
+            msg.ref &&
+            (msg.cmd === 'instance' || msg.cmd === 'restart' || msg.cmd === 'osUpgrade' || msg.cmd === 'adapter')
+        ) {
             await this.runCommand(msg);
         } else if (msg.ref && msg.cmd === 'logList') {
             // only reads: also during a job or another command
@@ -436,7 +451,7 @@ class BeeAdapter extends utils.Adapter {
             await this.reply(ref, 'error', 'Während eines Auftrags (Update) nicht möglich');
             return;
         }
-        if (this.commandRunning) {
+        if (this.commandRunning || (await adapterCommandState(adapterCommandPaths(this.dataDir))) === null) {
             await this.reply(ref, 'error', 'Es läuft schon ein Befehl');
             return;
         }
@@ -451,6 +466,8 @@ class BeeAdapter extends utils.Adapter {
                 this.sendToHost(`system.host.${this.host}`, 'restartController', {});
             } else if (msg.cmd === 'osUpgrade') {
                 await this.osUpgradeCommand(ref, by, msg.osUpgrade);
+            } else if (msg.cmd === 'adapter') {
+                await this.adapterCommand(ref, by, msg.adapter);
             }
         } catch (e) {
             this.log.warn(`Command ${msg.cmd} of ${by} failed: ${e.message}`);
@@ -484,6 +501,86 @@ class BeeAdapter extends utils.Adapter {
         if (!own) {
             await this.reply(ref, 'done', `${req.id} ${ACTION_DONE[req.action]}`);
             this.inventorySoon();
+        }
+    }
+
+    /** Installs one version of one adapter right away, for an asset without desired profile */
+    private async adapterCommand(ref: string, by: string, req: JobMessage['adapter']): Promise<void> {
+        const refusal = adapterRefusal(req, this.desired);
+        if (refusal || !req) {
+            await this.reply(ref, 'error', refusal || 'Adapter fehlt');
+            return;
+        }
+        const obj = await this.getForeignObjectAsync(`system.adapter.${req.name}`);
+        const installed = typeof obj?.common?.version === 'string' ? obj.common.version : undefined;
+        let file: string | undefined;
+        if (req.tarball) {
+            await this.reply(ref, 'running', `Paket für ${req.name} wird geladen`);
+            file = await ensurePackage(join(this.dataDir, 'packages'), req.tarball, {
+                serverUrls: [this.config.enrollUrl, this.creds?.mqttUrl || ''],
+                ca: trustedCas(this.creds?.ca || ''),
+            });
+        }
+        const step = adapterStep(req.name, req.version, installed, !!file);
+        if (!step) {
+            await this.reply(ref, 'done', `${req.name} ${req.version} ist schon installiert`);
+            return;
+        }
+        this.log.info(
+            `Adapter ${req.name}: ${step.action} ${installed ?? '-'} -> ${req.version} on request of ${by} (fleet management)`,
+        );
+        await startAdapterCommand(
+            adapterCommandPaths(this.dataDir),
+            { ref, by, name: req.name, version: req.version, startedAt: Date.now() },
+            step,
+            {
+                iobrokerJs: join(utils.controllerDir, 'iobroker.js'),
+                cwd: join(utils.controllerDir, '..', '..'),
+                haltFile: join(this.dataDir, 'halt'),
+                logFile: join(this.dataDir, 'runner.log'),
+                file,
+            },
+        );
+        await this.reply(
+            ref,
+            'running',
+            installed
+                ? `${req.name} ${installed} → ${req.version} wird installiert`
+                : `${req.name} ${req.version} wird installiert`,
+        );
+        await this.waitAdapterCommand();
+    }
+
+    /** Waits for the runner of the command 'adapter' and answers the server */
+    private async waitAdapterCommand(): Promise<void> {
+        if (this.adapterWaiting || !this.dataDir) {
+            return;
+        }
+        this.adapterWaiting = true;
+        const paths = adapterCommandPaths(this.dataDir);
+        try {
+            while (!this.unloading) {
+                const result = await adapterCommandState(paths);
+                if (result === undefined) {
+                    return;
+                }
+                if (result) {
+                    if (!this.transport?.connected) {
+                        // answered after the next connect
+                        return;
+                    }
+                    await this.reply(result.command.ref, result.state, result.message);
+                    this.log[result.state === 'done' ? 'info' : 'warn'](
+                        `Adapter command of ${result.command.by}: ${result.message}`,
+                    );
+                    await clearAdapterCommand(paths);
+                    this.inventorySoon();
+                    return;
+                }
+                await sleep(2000);
+            }
+        } finally {
+            this.adapterWaiting = false;
         }
     }
 
@@ -901,7 +998,7 @@ class BeeAdapter extends utils.Adapter {
 
     /** Converges on the desired state if possible. Never runs two jobs at once. */
     private async reconcile(): Promise<void> {
-        if (this.reconciling || this.unloading || !this.jobs || this.jobs.isActive()) {
+        if (this.reconciling || this.unloading || !this.jobs || this.jobs.isActive() || this.adapterWaiting) {
             return;
         }
         this.reconciling = true;

@@ -177,7 +177,7 @@ export const INSTANCE_ID = /^[a-z0-9][a-z0-9_-]*\.\d{1,4}$/;
 export type InstanceAction = 'start' | 'stop' | 'restart';
 
 /** Commands from the asset detail an agent may understand (Inventory.commands) */
-export type AgentCommand = 'instance' | 'restart' | 'osUpgrade' | 'logs';
+export type AgentCommand = 'instance' | 'restart' | 'osUpgrade' | 'logs' | 'adapter';
 
 /** A log file of ioBroker on the device, in the directory of a file transport of iobroker.json */
 export interface LogFile {
@@ -261,8 +261,9 @@ export interface JobMessage {
      * osUpgrade: upgrade packages of the operating system that js-controller listed (OsUpdates)
      * logList: list the log files of ioBroker (answer: ReplyMessage.files)
      * logFetch: upload one of them (command 'logs' of Inventory.commands for both)
+     * adapter: install a version of an adapter right away, for an asset without desired profile (since 0.2.6)
      */
-    cmd: 'resync' | 'refresh' | 'tunnel' | 'instance' | 'restart' | 'osUpgrade' | 'logList' | 'logFetch';
+    cmd: 'resync' | 'refresh' | 'tunnel' | 'instance' | 'restart' | 'osUpgrade' | 'logList' | 'logFetch' | 'adapter';
     /** For cmd 'tunnel' */
     tunnel?: TunnelRequest;
     /** Commands: the agent answers on topic reply with this reference */
@@ -278,6 +279,12 @@ export interface JobMessage {
      * header "Authorization: Bearer <ticket>". The url must belong to the own server; the ticket is good once.
      */
     logFetch?: { file: string; url: string; ticket: string };
+    /**
+     * For cmd 'adapter': install this version (upgrade, downgrade, or a new adapter with one instance), from
+     * npm or from a package of the own server (same rules as ProfileAdapter.tarball). Not js-controller, and
+     * not while the asset follows a desired profile in managed mode: that would turn it back.
+     */
+    adapter?: { name: string; version: string; tarball?: { url: string; sha256: string; size: number } };
 }
 
 /** Answer to a command: 'running' first if it takes a while, then 'done' or 'error' */

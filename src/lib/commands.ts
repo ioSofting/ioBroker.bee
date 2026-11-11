@@ -28,7 +28,7 @@ export function supportedCommands(jsController: string, platform: string = proce
     if (platform === 'linux' && jsController && compareVersions(jsController, '6.0.0') >= 0) {
         commands.push('osUpgrade');
     }
-    commands.push('logs');
+    commands.push('logs', 'adapter');
     return commands;
 }
 

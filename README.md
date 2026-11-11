@@ -60,6 +60,7 @@ From the asset detail a technician (permission `operate`) can start, stop and re
 - Instances: the same way admin does it, through the instance object (`common.enabled`, or rewriting it for a restart). Only instances of this host; `bee` itself can be restarted but not stopped from afar.
 - Restart of ioBroker: host command `restartController` of js-controller.
 - OS updates: js-controller (6 and newer, Linux) lists upgradeable packages (`apt list --upgradeable`) on every update of the repository, admin triggers that daily, and writes them to `system.host.<host>.osPackageUpdates`. The agent reports this list in the inventory, together with `/var/run/reboot-required`, and on request passes the chosen packages to the host command `upgradeOsPackages`, which runs apt (with sudo if ioBroker does not run as root). Packages that js-controller did not list are refused.
+- Adapter version (since 0.2.6, permission `assign`): installs one version of one adapter right away, from npm or from a package of the own server (checked like the packages of a job), like an installation from admin: `iobroker upgrade <adapter>@<version>` (with `--force` downwards), `iobroker add` for a new adapter, `iobroker url` for a package. Only for an asset without desired profile in managed mode (otherwise the next job would turn it back; there the version is changed in the profile or set for the asset), never js-controller, without backup. It runs with the detached runner of the jobs under its own file (`adapter-runner.json`), so it survives the restart of the agent when the agent updates itself; the answer then comes from the new process. The emergency stop stops it too.
 - Nothing of this while a job (update) is running, and one command at a time.
 - Log files: the agent lists the files in the directories of the file transports of `iobroker.json` (`iobroker-data/iobroker.json`, found as js-controller finds it; without a file transport `log` below the ioBroker directory; only `*.log` and `*.gz`, no symbolic links like `iobroker.current.log`), and on request uploads one of them to its own server, compressed with gzip (a `.gz` file as it is), with the one-time ticket of the request and at most 50 MB compressed. The upload URL must belong to the server of the enrollment or the broker. This works also during a job, one upload at a time.
 
@@ -112,6 +113,7 @@ npm test          # unit tests of planner, preflight and diff
 ### **WORK IN PROGRESS**
 
 - Log files: the list was empty on normal installations, the agent now finds `iobroker.json` in `iobroker-data` as js-controller does
+- Command `adapter`: install a version of an adapter right away on an asset without desired profile
 
 ### 0.2.5 (2026-11-10)
 
