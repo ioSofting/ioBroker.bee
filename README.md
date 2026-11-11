@@ -123,7 +123,7 @@ npm test          # unit tests of planner, preflight and diff
 
 ## Changelog
 
-### **WORK IN PROGRESS**
+### 0.2.11 (2026-11-11)
 
 - Reports the backup of ioBroker by BackItUp: instance, automatic backup on, interval, targets outside the device, the last run with its error, the last good backup and the last one outside the device. The fleet management warns when there is no automatic backup, when it failed or when it is overdue
 - The update of Node.js needs a recent backup outside the device, not only a target switched on

@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "bee",
-        "version": "0.2.10",
+        "version": "0.2.11",
         "news": {
+            "0.2.11": {
+                "en": "Reports the backup by BackItUp (automatic backup on, interval, targets outside the device, last run, last good backup and last one outside the device); the fleet management warns when there is none, when it failed or when it is overdue. The update of Node.js needs a recent backup outside the device",
+                "de": "Meldet die Sicherung durch BackItUp (automatische Sicherung an, Abstand, Ziele außerhalb des Geräts, letzter Lauf, letzte erfolgreiche und letzte externe Sicherung); die Flottenverwaltung warnt, wenn es keine gibt, sie fehlgeschlagen oder überfällig ist. Das Update von Node.js braucht eine aktuelle Sicherung außerhalb des Geräts"
+            },
             "0.2.10": {
                 "en": "Adapters that are not in the repositories of the system (bee itself, own adapters only on npm) are installed and updated from npm, as admin does",
                 "de": "Adapter, die nicht in den Repositories des Systems stehen (bee selbst, eigene Adapter nur auf npm), werden wie in admin aus npm installiert und aktualisiert"
