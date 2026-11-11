@@ -66,6 +66,11 @@ export function cliArgs(step: JobStep, file?: string): string[][] {
             return [['upgrade', `${step.adapter}@${step.to}`, '--yes', '--force']];
         case 'remove':
             return [['del', step.adapter!]];
+        case 'addInstance':
+            // with the number: "add" only creates the instance, the adapter is installed already
+            return [['add', step.adapter!, step.instance!.slice(step.adapter!.length + 1)]];
+        case 'removeInstance':
+            return [['del', step.instance!]];
     }
 }
 
@@ -115,8 +120,20 @@ function installedVersion(file: RunnerFile, adapter: string): string | null {
     }
 }
 
-function checkResult(file: RunnerFile, step: JobStep): string | null {
-    if (step.action === 'backup' || !step.adapter) {
+/**
+ * Why the step did not do what it should although the CLI ended with 0, or null
+ *
+ * @param file the runner file
+ * @param step the step
+ * @param output what the CLI printed
+ */
+export function checkResult(file: RunnerFile, step: JobStep, output: string): string | null {
+    if (step.action === 'removeInstance') {
+        // js-controller keeps an instance others depend on, and still ends with 0
+        const refused = /Cannot remove instance[^\r\n]*/.exec(output);
+        return refused ? refused[0].trim() : null;
+    }
+    if (step.action === 'backup' || step.action === 'addInstance' || !step.adapter) {
         return null;
     }
     const version = installedVersion(file, step.adapter);
@@ -168,7 +185,7 @@ async function main(path: string): Promise<void> {
                 break;
             }
         }
-        const mismatch = result.code === 0 ? checkResult(file, step) : null;
+        const mismatch = result.code === 0 ? checkResult(file, step, result.output) : null;
         if (mismatch) {
             appendFileSync(file.logFile, `\n[check] ${mismatch}\n`);
             result.code = 1;
@@ -192,7 +209,7 @@ async function main(path: string): Promise<void> {
             step.detail = tail(result.output);
             file.phase = 'failed';
             file.error = mismatch
-                ? `${step.action} ${step.adapter}: ${mismatch}`
+                ? `${step.action} ${step.instance ?? step.adapter}: ${mismatch}`
                 : `${step.action}${step.adapter ? ` ${step.adapter}` : ''} fehlgeschlagen (Exit-Code ${result.code})`;
             file.steps.filter(s => s.status === 'pending').forEach(s => (s.status = 'skipped'));
         }

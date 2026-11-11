@@ -177,7 +177,15 @@ export const INSTANCE_ID = /^[a-z0-9][a-z0-9_-]*\.\d{1,4}$/;
 export type InstanceAction = 'start' | 'stop' | 'restart';
 
 /** Commands from the asset detail an agent may understand (Inventory.commands) */
-export type AgentCommand = 'instance' | 'restart' | 'osUpgrade' | 'logs' | 'adapter';
+export type AgentCommand = 'instance' | 'restart' | 'osUpgrade' | 'logs' | 'adapter' | 'software';
+
+/**
+ * Command 'software' (since agent 0.2.7): removeAdapter removes an adapter with all its instances (not the agent,
+ * not js-controller), addInstance creates one more instance of an installed adapter on the host of the agent,
+ * removeInstance deletes one instance there
+ */
+export type SoftwareAction = 'removeAdapter' | 'addInstance' | 'removeInstance';
+export const SOFTWARE_ACTIONS: SoftwareAction[] = ['removeAdapter', 'addInstance', 'removeInstance'];
 
 /** A log file of ioBroker on the device, in the directory of a file transport of iobroker.json */
 export interface LogFile {
@@ -266,8 +274,19 @@ export interface JobMessage {
      * logList: list the log files of ioBroker (answer: ReplyMessage.files)
      * logFetch: upload one of them (command 'logs' of Inventory.commands for both)
      * adapter: install a version of an adapter right away, for an asset without desired profile (since 0.2.6)
+     * software: remove an adapter, add or delete an instance right away (since 0.2.7)
      */
-    cmd: 'resync' | 'refresh' | 'tunnel' | 'instance' | 'restart' | 'osUpgrade' | 'logList' | 'logFetch' | 'adapter';
+    cmd:
+        | 'resync'
+        | 'refresh'
+        | 'tunnel'
+        | 'instance'
+        | 'restart'
+        | 'osUpgrade'
+        | 'logList'
+        | 'logFetch'
+        | 'adapter'
+        | 'software';
     /** For cmd 'tunnel' */
     tunnel?: TunnelRequest;
     /** Commands: the agent answers on topic reply with this reference */
@@ -289,6 +308,11 @@ export interface JobMessage {
      * not while the asset follows a desired profile in managed mode: that would turn it back.
      */
     adapter?: { name: string; version: string; tarball?: { url: string; sha256: string; size: number } };
+    /**
+     * For cmd 'software': instance is the id for removeInstance (e.g. "javascript.1"). removeAdapter not for an
+     * adapter of the desired profile in managed mode: the server removes it with a job (DesiredMessage.remove).
+     */
+    software?: { action: SoftwareAction; adapter: string; instance?: string };
 }
 
 /** Answer to a command: 'running' first if it takes a while, then 'done' or 'error' */
@@ -352,11 +376,13 @@ export const TERMINAL_JOB_STATES: JobState[] = ['done', 'blocked'];
 
 /**
  * A step of a job. node: Node.js to the major line of the profile (from: process.version, to: the major,
- * e.g. "22"); it comes right after the backup and stays when a later step fails.
+ * e.g. "22"); it comes right after the backup and stays when a later step fails. addInstance and
+ * removeInstance only for the command 'software', with the instance (e.g. "javascript.1").
  */
 export interface JobStep {
-    action: 'backup' | 'node' | 'install' | 'upgrade' | 'downgrade' | 'remove';
+    action: 'backup' | 'node' | 'install' | 'upgrade' | 'downgrade' | 'remove' | 'addInstance' | 'removeInstance';
     adapter?: string;
+    instance?: string;
     from?: string | null;
     to?: string | null;
     status: 'pending' | 'running' | 'ok' | 'error' | 'skipped';

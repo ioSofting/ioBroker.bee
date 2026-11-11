@@ -115,6 +115,7 @@ npm test          # unit tests of planner, preflight and diff
 ### **WORK IN PROGRESS**
 
 - Protocol: the desired state can carry the mode `free` (without profile), shown in `info.mode`
+- Command `software`: remove an adapter, add or delete an instance right away, with the runner of the command `adapter`
 
 ### 0.2.6 (2026-11-11)
 

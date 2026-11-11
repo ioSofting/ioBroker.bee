@@ -16,11 +16,25 @@ const state = (val: unknown, ts = 1000): ioBroker.State =>
 
 describe('commands of the fleet management', () => {
     it('offers OS updates only on Linux with js-controller 6 or newer', () => {
-        assert.deepEqual(supportedCommands('7.0.7', 'linux'), ['instance', 'restart', 'osUpgrade', 'logs', 'adapter']);
-        assert.deepEqual(supportedCommands('6.0.11', 'linux'), ['instance', 'restart', 'osUpgrade', 'logs', 'adapter']);
-        assert.deepEqual(supportedCommands('5.0.19', 'linux'), ['instance', 'restart', 'logs', 'adapter']);
-        assert.deepEqual(supportedCommands('7.0.7', 'win32'), ['instance', 'restart', 'logs', 'adapter']);
-        assert.deepEqual(supportedCommands('', 'linux'), ['instance', 'restart', 'logs', 'adapter']);
+        assert.deepEqual(supportedCommands('7.0.7', 'linux'), [
+            'instance',
+            'restart',
+            'osUpgrade',
+            'logs',
+            'adapter',
+            'software',
+        ]);
+        assert.deepEqual(supportedCommands('6.0.11', 'linux'), [
+            'instance',
+            'restart',
+            'osUpgrade',
+            'logs',
+            'adapter',
+            'software',
+        ]);
+        assert.deepEqual(supportedCommands('5.0.19', 'linux'), ['instance', 'restart', 'logs', 'adapter', 'software']);
+        assert.deepEqual(supportedCommands('7.0.7', 'win32'), ['instance', 'restart', 'logs', 'adapter', 'software']);
+        assert.deepEqual(supportedCommands('', 'linux'), ['instance', 'restart', 'logs', 'adapter', 'software']);
     });
 
     it('reads the packages js-controller listed', () => {

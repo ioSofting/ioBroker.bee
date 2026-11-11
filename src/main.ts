@@ -66,6 +66,13 @@ import {
     clearAdapterCommand,
     startAdapterCommand,
 } from './lib/adapterCommand';
+import {
+    softwarePlan,
+    softwareRefusal,
+    validAdapterName,
+    type SoftwareContext,
+    type SoftwareInstance,
+} from './lib/softwareCommand';
 
 interface BeeConfig {
     enrollUrl: string;
@@ -356,7 +363,11 @@ class BeeAdapter extends utils.Adapter {
             await this.openTunnel(msg.tunnel, false);
         } else if (
             msg.ref &&
-            (msg.cmd === 'instance' || msg.cmd === 'restart' || msg.cmd === 'osUpgrade' || msg.cmd === 'adapter')
+            (msg.cmd === 'instance' ||
+                msg.cmd === 'restart' ||
+                msg.cmd === 'osUpgrade' ||
+                msg.cmd === 'adapter' ||
+                msg.cmd === 'software')
         ) {
             await this.runCommand(msg);
         } else if (msg.ref && msg.cmd === 'logList') {
@@ -468,6 +479,8 @@ class BeeAdapter extends utils.Adapter {
                 await this.osUpgradeCommand(ref, by, msg.osUpgrade);
             } else if (msg.cmd === 'adapter') {
                 await this.adapterCommand(ref, by, msg.adapter);
+            } else if (msg.cmd === 'software') {
+                await this.softwareCommand(ref, by, msg.software);
             }
         } catch (e) {
             this.log.warn(`Command ${msg.cmd} of ${by} failed: ${e.message}`);
@@ -551,7 +564,56 @@ class BeeAdapter extends utils.Adapter {
         await this.waitAdapterCommand();
     }
 
-    /** Waits for the runner of the command 'adapter' and answers the server */
+    /** All instances of an adapter with their host */
+    private async instancesWithHost(adapter: string): Promise<SoftwareInstance[]> {
+        const prefix = `system.adapter.${adapter}.`;
+        const res = await this.getObjectViewAsync('system', 'instance', { startkey: prefix, endkey: `${prefix}香` });
+        return res.rows
+            .filter(row => row.value)
+            .map(row => ({ id: row.value._id.replace('system.adapter.', ''), host: String(row.value.common.host) }));
+    }
+
+    /** Removes an adapter, adds or deletes an instance right away, with the runner of the command 'adapter' */
+    private async softwareCommand(ref: string, by: string, req: JobMessage['software']): Promise<void> {
+        const adapter = validAdapterName(req?.adapter) ? req.adapter : null;
+        const ctx: SoftwareContext = {
+            own: this.namespace,
+            host: this.host || '',
+            desired: this.desired,
+            adapterObj: adapter ? await this.getForeignObjectAsync(`system.adapter.${adapter}`) : null,
+            instances: adapter ? await this.instancesWithHost(adapter) : [],
+        };
+        const refusal = softwareRefusal(req, ctx);
+        if (refusal || !req) {
+            await this.reply(ref, 'error', refusal || 'Anfrage fehlt');
+            return;
+        }
+        const plan = softwarePlan(req, ctx);
+        this.log.info(`Software ${req.action} ${plan.what} on request of ${by} (fleet management)`);
+        await startAdapterCommand(
+            adapterCommandPaths(this.dataDir),
+            {
+                ref,
+                by,
+                name: req.adapter,
+                version: '',
+                what: plan.what,
+                done: plan.done,
+                startedAt: Date.now(),
+            },
+            plan.step,
+            {
+                iobrokerJs: join(utils.controllerDir, 'iobroker.js'),
+                cwd: join(utils.controllerDir, '..', '..'),
+                haltFile: join(this.dataDir, 'halt'),
+                logFile: join(this.dataDir, 'runner.log'),
+            },
+        );
+        await this.reply(ref, 'running', plan.running);
+        await this.waitAdapterCommand();
+    }
+
+    /** Waits for the runner of the commands 'adapter' and 'software' and answers the server */
     private async waitAdapterCommand(): Promise<void> {
         if (this.adapterWaiting || !this.dataDir) {
             return;

@@ -17,13 +17,20 @@ const VERSION = /^\d+\.\d+\.\d+(?:-[\w.-]+)?(?:\+[\w.-]+)?$/;
 /** Longer than the runner needs for one step (30 minutes per call of the CLI, at most two calls) */
 export const ADAPTER_COMMAND_TIMEOUT = 65 * 60_000;
 
-/** What the agent remembers about the running command, to answer also after its own restart */
+/**
+ * What the agent remembers about the running command, to answer also after its own restart. The command
+ * 'software' uses the same files: what it does and the answer when it is done.
+ */
 export interface AdapterCommandFile {
     ref: string;
     by: string;
     name: string;
     version: string;
     startedAt: number;
+    /** Instead of "<name> <version>" */
+    what?: string;
+    /** Instead of "<what> installiert" */
+    done?: string;
 }
 
 export interface AdapterCommandPaths {
@@ -148,9 +155,9 @@ export async function adapterCommandState(
         return undefined;
     }
     const runner = await readJson<RunnerFile>(paths.runner);
-    const what = `${command.name} ${command.version}`;
+    const what = command.what ?? `${command.name} ${command.version}`;
     if (runner?.phase === 'done') {
-        return { command, state: 'done', message: `${what} installiert` };
+        return { command, state: 'done', message: command.done ?? `${what} installiert` };
     }
     if (runner?.phase === 'failed' || runner?.phase === 'halted') {
         const step = runner.steps[0];
