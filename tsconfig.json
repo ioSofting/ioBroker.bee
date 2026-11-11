@@ -1,6 +1,6 @@
 // Root tsconfig: type-checks sources and tests (no emit)
 {
-    "extends": "@tsconfig/node20/tsconfig.json",
+    "extends": "@tsconfig/node22/tsconfig.json",
     "compilerOptions": {
         "noEmit": true,
         "allowJs": false,
