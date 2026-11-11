@@ -30,6 +30,7 @@ import {
 import { ensurePackage, packagesOf, trustedPackageUrl } from './lib/packages';
 import { checkDependencies, computePlan, foreignAdapters } from './lib/planner';
 import { preflight, type Condition } from './lib/preflight';
+import { repoCatalog, repoInfo, type RepoCatalog } from './lib/repo';
 import {
     normalizeComment,
     PROTOCOL_VERSION,
@@ -138,6 +139,9 @@ class BeeAdapter extends utils.Adapter {
     /** Waits for the runner of the command 'adapter' (also one started before a restart of the agent) */
     private adapterWaiting = false;
     private logUploading = false;
+    /** The repositories set in admin: read on start and when admin loads them again */
+    private repos: RepoCatalog | undefined;
+    private activeRepoKey = '';
     private lastWaitReason = '';
     private unloading = false;
     /** Open remote access sessions by session id */
@@ -149,6 +153,7 @@ class BeeAdapter extends utils.Adapter {
         super({ ...options, name: 'bee' });
         this.on('ready', () => this.onReady());
         this.on('stateChange', (id, state) => this.onStateChange(id, state));
+        this.on('objectChange', (id, obj) => void this.onObjectChange(id, obj));
         this.on('unload', callback => void this.onUnload(callback));
         this.on('log', (msg: ioBroker.LogMessage) => this.onLog(msg));
     }
@@ -197,6 +202,10 @@ class BeeAdapter extends utils.Adapter {
         await this.requireLog?.(true);
 
         await this.subscribeStatesAsync('control.*');
+        // the repositories of admin, for the updates of the adapters in the fleet management
+        await this.subscribeForeignObjectsAsync('system.repositories');
+        await this.subscribeForeignObjectsAsync('system.config');
+        await this.readRepos();
         await this.updateInfoStates();
 
         this.creds = await readJson<EnrollResponse>(join(this.dataDir, 'device.json'));
@@ -852,6 +861,41 @@ class BeeAdapter extends utils.Adapter {
 
     // ------------------------------------------------------------------ inventory and heartbeat
 
+    /**
+     * Reads the active repositories. system.repositories has several megabytes: only on start, when admin loads
+     * the repositories again and when another repository is set.
+     *
+     * @param repositories the changed object system.repositories; undefined: read it
+     */
+    private async readRepos(repositories?: ioBroker.Object | null): Promise<void> {
+        try {
+            const config = await this.getForeignObjectAsync('system.config');
+            const active: unknown = config?.common?.activeRepo;
+            this.activeRepoKey = JSON.stringify(active ?? null);
+            const repos =
+                repositories === undefined ? await this.getForeignObjectAsync('system.repositories') : repositories;
+            this.repos = repoCatalog(active, repos?.native?.repositories);
+        } catch (e) {
+            this.log.debug(`Repositories not readable: ${(e as Error).message}`);
+            this.repos = undefined;
+        }
+    }
+
+    private async onObjectChange(id: string, obj: ioBroker.Object | null | undefined): Promise<void> {
+        if (id === 'system.config') {
+            const active: unknown = (obj?.common as { activeRepo?: unknown } | undefined)?.activeRepo;
+            if (JSON.stringify(active ?? null) === this.activeRepoKey) {
+                return;
+            }
+            await this.readRepos();
+        } else if (id === 'system.repositories') {
+            await this.readRepos(obj ?? null);
+        } else {
+            return;
+        }
+        await this.sendInventory(false);
+    }
+
     private async inventory(): Promise<Inventory> {
         const inv = await collectInventory(this, {
             agentVersion: this.version || '',
@@ -873,6 +917,10 @@ class BeeAdapter extends utils.Adapter {
             inv.consoleUser = consoleUser();
         }
         inv.commands = supportedCommands(inv.software.jsController);
+        const repo = repoInfo(this.repos, Object.keys(inv.software.adapters));
+        if (repo) {
+            inv.repo = repo;
+        }
         if (inv.commands.includes('osUpgrade')) {
             const updates = osUpdatesFrom(
                 await this.getForeignStateAsync(`system.host.${this.host}.osPackageUpdates`),

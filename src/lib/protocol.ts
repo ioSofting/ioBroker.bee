@@ -116,6 +116,11 @@ export interface Inventory {
      * Missing: unknown (older agent, older js-controller, no Linux). Not part of the history.
      */
     osUpdates?: OsUpdates;
+    /**
+     * The adapter repositories set in admin and the versions of the installed adapters there, see RepoInfo.
+     * Missing: unknown (older agent, no repository active). Not part of the history.
+     */
+    repo?: RepoInfo;
     /** Commands this agent understands (JobMessage.cmd); missing: none */
     commands?: AgentCommand[];
     software: {
@@ -149,6 +154,23 @@ export interface OsPackage {
     version?: string;
     /** Installed version */
     from?: string;
+}
+
+/**
+ * The adapter repositories active in admin (system.config common.activeRepo), as js-controller keeps them in
+ * system.repositories. Admin loads them daily and shows from them which adapters have an update.
+ */
+export interface RepoInfo {
+    /**
+     * Active repositories in their order, e.g. beta with http://download.iobroker.net/sources-dist-latest.json;
+     * the link without user, password and query. time: when js-controller loaded it, null: not loaded yet.
+     */
+    active: { name: string; link: string; time: number | null }[];
+    /**
+     * Version of each installed adapter and of js-controller in the active repositories, merged as js-controller
+     * does it (a later repository wins). Missing: not in a repository, or no repository loaded yet.
+     */
+    versions: Record<string, string>;
 }
 
 export interface OsUpdates {
