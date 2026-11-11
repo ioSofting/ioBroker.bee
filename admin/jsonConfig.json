@@ -141,6 +141,65 @@
                     "lg": 6,
                     "xl": 6
                 },
+                "_aiHeader": {
+                    "type": "header",
+                    "text": { "en": "AI access (MCP)", "de": "KI-Zugang (MCP)" },
+                    "size": 5,
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                },
+                "allowAi": {
+                    "type": "checkbox",
+                    "label": { "en": "Allow the AI access", "de": "KI-Zugang erlauben" },
+                    "help": {
+                        "en": "An AI of the fleet management works with the MCP server of ioBroker on this system, only while someone opened it there with purpose and duration. Needs Node.js 22.19",
+                        "de": "Eine KI der Flottenverwaltung arbeitet mit dem MCP-Server von ioBroker auf diesem System, nur solange jemand sie dort mit Zweck und Dauer geöffnet hat. Braucht Node.js 22.19"
+                    },
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 6,
+                    "lg": 6,
+                    "xl": 6
+                },
+                "aiUser": {
+                    "type": "user",
+                    "short": true,
+                    "label": { "en": "Runs as ioBroker user", "de": "Läuft als ioBroker-Nutzer" },
+                    "help": { "en": "The AI has the rights of this user", "de": "Die KI hat die Rechte dieses Nutzers" },
+                    "hidden": "!data.allowAi",
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 6,
+                    "lg": 6,
+                    "xl": 6
+                },
+                "aiSetState": {
+                    "type": "checkbox",
+                    "label": { "en": "Also write states", "de": "Auch Werte schreiben" },
+                    "help": { "en": "Otherwise the AI only reads", "de": "Sonst liest die KI nur" },
+                    "hidden": "!data.allowAi",
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 6,
+                    "lg": 6,
+                    "xl": 6
+                },
+                "aiObjectChange": {
+                    "type": "checkbox",
+                    "label": { "en": "Also change objects and files", "de": "Auch Objekte und Dateien ändern" },
+                    "hidden": "!data.allowAi",
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 6,
+                    "lg": 6,
+                    "xl": 6
+                },
                 "_remoteAccessBy": {
                     "type": "state",
                     "oid": "info.remoteAccessBy",

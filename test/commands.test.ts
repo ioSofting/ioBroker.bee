@@ -23,6 +23,7 @@ describe('commands of the fleet management', () => {
             'logs',
             'adapter',
             'software',
+            'mcp',
         ]);
         assert.deepEqual(supportedCommands('6.0.11', 'linux'), [
             'instance',
@@ -31,10 +32,25 @@ describe('commands of the fleet management', () => {
             'logs',
             'adapter',
             'software',
+            'mcp',
         ]);
-        assert.deepEqual(supportedCommands('5.0.19', 'linux'), ['instance', 'restart', 'logs', 'adapter', 'software']);
-        assert.deepEqual(supportedCommands('7.0.7', 'win32'), ['instance', 'restart', 'logs', 'adapter', 'software']);
-        assert.deepEqual(supportedCommands('', 'linux'), ['instance', 'restart', 'logs', 'adapter', 'software']);
+        assert.deepEqual(supportedCommands('5.0.19', 'linux'), [
+            'instance',
+            'restart',
+            'logs',
+            'adapter',
+            'software',
+            'mcp',
+        ]);
+        assert.deepEqual(supportedCommands('7.0.7', 'win32'), [
+            'instance',
+            'restart',
+            'logs',
+            'adapter',
+            'software',
+            'mcp',
+        ]);
+        assert.deepEqual(supportedCommands('', 'linux'), ['instance', 'restart', 'logs', 'adapter', 'software', 'mcp']);
     });
 
     it('reads the packages js-controller listed', () => {

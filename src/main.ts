@@ -12,6 +12,7 @@ import {
     REBOOT_REQUIRED,
     supportedCommands,
 } from './lib/commands';
+import { aiAccess, aiUserId, AiAccessManager, type McpClient } from './lib/ai';
 import { consoleUser, findScript, MAX_SHELLS, startShell } from './lib/console';
 import { instanceRunning, onlyWww } from './lib/instances';
 import { enroll } from './lib/enrollment';
@@ -42,6 +43,8 @@ import {
     type JobMessage,
     type JobState,
     type JobStep,
+    type McpReply,
+    type McpRequest,
     type ReplyMessage,
     type ResultMessage,
     type StateMessage,
@@ -85,6 +88,12 @@ interface BeeConfig {
     allowVis: boolean;
     /** A shell on this system for the fleet management (off unless the owner switches it on) */
     allowConsole: boolean;
+    /** AI access: the MCP server of ioBroker for an AI of the fleet management (off unless the owner allows it) */
+    allowAi: boolean;
+    /** ...with writing states, with changing objects and files; as this ioBroker user */
+    aiSetState: boolean;
+    aiObjectChange: boolean;
+    aiUser: string;
     windowStart: string;
     windowEnd: string;
     ignoreWindow: boolean;
@@ -138,6 +147,8 @@ class BeeAdapter extends utils.Adapter {
     private commandRunning = false;
     /** Waits for the runner of the command 'adapter' (also one started before a restart of the agent) */
     private adapterWaiting = false;
+    /** AI access (command 'mcp') */
+    private ai: AiAccessManager | null = null;
     private logUploading = false;
     /** The repositories set in admin: read on start and when admin loads them again */
     private repos: RepoCatalog | undefined;
@@ -207,6 +218,13 @@ class BeeAdapter extends utils.Adapter {
         await this.subscribeForeignObjectsAsync('system.config');
         await this.readRepos();
         await this.updateInfoStates();
+        this.ai = new AiAccessManager({
+            settings: this.config,
+            nodeVersion: process.versions.node,
+            create: settings => this.startMcp(settings),
+            log: this.log,
+            onChange: () => void this.updateAccessStates(),
+        });
 
         this.creds = await readJson<EnrollResponse>(join(this.dataDir, 'device.json'));
         await this.updateAccessStates();
@@ -244,6 +262,8 @@ class BeeAdapter extends utils.Adapter {
             for (const client of [...this.tunnels.values()]) {
                 client.stop('agent stops');
             }
+            // AI sessions come back with their next request
+            await Promise.race([this.ai?.stop(), new Promise(resolve => setTimeout(resolve, 500))]);
             // js-controller kills slow adapters; the Last Will covers a disconnect that does not finish in time
             await Promise.race([this.transport?.stop(), new Promise(resolve => setTimeout(resolve, 800))]);
             await this.setState('info.connection', false, true);
@@ -385,6 +405,57 @@ class BeeAdapter extends utils.Adapter {
         } else if (msg.ref && msg.cmd === 'logFetch') {
             // may take minutes on a mobile connection: the other messages go on meanwhile
             void this.logFetchCommand(msg.ref, msg.by || 'Flottenverwaltung', msg.logFetch);
+        } else if (msg.ref && msg.cmd === 'mcp') {
+            // the AI waits for it; independent of jobs and other commands
+            void this.mcpCommand(msg.ref, msg.mcp);
+        }
+    }
+
+    // ------------------------------------------------------------------ AI access
+
+    /** Starts the MCP server of ioBroker in this process, with the rights the owner gives */
+    private async startMcp(settings: {
+        aiUser: string;
+        aiSetState: boolean;
+        aiObjectChange: boolean;
+    }): Promise<McpClient> {
+        const user = aiUserId(settings.aiUser);
+        if (!user || !(await this.getForeignObjectAsync(user))) {
+            throw new Error(`ioBroker-Nutzer ${settings.aiUser} gibt es nicht`);
+        }
+        const { createInProcessMcp } = await import('@iobroker/mcp-server');
+        const mcp = await createInProcessMcp({
+            adapter: this,
+            defaultUser: user,
+            language: this.language || 'en',
+            allowSetState: settings.aiSetState === true,
+            setStateDestructive: true,
+            allowObjectChange: settings.aiObjectChange === true,
+            allowInstanceControl: false,
+            allowAdapterManagement: false,
+            allowPackageInstall: false,
+            allowScriptChange: false,
+            sendToAllowlist: '',
+            // the person opened the session in the fleet management; the AI client asks its user itself
+            confirmDangerous: false,
+            clientName: 'ioBroker.bee',
+            clientVersion: this.version || '',
+        });
+        this.log.info(`MCP server of ioBroker started for the AI access, as ${user}`);
+        return mcp;
+    }
+
+    private async mcpCommand(ref: string, req: McpRequest | undefined): Promise<void> {
+        try {
+            if (!this.ai) {
+                throw new Error('Der Agent startet noch');
+            }
+            const mcp = await this.ai.handle(req);
+            await this.reply(ref, 'done', undefined, undefined, mcp);
+        } catch (e) {
+            // e.g. the MCP server does not start: the person opening the session reads why, and may try again
+            this.log.debug(`AI request refused: ${e.message}`);
+            await this.reply(ref, 'error', e.message);
         }
     }
 
@@ -395,6 +466,7 @@ class BeeAdapter extends utils.Adapter {
         state: ReplyMessage['state'],
         message?: string,
         files?: ReplyMessage['files'],
+        mcp?: McpReply,
     ): Promise<void> {
         const msg: ReplyMessage = {
             v: PROTOCOL_VERSION,
@@ -403,6 +475,7 @@ class BeeAdapter extends utils.Adapter {
             state,
             ...(message ? { message } : {}),
             ...(files ? { files } : {}),
+            ...(mcp ? { mcp } : {}),
         };
         await this.transport?.publish('reply', msg);
     }
@@ -842,17 +915,22 @@ class BeeAdapter extends utils.Adapter {
         return n ? ` (${n} ${n === 1 ? 'Shell' : 'Shells'} offen)` : '';
     }
 
-    /** Shows the owner who is connected right now, and why */
+    /** Shows the owner who is connected right now, and why: remote access and AI access */
     private async updateAccessStates(): Promise<void> {
         const active = [...this.tunnels.values()].map(c => c.req);
-        await this.setState('info.remoteAccess', active.length > 0, true);
+        const ai = this.ai?.list() ?? [];
+        const until = (ts: number): string =>
+            new Date(ts).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        await this.setState('info.remoteAccess', active.length + ai.length > 0, true);
         await this.setState(
             'info.remoteAccessBy',
-            active
-                .map(
+            [
+                ...active.map(
                     t =>
-                        `${ACCESS_LABEL[t.kind]}${t.instance ? ` (${t.instance})` : ''}${this.shellText(t)}: ${t.by}, ${t.purpose} (bis ${new Date(t.expiresAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })})`,
-                )
+                        `${ACCESS_LABEL[t.kind]}${t.instance ? ` (${t.instance})` : ''}${this.shellText(t)}: ${t.by}, ${t.purpose} (bis ${until(t.expiresAt)})`,
+                ),
+                ...ai.map(s => `KI: ${s.by}, ${s.purpose} (bis ${until(s.expiresAt)})`),
+            ]
                 // in the settings an empty value would show the label alone
                 .join('; ') || 'keiner',
             true,
@@ -917,6 +995,10 @@ class BeeAdapter extends utils.Adapter {
             inv.consoleUser = consoleUser();
         }
         inv.commands = supportedCommands(inv.software.jsController);
+        const ai = aiAccess(this.config, process.versions.node);
+        if (ai) {
+            inv.ai = ai;
+        }
         const repo = repoInfo(this.repos, Object.keys(inv.software.adapters));
         if (repo) {
             inv.repo = repo;

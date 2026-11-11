@@ -121,6 +121,11 @@ export interface Inventory {
      * Missing: unknown (older agent, no repository active). Not part of the history.
      */
     repo?: RepoInfo;
+    /**
+     * The owner allows the AI access (instance setting of the agent, off by default), see AiAccess.
+     * Missing: not allowed, or an older agent. Not part of the history.
+     */
+    ai?: AiAccess;
     /** Commands this agent understands (JobMessage.cmd); missing: none */
     commands?: AgentCommand[];
     software: {
@@ -146,6 +151,67 @@ export interface Inventory {
         offDevice: boolean;
     };
 }
+
+/**
+ * AI access (command 'mcp', since agent 0.2.9): an AI of the integrator works with the MCP server of ioBroker
+ * (package `@iobroker/mcp-server`), which the agent runs in its own process. Only while a person opened an AI session
+ * in the fleet management, and only with the rights the owner gives here.
+ */
+export interface AiAccess {
+    /** ioBroker user the tools run as, e.g. "admin" */
+    user: string;
+    /** Writing states (set_state) is allowed; otherwise reading only */
+    setState: boolean;
+    /** Changing objects, files and scripts is allowed */
+    objectChange: boolean;
+    /** Why the MCP server cannot run on this device, e.g. Node.js too old; missing: it can */
+    error?: string;
+}
+
+/** A tool of the MCP server on the device, as MCP lists it */
+export interface McpTool {
+    name: string;
+    title?: string;
+    description?: string;
+    /** JSON Schema of the arguments */
+    inputSchema: Record<string, unknown>;
+    annotations?: {
+        title?: string;
+        readOnlyHint?: boolean;
+        destructiveHint?: boolean;
+        idempotentHint?: boolean;
+        openWorldHint?: boolean;
+    };
+}
+
+/**
+ * A request of the AI to the device. Every request carries the session, so the agent knows it after its own restart
+ * as well; it refuses requests after expiresAt.
+ * open: check that the MCP server runs and show the session on the device; tools: list the tools; call: call one;
+ * close: the session ended (the agent forgets it)
+ */
+export interface McpRequest {
+    session: string;
+    action: 'open' | 'tools' | 'call' | 'close';
+    expiresAt: number;
+    /** Who opened the session and why; shown on the device */
+    by: string;
+    purpose: string;
+    /** For call */
+    tool?: string;
+    args?: Record<string, unknown>;
+}
+
+/** Answer of the agent to an McpRequest (ReplyMessage.mcp); errors of the request itself come as state 'error' */
+export interface McpReply {
+    /** For open and tools */
+    tools?: McpTool[];
+    /** For call: the text of the tool, isError if the tool failed */
+    result?: { text: string; isError: boolean; truncated?: boolean };
+}
+
+/** Longest text of a tool result the agent sends back (characters); longer ones are cut and marked truncated */
+export const MAX_MCP_RESULT = 512 * 1024;
 
 /** A package of the operating system that can be upgraded, from a line of `apt list --upgradeable` */
 export interface OsPackage {
@@ -199,7 +265,7 @@ export const INSTANCE_ID = /^[a-z0-9][a-z0-9_-]*\.\d{1,4}$/;
 export type InstanceAction = 'start' | 'stop' | 'restart';
 
 /** Commands from the asset detail an agent may understand (Inventory.commands) */
-export type AgentCommand = 'instance' | 'restart' | 'osUpgrade' | 'logs' | 'adapter' | 'software';
+export type AgentCommand = 'instance' | 'restart' | 'osUpgrade' | 'logs' | 'adapter' | 'software' | 'mcp';
 
 /**
  * Command 'software' (since agent 0.2.7): removeAdapter removes an adapter with all its instances (not the agent,
@@ -297,6 +363,7 @@ export interface JobMessage {
      * logFetch: upload one of them (command 'logs' of Inventory.commands for both)
      * adapter: install a version of an adapter right away, for an asset without desired profile (since 0.2.6)
      * software: remove an adapter, add or delete an instance right away (since 0.2.7)
+     * mcp: a request of the AI access to the MCP server on the device (since 0.2.9)
      */
     cmd:
         | 'resync'
@@ -308,7 +375,8 @@ export interface JobMessage {
         | 'logList'
         | 'logFetch'
         | 'adapter'
-        | 'software';
+        | 'software'
+        | 'mcp';
     /** For cmd 'tunnel' */
     tunnel?: TunnelRequest;
     /** Commands: the agent answers on topic reply with this reference */
@@ -335,6 +403,8 @@ export interface JobMessage {
      * adapter of the desired profile in managed mode: the server removes it with a job (DesiredMessage.remove).
      */
     software?: { action: SoftwareAction; adapter: string; instance?: string };
+    /** For cmd 'mcp' */
+    mcp?: McpRequest;
 }
 
 /** Answer to a command: 'running' first if it takes a while, then 'done' or 'error' */
@@ -346,6 +416,8 @@ export interface ReplyMessage {
     message?: string;
     /** For cmd 'logList': the log files, newest first */
     files?: LogFile[];
+    /** For cmd 'mcp' */
+    mcp?: McpReply;
 }
 
 /**

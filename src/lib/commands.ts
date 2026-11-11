@@ -22,14 +22,14 @@ export const REBOOT_REQUIRED = '/var/run/reboot-required';
 /**
  * What this system can do: OS updates need Linux and js-controller 6 (it lists them and runs apt);
  * logs: list and upload log files; adapter: install a version; software: remove an adapter, add or delete
- * an instance
+ * an instance; mcp: AI access (whether the owner allows it is Inventory.ai)
  */
 export function supportedCommands(jsController: string, platform: string = process.platform): AgentCommand[] {
     const commands: AgentCommand[] = ['instance', 'restart'];
     if (platform === 'linux' && jsController && compareVersions(jsController, '6.0.0') >= 0) {
         commands.push('osUpgrade');
     }
-    commands.push('logs', 'adapter', 'software');
+    commands.push('logs', 'adapter', 'software', 'mcp');
     return commands;
 }
 

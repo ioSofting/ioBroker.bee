@@ -55,6 +55,16 @@ The owner can switch off each kind in the tab *Remote access*; the agent then re
 
 **Console.** Off until the owner allows it (*Allow the console*), and only on Linux with `script` of util-linux (part of every Debian). Then every terminal the technician opens in the browser is a login shell on this system, as the user ioBroker runs as (usually `iobroker`), started in the ioBroker directory. No native module: `script` gives the shell a pseudo terminal, `stty` sets the size of its window. At most 4 shells per session; when the session or the connection ends, the shells get SIGHUP. `info.remoteAccessBy` shows how many shells are open. Whatever the shell may do beyond the rights of that user belongs in a sudo allow list for single commands, not in a general sudo. Note that the list the ioBroker installer writes (`/etc/sudoers.d/iobroker`) contains `apt`, `apt-get` and `dpkg` without password, which makes the console effectively root on a standard installation. Systems installed with `--hardened` have no sudo; there the OS updates below do not work either.
 
+### AI access (MCP)
+
+An integrator connects their AI (Claude Code, Cursor, ...) to the fleet management by MCP. The fleet management passes requests of that AI on to the MCP server of ioBroker (package `@iobroker/mcp-server`), which the agent runs in its own process, only:
+
+- if the owner allows it in the tab *Remote access* (*Allow the AI access*, off by default), with Node.js 22.19 or newer;
+- with the rights set there: the AI runs as the chosen ioBroker user (`admin` by default) and only reads, unless the owner also allows writing states (`set_state`) or changing objects and files. Controlling instances, installing adapters, scripts and `sendTo` are never offered;
+- while a person opened an AI session for this system in the fleet management, with purpose and duration. Every request carries the session with its end, so the agent knows it after its own restart too, and refuses it after the end.
+
+The MCP server starts with the first request and stops when the last session ended. Results longer than 512 KB are cut. Running AI sessions show in `info.remoteAccessBy` (`KI: <person>, <purpose> (bis HH:MM)`). The fleet management keeps every call in its audit log.
+
 ### Commands from the fleet management
 
 From the asset detail a technician (permission `operate`) can start, stop and restart instances on this host, restart ioBroker, and install updates of operating system packages. The agent answers on the topic `reply`; the fleet management logs who did what.
@@ -80,6 +90,7 @@ From the asset detail a technician (permission `operate`) can start, stop and re
 | | backup before every update | only disable for tests |
 | Remote access | allow admin, allow vis-2 | whether the fleet manager may open the interface remotely (both allowed by default) |
 | | allow the console | a shell on this system for the fleet manager (off by default, Linux only) |
+| | allow the AI access, user, write states, change objects | the MCP server of ioBroker for an AI of the fleet manager (off by default; reading only unless allowed), see above |
 
 ## States
 
@@ -92,7 +103,7 @@ From the asset detail a technician (permission `operate`) can start, stop and re
 | `job.state`, `job.detail`, `job.steps` | current or last job |
 | `control.halted` | emergency stop of the fleet is active |
 | `control.refresh`, `control.check` | buttons: send inventory, check desired state now |
-| `info.remoteAccess`, `info.remoteAccessBy` | remote access running now, and by whom with which purpose (`keiner` if none; scripts should use `info.remoteAccess`) |
+| `info.remoteAccess`, `info.remoteAccessBy` | remote access or AI access running now, and by whom with which purpose (`keiner` if none; scripts should use `info.remoteAccess`) |
 
 Files in `iobroker-data/bee.0/`: `device.json` (certificate and key, mode 0600), `desired.json`, `job.json`, `runner.json`, `runner.log` (complete CLI output of all jobs), `tunnels.json` (running remote access sessions, resumed after a restart), and for an update of Node.js `node-update.sh` (copy of the script), `node-status.json`, `node-verdict.json` and `node-update.log` (complete output of the script).
 
@@ -111,6 +122,10 @@ npm test          # unit tests of planner, preflight and diff
 `src/lib/protocol.ts` and `src/lib/tunnel.ts` are shared with the server and must stay identical to `beekeeper-server/src/protocol.ts` and `beekeeper-server/src/tunnel.ts`.
 
 ## Changelog
+
+### **WORK IN PROGRESS**
+
+- AI access: requests of an AI of the fleet management to the MCP server of ioBroker (command `mcp`), only if the owner allows it, with the rights set in the instance, and only during a session opened in the fleet management
 
 ### 0.2.8 (2026-11-11)
 
