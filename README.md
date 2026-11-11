@@ -110,7 +110,7 @@ npm test          # unit tests of planner, preflight and diff
 
 ## Changelog
 
-### **WORK IN PROGRESS**
+### 0.2.6 (2026-11-11)
 
 - Log files: the list was empty on normal installations, the agent now finds `iobroker.json` in `iobroker-data` as js-controller does
 - Command `adapter`: install a version of an adapter right away on an asset without desired profile
