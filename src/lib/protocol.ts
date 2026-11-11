@@ -149,7 +149,45 @@ export interface Inventory {
         lastLocal?: { ts: number; file: string; size: number } | null;
         /** Is an off-device backup target configured (backitup)? */
         offDevice: boolean;
+        /**
+         * BackItUp on the host of the agent, see BackitupInfo. null: no instance of BackItUp on this host. Missing:
+         * older agent (before 0.2.11). Only the settings are part of the history, not the runs.
+         */
+        backitup?: BackitupInfo | null;
     };
+}
+
+/**
+ * The backup of ioBroker by BackItUp (since agent 0.2.11): what is set up and how the last runs went, from the
+ * settings of the instance and its states history.*. The fleet management judges from it whether the installation is
+ * backed up; the agent requires a recent backup outside the device for the update of Node.js.
+ */
+export interface BackitupInfo {
+    /** Instance, e.g. "backitup.0" */
+    instance: string;
+    /** The instance is enabled */
+    enabled: boolean;
+    /** The automatic backup of ioBroker is switched on */
+    scheduled: boolean;
+    /** Days between two automatic backups: 1 = daily; with an own cron schedule estimated from it */
+    everyDays: number;
+    /** Targets outside the device that are switched on: ftp, cifs, nfs, dropbox, webdav, googledrive, onedrive */
+    targets: string[];
+    /** The last backup of ioBroker: its end, whether it worked and if not why (shortened); null: none yet */
+    lastRun: { ts: number; ok: boolean; error?: string } | null;
+    /** The newest backup of ioBroker without error in the history of BackItUp (start of the run, bytes) */
+    lastOk: { ts: number; size: number | null } | null;
+    /** Start of the newest backup of ioBroker without error that went to a target outside the device */
+    lastOffDevice: number | null;
+}
+
+/**
+ * Days a backup may be old before it is overdue: the interval of the schedule and one day for the run
+ *
+ * @param b the settings of BackItUp
+ */
+export function backupMaxAgeDays(b: Pick<BackitupInfo, 'everyDays'>): number {
+    return Math.max(1, b.everyDays || 1) + 1;
 }
 
 /**

@@ -1,8 +1,9 @@
 import { execFile } from 'node:child_process';
 import { readFile, statfs } from 'node:fs/promises';
 import os from 'node:os';
+import { backitupInfo, mainBackitup } from './backup';
 import { instanceRunning, onlyWww, webExtensionOf } from './instances';
-import type { AdapterInventory, InstanceInventory, Inventory } from './protocol';
+import type { AdapterInventory, BackitupInfo, InstanceInventory, Inventory } from './protocol';
 
 /**
  * Collects the inventory of this ioBroker system. Versions and system data only;
@@ -98,6 +99,7 @@ export async function collectInventory(
     });
     const instances: Record<string, InstanceInventory> = {};
     let offDevice = false;
+    const backitups: ioBroker.InstanceObject[] = [];
     // web instances on any host, for extensions that run in every one of them
     const webInstances = (): Promise<string[]> =>
         Promise.resolve(
@@ -120,10 +122,26 @@ export async function collectInventory(
             ...(web ? { webInstance: web } : {}),
             ...(onlyWww(obj) ? { onlyWWW: true } : {}),
         };
-        if (obj.common.name === 'backitup' && obj.common.enabled) {
-            const native = obj.native as Record<string, unknown>;
-            offDevice ||= OFF_DEVICE_KEYS.some(k => native[k] === true);
+        if (obj.common.name === 'backitup') {
+            backitups.push(obj);
+            if (obj.common.enabled) {
+                const native = obj.native as Record<string, unknown>;
+                offDevice ||= OFF_DEVICE_KEYS.some(k => native[k] === true);
+            }
         }
+    }
+    let backitup: BackitupInfo | null = null;
+    const main = mainBackitup(backitups);
+    if (main) {
+        const id = main._id.replace(/^system\.adapter\./, '');
+        const read = (state: string): Promise<ioBroker.State | null | undefined> =>
+            adapter.getForeignStateAsync(`${id}.${state}`).catch(() => null);
+        const [success, lastTime, history] = await Promise.all([
+            read('history.iobrokerSuccess'),
+            read('history.iobrokerLastTime'),
+            read('history.json'),
+        ]);
+        backitup = backitupInfo(main, { success, lastTime, history });
     }
 
     const hostObj = await adapter.getForeignObjectAsync(`system.host.${adapter.host}`);
@@ -150,7 +168,7 @@ export async function collectInventory(
             memTotal: os.totalmem(),
             diskTotal: disk?.total ?? 0,
         },
-        backup: { lastLocal: opts.lastBackup ?? null, offDevice },
+        backup: { lastLocal: opts.lastBackup ?? null, offDevice, backitup },
     };
 }
 

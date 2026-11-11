@@ -13,6 +13,7 @@ import {
     supportedCommands,
 } from './lib/commands';
 import { aiAccess, aiUserId, AiAccessManager, type McpClient } from './lib/ai';
+import { recentOffDeviceBackup } from './lib/backup';
 import { consoleUser, findScript, MAX_SHELLS, startShell } from './lib/console';
 import { instanceRunning, onlyWww } from './lib/instances';
 import { enroll } from './lib/enrollment';
@@ -1328,7 +1329,7 @@ class BeeAdapter extends utils.Adapter {
         const changed = new Set(plan.map(s => s.adapter));
         const names = ['js-controller', ...Object.keys(inv.software.adapters).filter(n => !changed.has(n))];
         return [
-            ...nodeBlockers(await nodeFacts(inv.backup.offDevice)),
+            ...nodeBlockers(await nodeFacts(recentOffDeviceBackup(inv.backup))),
             ...engineConflicts(Number(target), readEngines(join(utils.controllerDir, '..', '..'), names)),
         ];
     }

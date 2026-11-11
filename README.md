@@ -28,7 +28,7 @@ The update stops ioBroker, so the agent cannot do it itself. It starts `scripts/
 
 Afterwards the runner continues with the adapters. A failed adapter later rolls back the adapters, Node.js stays. If the old version came back, the job is *blocked* with the reason. Adapters with native modules are rebuilt by js-controller when they start.
 
-Preflight blocks with a reason unless all of this holds: Linux, ioBroker runs as a systemd service, sudo without password for `systemd-run` (not with `--hardened`), Node.js is `/usr/bin/node` of the package `nodejs` from NodeSource, architecture amd64 or arm64, `nodejs` not on hold, an off-device backup target (BackItUp), and no installed package (js-controller, adapters that the job does not change) excludes the new line in `engines.node`.
+Preflight blocks with a reason unless all of this holds: Linux, ioBroker runs as a systemd service, sudo without password for `systemd-run` (not with `--hardened`), Node.js is `/usr/bin/node` of the package `nodejs` from NodeSource, architecture amd64 or arm64, `nodejs` not on hold, a recent backup outside the device (BackItUp, not older than its interval and a day), and no installed package (js-controller, adapters that the job does not change) excludes the new line in `engines.node`.
 
 Limits: a power loss while the script works leaves the system as far as the script got; the agent then reports *blocked* and `node-update.log` tells where it stopped.
 
@@ -122,6 +122,11 @@ npm test          # unit tests of planner, preflight and diff
 `src/lib/protocol.ts` and `src/lib/tunnel.ts` are shared with the server and must stay identical to `beekeeper-server/src/protocol.ts` and `beekeeper-server/src/tunnel.ts`.
 
 ## Changelog
+
+### **WORK IN PROGRESS**
+
+- Reports the backup of ioBroker by BackItUp: instance, automatic backup on, interval, targets outside the device, the last run with its error, the last good backup and the last one outside the device. The fleet management warns when there is no automatic backup, when it failed or when it is overdue
+- The update of Node.js needs a recent backup outside the device, not only a target switched on
 
 ### 0.2.10 (2026-11-11)
 

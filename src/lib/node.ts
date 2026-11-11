@@ -75,7 +75,7 @@ export interface NodeFacts {
     source: boolean;
     /** the package nodejs is on hold */
     held: boolean;
-    /** an off-device backup target is configured (BackItUp) */
+    /** a recent backup outside the device (BackItUp), see recentOffDeviceBackup */
     offDeviceBackup: boolean;
 }
 
@@ -100,7 +100,7 @@ export function nodeBlockers(f: NodeFacts): string[] {
         errors.push('das Paket nodejs ist auf hold gesetzt');
     }
     if (!f.offDeviceBackup) {
-        errors.push('keine Sicherung außerhalb des Geräts (BackItUp)');
+        errors.push('keine aktuelle Sicherung außerhalb des Geräts (BackItUp)');
     }
     return errors;
 }
@@ -166,7 +166,7 @@ const SOURCES = ['/etc/apt/sources.list.d/nodesource.sources', '/etc/apt/sources
 /**
  * Looks at this system
  *
- * @param offDeviceBackup Inventory.backup.offDevice
+ * @param offDeviceBackup a recent backup outside the device, see recentOffDeviceBackup
  */
 export async function nodeFacts(offDeviceBackup: boolean): Promise<NodeFacts> {
     const facts: NodeFacts = {
