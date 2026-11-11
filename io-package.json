@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "bee",
-        "version": "0.2.7",
+        "version": "0.2.8",
         "news": {
+            "0.2.8": {
+                "en": "Reports the repositories set in admin and the versions of the installed adapters there, so the fleet management shows the available updates as admin does",
+                "de": "Meldet die in admin eingestellten Repositories und die Versionen der installierten Adapter darin, damit die Flottenverwaltung die verfügbaren Updates wie admin anzeigt"
+            },
             "0.2.7": {
                 "en": "Command software: removes an adapter, adds or deletes an instance right away on request of the fleet management; the desired state can carry the mode free (without profile), shown in info.mode",
                 "de": "Befehl software: entfernt einen Adapter, legt eine Instanz an oder löscht sie, sofort auf Anforderung der Flottenverwaltung; der Sollzustand kann den Modus free (ohne Profil) tragen, sichtbar in info.mode"

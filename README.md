@@ -112,7 +112,7 @@ npm test          # unit tests of planner, preflight and diff
 
 ## Changelog
 
-### **WORK IN PROGRESS**
+### 0.2.8 (2026-11-11)
 
 - Inventory: the repositories set in admin and the versions of the installed adapters there, so the fleet management shows the updates as admin does
 
