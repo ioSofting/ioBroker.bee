@@ -41,6 +41,8 @@ Limits: a power loss while the script works leaves the system as far as the scri
 
 If the owner installs adapters that are not part of the profile, the agent reports them, stops automatic updates and informs the owner via an ioBroker notification. The fleet manager sees the installation in the deviation list and can bring it back to managed mode (removing the own adapters or tolerating them as exceptions).
 
+An asset can also run without profile (mode `free`, set in the fleet management for installations that are too different for a profile). The agent then gets no profile and changes nothing by itself; versions are installed with the command `adapter`. Every version of the agent handles this like an asset without profile.
+
 ### Remote access to admin, vis-2 and the console
 
 A technician of the fleet manager can open admin or vis-2 of the system from the fleet management, without ioBroker.pro and without open ports on the device:
@@ -109,6 +111,10 @@ npm test          # unit tests of planner, preflight and diff
 `src/lib/protocol.ts` and `src/lib/tunnel.ts` are shared with the server and must stay identical to `beekeeper-server/src/protocol.ts` and `beekeeper-server/src/tunnel.ts`.
 
 ## Changelog
+
+### **WORK IN PROGRESS**
+
+- Protocol: the desired state can carry the mode `free` (without profile), shown in `info.mode`
 
 ### 0.2.6 (2026-11-11)
 

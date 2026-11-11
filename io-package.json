@@ -254,8 +254,8 @@
             "common": {
                 "role": "text",
                 "name": {
-                    "en": "Mode (managed or self)",
-                    "de": "Modus (verwaltet oder eigenverantwortlich)"
+                    "en": "Mode (managed, self or free: without profile)",
+                    "de": "Modus (verwaltet, eigenverantwortlich oder free: ohne Profil)"
                 },
                 "type": "string",
                 "read": true,

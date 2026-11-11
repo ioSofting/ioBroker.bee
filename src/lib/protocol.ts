@@ -234,7 +234,11 @@ export interface DesiredMessage {
     v: number;
     ts: number;
     assetId: string;
-    mode: 'managed' | 'self';
+    /**
+     * managed: follows the profile; self: no automatic rollouts, only hints; free (server from November
+     * 2026): without profile, always with profile null (an older agent handles it like no profile)
+     */
+    mode: 'managed' | 'self' | 'free';
     profile: DesiredProfile | null;
     /** Adapters installed by the owner that are accepted as exceptions */
     tolerated: string[];
