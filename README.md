@@ -112,7 +112,7 @@ npm test          # unit tests of planner, preflight and diff
 
 ## Changelog
 
-### **WORK IN PROGRESS**
+### 0.2.7 (2026-11-11)
 
 - Protocol: the desired state can carry the mode `free` (without profile), shown in `info.mode`
 - Command `software`: remove an adapter, add or delete an instance right away, with the runner of the command `adapter`

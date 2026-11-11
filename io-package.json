@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "bee",
-        "version": "0.2.6",
+        "version": "0.2.7",
         "news": {
+            "0.2.7": {
+                "en": "Command software: removes an adapter, adds or deletes an instance right away on request of the fleet management; the desired state can carry the mode free (without profile), shown in info.mode",
+                "de": "Befehl software: entfernt einen Adapter, legt eine Instanz an oder löscht sie, sofort auf Anforderung der Flottenverwaltung; der Sollzustand kann den Modus free (ohne Profil) tragen, sichtbar in info.mode"
+            },
             "0.2.6": {
                 "en": "Installs a version of an adapter right away on an asset without desired profile, like from admin; the list of log files was empty on normal installations, the agent now finds iobroker.json in iobroker-data as js-controller does",
                 "de": "Installiert eine Version eines Adapters sofort auf einer Anlage ohne Sollprofil, wie aus admin heraus; die Liste der Log-Dateien war auf normalen Installationen leer, der Agent findet iobroker.json jetzt wie js-controller in iobroker-data"
