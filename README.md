@@ -123,7 +123,7 @@ npm test          # unit tests of planner, preflight and diff
 
 ## Changelog
 
-### **WORK IN PROGRESS**
+### 0.2.9 (2026-11-11)
 
 - Node.js 22 or newer is required
 - AI access: requests of an AI of the fleet management to the MCP server of ioBroker (command `mcp`), only if the owner allows it, with the rights set in the instance, and only during a session opened in the fleet management

@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "bee",
-        "version": "0.2.8",
+        "version": "0.2.9",
         "news": {
+            "0.2.9": {
+                "en": "AI access: an AI of the fleet management may use the MCP server of ioBroker on this system, only if the owner allows it in the tab Remote access, with the rights set there, and only during a session opened in the fleet management. Node.js 22 or newer is required",
+                "de": "KI-Zugang: eine KI der Flottenverwaltung darf den MCP-Server von ioBroker auf diesem System nutzen, nur wenn der Besitzer es im Tab Fernzugriff erlaubt, mit den dort eingestellten Rechten und nur während einer in der Flottenverwaltung geöffneten Sitzung. Node.js 22 oder neuer ist nötig"
+            },
             "0.2.8": {
                 "en": "Reports the repositories set in admin and the versions of the installed adapters there, so the fleet management shows the available updates as admin does",
                 "de": "Meldet die in admin eingestellten Repositories und die Versionen der installierten Adapter darin, damit die Flottenverwaltung die verfügbaren Updates wie admin anzeigt"
