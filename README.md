@@ -123,6 +123,10 @@ npm test          # unit tests of planner, preflight and diff
 
 ## Changelog
 
+### **WORK IN PROGRESS**
+
+- Adapters that are not in the repositories of the system (bee itself, own adapters only on npm) are installed and updated from npm with `iobroker url`, as admin does; `iobroker upgrade` refused them
+
 ### 0.2.9 (2026-11-11)
 
 - Node.js 22 or newer is required

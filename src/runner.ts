@@ -74,6 +74,60 @@ export function cliArgs(step: JobStep, file?: string): string[][] {
     }
 }
 
+/**
+ * js-controller installs and upgrades only adapters of its repositories ("is not in the repository", "Unknown packet
+ * name"). An adapter only on npm, like bee itself or an own adapter, it installs as admin does: with "url".
+ */
+const NOT_IN_REPO = /is not in the repository|Unknown packet name/i;
+
+/**
+ * The same step from npm, for an adapter that is not in the repositories of the system; null if there is none
+ *
+ * @param step step of the job
+ */
+export function npmArgs(step: JobStep): string[][] | null {
+    if (!step.adapter || !step.to || !['install', 'upgrade', 'downgrade'].includes(step.action)) {
+        return null;
+    }
+    const url = ['url', `iobroker.${step.adapter}@${step.to}`, step.adapter];
+    // "url" only installs the package; "add" then creates the instance from it
+    return step.action === 'install' ? [url, ['add', step.adapter]] : [url];
+}
+
+async function runAll(file: RunnerFile, calls: string[][]): Promise<{ code: number; output: string }> {
+    let result = { code: 0, output: '' };
+    for (const args of calls) {
+        const r = await run(file, args);
+        result = { code: r.code, output: result.output + r.output };
+        if (r.code !== 0) {
+            break;
+        }
+    }
+    return result;
+}
+
+/**
+ * The CLI calls of one step; an adapter that js-controller does not find in its repositories from npm
+ *
+ * @param file the runner file
+ * @param step the step
+ */
+export async function runStep(file: RunnerFile, step: JobStep): Promise<{ code: number; output: string }> {
+    const pkg = step.adapter ? file.files?.[step.adapter] : undefined;
+    const result = await runAll(file, cliArgs(step, pkg));
+    const alt = pkg ? null : npmArgs(step);
+    const failed = result.code !== 0 || checkResult(file, step, result.output) !== null;
+    if (alt && failed && NOT_IN_REPO.test(result.output)) {
+        appendFileSync(
+            file.logFile,
+            `\n[npm] ${step.adapter} is not in the repositories of this system: from npm, as admin installs it\n`,
+        );
+        const r = await runAll(file, alt);
+        return { code: r.code, output: result.output + r.output };
+    }
+    return result;
+}
+
 function run(file: RunnerFile, args: string[]): Promise<{ code: number; output: string }> {
     return new Promise(resolve => {
         const out: string[] = [];
@@ -177,14 +231,7 @@ async function main(path: string): Promise<void> {
         step.status = 'running';
         step.ts = Date.now();
         save(path, file);
-        let result = { code: 0, output: '' };
-        for (const args of cliArgs(step, step.adapter ? file.files?.[step.adapter] : undefined)) {
-            const r = await run(file, args);
-            result = { code: r.code, output: result.output + r.output };
-            if (r.code !== 0) {
-                break;
-            }
-        }
+        const result = await runStep(file, step);
         const mismatch = result.code === 0 ? checkResult(file, step, result.output) : null;
         if (mismatch) {
             appendFileSync(file.logFile, `\n[check] ${mismatch}\n`);
