@@ -123,7 +123,7 @@ npm test          # unit tests of planner, preflight and diff
 
 ## Changelog
 
-### **WORK IN PROGRESS**
+### 0.2.10 (2026-11-11)
 
 - Adapters that are not in the repositories of the system (bee itself, own adapters only on npm) are installed and updated from npm with `iobroker url`, as admin does; `iobroker upgrade` refused them
 
