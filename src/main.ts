@@ -2,7 +2,7 @@ import * as utils from '@iobroker/adapter-core';
 import { existsSync, mkdirSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import os from 'node:os';
-import { join } from 'node:path';
+import { basename, join } from 'node:path';
 import type { Duplex } from 'node:stream';
 import {
     ACTION_DONE,
@@ -17,7 +17,25 @@ import { recentOffDeviceBackup } from './lib/backup';
 import { consoleUser, findScript, MAX_SHELLS, startShell } from './lib/console';
 import { instanceRunning, onlyWww } from './lib/instances';
 import { enroll } from './lib/enrollment';
-import { collectInventory, cpuTemperature, diskInfo, installedVersions, sdWrites } from './lib/inventory';
+import {
+    adaptersFromInstalled,
+    collectHosts,
+    HostExec,
+    hostCommands,
+    logFileData,
+    MAX_REMOTE_LOG_BYTES,
+    remoteLogFiles,
+} from './lib/hosts';
+import {
+    collectInventory,
+    cpuTemperature,
+    describeInstance,
+    diskInfo,
+    installedVersions,
+    packageVersion,
+    sdWrites,
+} from './lib/inventory';
+import { executeStep, type CallResult, type StepHost } from './lib/steps';
 import { JobManager, type JobFile } from './lib/jobs';
 import { findLogFile, listLogFiles, logDirs, readConfig, uploadLog } from './lib/logs';
 import {
@@ -37,9 +55,11 @@ import {
     normalizeComment,
     PROTOCOL_VERSION,
     type AccessKind,
+    type AgentCommand,
     type ControlMessage,
     type DesiredMessage,
     type EnrollResponse,
+    type HostInventory,
     type Inventory,
     type JobMessage,
     type JobState,
@@ -160,9 +180,18 @@ class BeeAdapter extends utils.Adapter {
     private readonly tunnels = new Map<string, TunnelClient>();
     /** Running shells of the console per session */
     private readonly shells = new Map<string, number>();
+    /** The other hosts of the system as last collected, by name */
+    private readonly knownHosts = new Map<string, HostInventory>();
+    /** The CLI on the other hosts of the system */
+    private readonly hostExec = new HostExec((host, command, message) =>
+        this.sendToHost(host, command, message as ioBroker.MessagePayload),
+    );
 
     public constructor(options: Partial<utils.AdapterOptions> = {}) {
-        super({ ...options, name: 'bee' });
+        // messages to the agent: the output of the CLI on the other hosts (cmdExec)
+        const ref: { adapter?: BeeAdapter } = {};
+        super({ ...options, name: 'bee', message: obj => void ref.adapter?.hostExec.onMessage(obj) });
+        ref.adapter = this;
         this.on('ready', () => this.onReady());
         this.on('stateChange', (id, state) => this.onStateChange(id, state));
         this.on('objectChange', (id, obj) => void this.onObjectChange(id, obj));
@@ -192,7 +221,7 @@ class BeeAdapter extends utils.Adapter {
             verifySeconds: this.config.verifySeconds || 120,
             startTimeoutSeconds: this.config.startTimeoutSeconds || 300,
             report: job => this.reportJob(job),
-            installed: async () => installedVersions(await this.inventory()),
+            installed: async () => installedVersions(await this.inventory(false)),
             instancesOf: adapter => this.instancesOf(adapter),
             errorsSince: (ts, adapters) =>
                 this.errorLog.filter(e => e.ts >= ts && adapters.some(a => e.from.startsWith(`${a}.`))),
@@ -256,6 +285,7 @@ class BeeAdapter extends utils.Adapter {
         this.unloading = true;
         try {
             this.timers.forEach(t => clearInterval(t));
+            this.hostExec.stop();
             if (this.enrollTimer) {
                 clearTimeout(this.enrollTimer);
             }
@@ -402,10 +432,10 @@ class BeeAdapter extends utils.Adapter {
             await this.runCommand(msg);
         } else if (msg.ref && msg.cmd === 'logList') {
             // only reads: also during a job or another command
-            await this.logListCommand(msg.ref);
+            await this.logListCommand(msg.ref, msg.host);
         } else if (msg.ref && msg.cmd === 'logFetch') {
             // may take minutes on a mobile connection: the other messages go on meanwhile
-            void this.logFetchCommand(msg.ref, msg.by || 'Flottenverwaltung', msg.logFetch);
+            void this.logFetchCommand(msg.ref, msg.by || 'Flottenverwaltung', msg.logFetch, msg.host);
         } else if (msg.ref && msg.cmd === 'mcp') {
             // the AI waits for it; independent of jobs and other commands
             void this.mcpCommand(msg.ref, msg.mcp);
@@ -492,8 +522,166 @@ class BeeAdapter extends utils.Adapter {
         return logDirs(config, join(utils.controllerDir, '..', '..'));
     }
 
-    private async logListCommand(ref: string): Promise<void> {
+    // ------------------------------------------------------------------ other hosts of the system
+
+    /**
+     * Sends a host command and waits for the answer
+     *
+     * @param host name of the host
+     * @param command host command of js-controller
+     * @param message its message
+     * @param timeoutMs longest wait
+     * @returns undefined if no answer came in time
+     */
+    private sendHost(host: string, command: string, message: unknown, timeoutMs: number): Promise<unknown> {
+        return new Promise(resolve => {
+            const timer = setTimeout(() => resolve(undefined), timeoutMs);
+            this.sendToHost(`system.host.${host}`, command, message as ioBroker.MessagePayload, answer => {
+                clearTimeout(timer);
+                resolve(answer);
+            });
+        });
+    }
+
+    private async hostAlive(host: string): Promise<boolean> {
+        return !!(await this.getForeignStateAsync(`system.host.${host}.alive`))?.val;
+    }
+
+    /**
+     * The host a command is for: the own one, or another host of the system that runs
+     *
+     * @param host JobMessage.host
+     * @param command the command, one of HostInventory.commands of that host
+     * @returns the name and whether it is another host, or why not
+     */
+    private async targetHost(
+        host: unknown,
+        command: AgentCommand,
+    ): Promise<{ name: string; remote: boolean; refusal?: undefined } | { refusal: string }> {
+        if (host === undefined || host === null || host === '' || host === this.host) {
+            return { name: this.host || '', remote: false };
+        }
+        if (typeof host !== 'string' || !/^[\w.-]{1,100}$/.test(host)) {
+            return { refusal: 'Ungültiger Host' };
+        }
+        const obj = await this.getForeignObjectAsync(`system.host.${host}`);
+        if (obj?.type !== 'host') {
+            return { refusal: `Den Host ${host} gibt es im System nicht` };
+        }
+        if (!(await this.hostAlive(host))) {
+            return { refusal: `Der Host ${host} ist offline` };
+        }
+        const known = this.knownHosts.get(host);
+        if (known && !known.commands.includes(command)) {
+            return { refusal: `Auf dem Host ${host} nicht möglich` };
+        }
+        return { name: host, remote: true };
+    }
+
+    /** Version of an adapter whose package is on another host; null if none */
+    private async remoteVersion(host: string, adapter: string): Promise<string | null> {
+        const adapters = adaptersFromInstalled(await this.sendHost(host, 'getInstalled', null, 60_000));
+        if (!adapters) {
+            throw new Error(`Der Host ${host} sagt nicht, was installiert ist`);
+        }
+        return adapters[adapter]?.version ?? null;
+    }
+
+    /**
+     * Runs a step on another host with its js-controller (cmdExec), as the runner does here, and answers the server
+     *
+     * @param ref reference of the command
+     * @param host the other host
+     * @param step the step
+     * @param texts what the answers say
+     * @param texts.what e.g. "frigate 3.3.0"
+     * @param texts.done the answer when it worked
+     * @param pkg local package (tgz) of the server instead of npm
+     */
+    private async remoteStep(
+        ref: string,
+        host: string,
+        step: JobStep,
+        texts: { what: string; done: string },
+        pkg?: string,
+    ): Promise<void> {
+        if (this.control?.halt) {
+            await this.reply(ref, 'error', `${texts.what}: durch Not-Aus angehalten`);
+            return;
+        }
+        let files: { name: string; file: string }[] | undefined;
+        const name = pkg ? basename(pkg) : undefined;
+        if (pkg) {
+            const feature = (await this.sendHost(
+                host,
+                'checkFeatureSupported',
+                'CONTROLLER_CMD_EXEC_FILES',
+                10_000,
+            )) as { result?: boolean } | undefined;
+            if (!feature?.result) {
+                await this.reply(
+                    ref,
+                    'error',
+                    `${texts.what}: js-controller auf ${host} kann keine Pakete annehmen (zu alt); aus npm installieren`,
+                );
+                return;
+            }
+            files = [{ name: name!, file: (await readFile(pkg)).toString('base64') }];
+        }
+        const runner: StepHost = {
+            run: args => {
+                this.log.info(`${host}: iobroker ${args.join(' ')}`);
+                return this.hostExec.run(host, args, name && args.includes(name) ? files : undefined);
+            },
+            installed: adapter => this.remoteVersion(host, adapter),
+            note: text => this.log.info(`${host}: ${text}`),
+        };
+        let result: CallResult & { mismatch: string | null };
         try {
+            result = await executeStep(step, runner, name);
+        } catch (e) {
+            result = { code: 1, output: e.message, mismatch: null };
+        }
+        if (result.code === 0 && !result.mismatch) {
+            this.log.info(`${host}: ${texts.done}`);
+            await this.reply(ref, 'done', `${texts.done} (Host ${host})`);
+        } else {
+            const lines = result.output
+                .split(/\r?\n/)
+                .map(l => l.trim())
+                .filter(Boolean)
+                .slice(-6)
+                .join(' | ');
+            const reason = result.mismatch ?? `fehlgeschlagen (Exit-Code ${result.code})`;
+            this.log.warn(`${host}: ${texts.what}: ${reason}: ${lines}`);
+            await this.reply(
+                ref,
+                'error',
+                `${texts.what} auf ${host}: ${reason}${lines ? `: ${lines}` : ''}`.slice(0, 1000),
+            );
+        }
+        this.inventorySoon();
+    }
+
+    private async logListCommand(ref: string, host?: string): Promise<void> {
+        try {
+            const target = await this.targetHost(host, 'logs');
+            if (target.refusal !== undefined) {
+                throw new Error(target.refusal);
+            }
+            if (target.remote) {
+                const answer = await this.sendHost(target.name, 'getLogFiles', null, 30_000);
+                if (!answer) {
+                    throw new Error(`Keine Antwort von ${target.name}`);
+                }
+                const files = remoteLogFiles(answer, target.name).map(({ name, size, mtime }) => ({
+                    name,
+                    size,
+                    mtime,
+                }));
+                await this.reply(ref, 'done', `${files.length} Log-Dateien auf ${target.name}`, files);
+                return;
+            }
             const dirs = this.logDirs();
             const files = await listLogFiles(dirs);
             await this.reply(ref, 'done', `${files.length} Log-Dateien in ${dirs.join(', ')}`, files);
@@ -503,23 +691,56 @@ class BeeAdapter extends utils.Adapter {
     }
 
     /** Uploads a log file to the own server, one at a time */
-    private async logFetchCommand(ref: string, by: string, req: JobMessage['logFetch']): Promise<void> {
+    /** A log file of another host, as it is */
+    private async remoteLog(host: string, name: unknown): Promise<{ name: string; data: Buffer }> {
+        const list = remoteLogFiles(await this.sendHost(host, 'getLogFiles', null, 30_000), host);
+        const entry = list.find(f => f.name === name);
+        if (!entry) {
+            throw new Error(`Log-Datei ${String(name)} gibt es auf ${host} nicht`);
+        }
+        if (entry.size > MAX_REMOTE_LOG_BYTES) {
+            throw new Error(
+                `${entry.name} ist größer als ${MAX_REMOTE_LOG_BYTES / 1024 / 1024} MB: von einem anderen Host nicht übertragbar`,
+            );
+        }
+        const answer = await this.sendHost(
+            host,
+            'getLogFile',
+            { transport: entry.transport, filename: entry.name },
+            120_000,
+        );
+        if (answer === undefined) {
+            throw new Error(`Keine Antwort von ${host}`);
+        }
+        return { name: entry.name, data: logFileData(answer) };
+    }
+
+    private async logFetchCommand(ref: string, by: string, req: JobMessage['logFetch'], host?: string): Promise<void> {
+        let mine = false;
         try {
             if (this.logUploading) {
                 throw new Error('Es wird schon eine Log-Datei übertragen');
             }
+            this.logUploading = mine = true;
             if (!req || typeof req.url !== 'string' || typeof req.ticket !== 'string') {
                 throw new Error('Unvollständige Anfrage');
             }
             if (!trustedPackageUrl(req.url, [this.config.enrollUrl, this.creds?.mqttUrl || ''])) {
                 throw new Error(`${req.url} gehört nicht zum Flottenserver`);
             }
-            const file = await findLogFile(this.logDirs(), req.file);
+            const target = await this.targetHost(host, 'logs');
+            if (target.refusal !== undefined) {
+                throw new Error(target.refusal);
+            }
+            const file = target.remote
+                ? await this.remoteLog(target.name, req.file)
+                : await findLogFile(this.logDirs(), req.file);
             if (!file) {
                 throw new Error(`Log-Datei ${String(req.file)} gibt es nicht`);
             }
-            this.logUploading = true;
-            this.log.info(`Log file ${req.file} is uploaded on request of ${by} (fleet management)`);
+            this.log.info(
+                `Log file ${req.file}${target.remote ? ` of ${target.name}` : ''} is uploaded on request of ${by} (fleet management)`,
+            );
             await this.reply(ref, 'running', `${req.file} wird komprimiert übertragen`);
             const bytes = await uploadLog(file, req.url, req.ticket, trustedCas(this.creds?.ca || ''));
             await this.reply(ref, 'done', `${req.file}: ${(bytes / 1024 / 1024).toFixed(1)} MB übertragen`);
@@ -527,7 +748,9 @@ class BeeAdapter extends utils.Adapter {
             this.log.warn(`Log file ${String(req?.file)} for ${by}: ${e.message}`);
             await this.reply(ref, 'error', e.message);
         } finally {
-            this.logUploading = false;
+            if (mine) {
+                this.logUploading = false;
+            }
         }
     }
 
@@ -551,19 +774,30 @@ class BeeAdapter extends utils.Adapter {
         }
         this.commandRunning = true;
         try {
+            const target = await this.targetHost(msg.host, msg.cmd as AgentCommand);
+            if (target.refusal !== undefined) {
+                await this.reply(ref, 'error', target.refusal);
+                return;
+            }
+            const remote = target.remote ? target.name : null;
             if (msg.cmd === 'instance') {
-                await this.instanceCommand(ref, by, msg.instance);
+                await this.instanceCommand(ref, by, msg.instance, target.name);
             } else if (msg.cmd === 'restart') {
-                this.log.warn(`Restart of ioBroker on request of ${by} (fleet management)`);
-                // the answer goes out first, the restart takes the agent down too
-                await this.reply(ref, 'done', 'ioBroker startet neu');
-                this.sendToHost(`system.host.${this.host}`, 'restartController', {});
+                this.log.warn(
+                    `Restart of ioBroker${remote ? ` on ${remote}` : ''} on request of ${by} (fleet management)`,
+                );
+                // the answer goes out first, the restart of the own host takes the agent down too
+                await this.reply(ref, 'done', remote ? `ioBroker auf ${remote} startet neu` : 'ioBroker startet neu');
+                this.sendToHost(`system.host.${target.name}`, 'restartController', {});
+                if (remote) {
+                    this.inventorySoon();
+                }
             } else if (msg.cmd === 'osUpgrade') {
-                await this.osUpgradeCommand(ref, by, msg.osUpgrade);
+                await this.osUpgradeCommand(ref, by, msg.osUpgrade, target.name);
             } else if (msg.cmd === 'adapter') {
-                await this.adapterCommand(ref, by, msg.adapter);
+                await this.adapterCommand(ref, by, msg.adapter, remote);
             } else if (msg.cmd === 'software') {
-                await this.softwareCommand(ref, by, msg.software);
+                await this.softwareCommand(ref, by, msg.software, remote);
             }
         } catch (e) {
             this.log.warn(`Command ${msg.cmd} of ${by} failed: ${e.message}`);
@@ -573,13 +807,13 @@ class BeeAdapter extends utils.Adapter {
         }
     }
 
-    /** Start, stop or restart an instance on this host, the same way admin does it */
-    private async instanceCommand(ref: string, by: string, req: JobMessage['instance']): Promise<void> {
+    /** Start, stop or restart an instance of a host, the same way admin does it */
+    private async instanceCommand(ref: string, by: string, req: JobMessage['instance'], host: string): Promise<void> {
         const id = req?.id;
         const action = req?.action;
         const objId = `system.adapter.${id}`;
         const obj = typeof id === 'string' && /^[\w.-]+$/.test(id) ? await this.getForeignObjectAsync(objId) : null;
-        const refusal = instanceRefusal(id, action, this.namespace, obj, this.host || '');
+        const refusal = instanceRefusal(id, action, this.namespace, obj, host);
         if (refusal || !req) {
             await this.reply(ref, 'error', refusal || 'Instanz fehlt');
             return;
@@ -600,15 +834,33 @@ class BeeAdapter extends utils.Adapter {
         }
     }
 
-    /** Installs one version of one adapter right away, for an asset without desired profile */
-    private async adapterCommand(ref: string, by: string, req: JobMessage['adapter']): Promise<void> {
+    /**
+     * Installs one version of one adapter right away, for an asset without desired profile
+     *
+     * @param ref reference of the command
+     * @param by who asked
+     * @param req the request
+     * @param remote another host of the system to install it on; null: this host
+     */
+    private async adapterCommand(
+        ref: string,
+        by: string,
+        req: JobMessage['adapter'],
+        remote: string | null,
+    ): Promise<void> {
         const refusal = adapterRefusal(req, this.desired);
         if (refusal || !req) {
             await this.reply(ref, 'error', refusal || 'Adapter fehlt');
             return;
         }
-        const obj = await this.getForeignObjectAsync(`system.adapter.${req.name}`);
-        const installed = typeof obj?.common?.version === 'string' ? obj.common.version : undefined;
+        if (remote && req.name === this.name) {
+            await this.reply(ref, 'error', `${this.name} läuft nur auf dem Host ${this.host}`);
+            return;
+        }
+        // what is on the host: the objects are the same for all hosts of the system
+        const installed = remote
+            ? ((await this.remoteVersion(remote, req.name)) ?? undefined)
+            : (packageVersion(join(utils.controllerDir, '..'), req.name) ?? undefined);
         let file: string | undefined;
         if (req.tarball) {
             await this.reply(ref, 'running', `Paket für ${req.name} wird geladen`);
@@ -623,8 +875,17 @@ class BeeAdapter extends utils.Adapter {
             return;
         }
         this.log.info(
-            `Adapter ${req.name}: ${step.action} ${installed ?? '-'} -> ${req.version} on request of ${by} (fleet management)`,
+            `Adapter ${req.name}${remote ? ` on ${remote}` : ''}: ${step.action} ${installed ?? '-'} -> ${req.version} on request of ${by} (fleet management)`,
         );
+        const running = installed
+            ? `${req.name} ${installed} → ${req.version} wird installiert`
+            : `${req.name} ${req.version} wird installiert`;
+        if (remote) {
+            await this.reply(ref, 'running', `${running} (Host ${remote})`);
+            const what = `${req.name} ${req.version}`;
+            await this.remoteStep(ref, remote, step, { what, done: `${what} installiert` }, file);
+            return;
+        }
         await startAdapterCommand(
             adapterCommandPaths(this.dataDir),
             { ref, by, name: req.name, version: req.version, startedAt: Date.now() },
@@ -637,14 +898,28 @@ class BeeAdapter extends utils.Adapter {
                 file,
             },
         );
-        await this.reply(
-            ref,
-            'running',
-            installed
-                ? `${req.name} ${installed} → ${req.version} wird installiert`
-                : `${req.name} ${req.version} wird installiert`,
-        );
+        await this.reply(ref, 'running', running);
         await this.waitAdapterCommand();
+    }
+
+    /**
+     * The hosts of the system the package of an adapter is on: this host and the target asked now, the others as
+     * last collected
+     *
+     * @param adapter name of the adapter
+     * @param remote another host the command is for; null: this host
+     */
+    private async hostsWithPackage(adapter: string, remote: string | null): Promise<string[]> {
+        const hosts = [...this.knownHosts.values()]
+            .filter(h => h.name !== remote && h.adapters?.[adapter])
+            .map(h => h.name);
+        if (remote && (await this.remoteVersion(remote, adapter))) {
+            hosts.unshift(remote);
+        }
+        if (packageVersion(join(utils.controllerDir, '..'), adapter)) {
+            hosts.unshift(this.host || '');
+        }
+        return hosts;
     }
 
     /** All instances of an adapter with their host */
@@ -656,15 +931,31 @@ class BeeAdapter extends utils.Adapter {
             .map(row => ({ id: row.value._id.replace('system.adapter.', ''), host: String(row.value.common.host) }));
     }
 
-    /** Removes an adapter, adds or deletes an instance right away, with the runner of the command 'adapter' */
-    private async softwareCommand(ref: string, by: string, req: JobMessage['software']): Promise<void> {
+    /**
+     * Removes an adapter, adds or deletes an instance right away, with the runner of the command 'adapter'
+     *
+     * @param ref reference of the command
+     * @param by who asked
+     * @param req the request
+     * @param remote another host of the system to do it on; null: this host
+     */
+    private async softwareCommand(
+        ref: string,
+        by: string,
+        req: JobMessage['software'],
+        remote: string | null,
+    ): Promise<void> {
         const adapter = validAdapterName(req?.adapter) ? req.adapter : null;
+        const host = remote ?? (this.host || '');
         const ctx: SoftwareContext = {
             own: this.namespace,
-            host: this.host || '',
+            host,
             desired: this.desired,
             adapterObj: adapter ? await this.getForeignObjectAsync(`system.adapter.${adapter}`) : null,
             instances: adapter ? await this.instancesWithHost(adapter) : [],
+            // an instance belongs to a host, whatever is installed where
+            installedOn:
+                adapter && req?.action !== 'removeInstance' ? await this.hostsWithPackage(adapter, remote) : undefined,
         };
         const refusal = softwareRefusal(req, ctx);
         if (refusal || !req) {
@@ -672,7 +963,14 @@ class BeeAdapter extends utils.Adapter {
             return;
         }
         const plan = softwarePlan(req, ctx);
-        this.log.info(`Software ${req.action} ${plan.what} on request of ${by} (fleet management)`);
+        this.log.info(
+            `Software ${req.action} ${plan.what}${remote ? ` on ${remote}` : ''} on request of ${by} (fleet management)`,
+        );
+        if (remote) {
+            await this.reply(ref, 'running', `${plan.running} (Host ${remote})`);
+            await this.remoteStep(ref, remote, plan.step, { what: plan.what, done: plan.done });
+            return;
+        }
         await startAdapterCommand(
             adapterCommandPaths(this.dataDir),
             {
@@ -730,10 +1028,20 @@ class BeeAdapter extends utils.Adapter {
     }
 
     /** Upgrade OS packages through js-controller, only those it listed itself */
-    private async osUpgradeCommand(ref: string, by: string, req: JobMessage['osUpgrade']): Promise<void> {
-        const host = `system.host.${this.host}`;
+    private async osUpgradeCommand(
+        ref: string,
+        by: string,
+        req: JobMessage['osUpgrade'],
+        hostName: string,
+    ): Promise<void> {
+        const remote = hostName !== this.host;
+        const host = `system.host.${hostName}`;
         const hostObj = await this.getForeignObjectAsync(host);
-        if (!supportedCommands(String(hostObj?.common?.installedVersion || '')).includes('osUpgrade')) {
+        const jsController = String(hostObj?.common?.installedVersion || '');
+        const supported = remote
+            ? hostCommands(jsController, this.knownHosts.get(hostName)?.system?.platform || '')
+            : supportedCommands(jsController);
+        if (!supported.includes('osUpgrade')) {
             await this.reply(ref, 'error', 'OS-Updates brauchen Linux und js-controller ab 6');
             return;
         }
@@ -749,8 +1057,10 @@ class BeeAdapter extends utils.Adapter {
             return;
         }
         const names = packages.map(p => p.name).join(', ');
-        this.log.warn(`Upgrade of OS packages ${names} on request of ${by} (fleet management)`);
-        await this.reply(ref, 'running', `apt: ${names}`);
+        this.log.warn(
+            `Upgrade of OS packages ${names}${remote ? ` on ${hostName}` : ''} on request of ${by} (fleet management)`,
+        );
+        await this.reply(ref, 'running', `apt${remote ? ` auf ${hostName}` : ''}: ${names}`);
         // js-controller runs apt (with sudo if it is not root) and answers when it is through
         const answer = (await Promise.race([
             this.sendToHostAsync(host, 'upgradeOsPackages', {
@@ -975,11 +1285,12 @@ class BeeAdapter extends utils.Adapter {
         await this.sendInventory(false);
     }
 
-    private async inventory(): Promise<Inventory> {
+    private async inventory(withHosts = true): Promise<Inventory> {
         const inv = await collectInventory(this, {
             agentVersion: this.version || '',
             dataDir: this.dataDir,
             lastBackup: this.persisted.lastBackup,
+            nodeModules: join(utils.controllerDir, '..'),
         });
         inv.uuid = this.uuid;
         const comment = normalizeComment(this.config.comment);
@@ -995,12 +1306,24 @@ class BeeAdapter extends utils.Adapter {
         if (inv.remoteAccess.includes('console')) {
             inv.consoleUser = consoleUser();
         }
-        inv.commands = supportedCommands(inv.software.jsController);
+        inv.commands = [...supportedCommands(inv.software.jsController), 'hosts'];
+        if (withHosts) {
+            try {
+                inv.hosts = await this.collectOtherHosts();
+            } catch (e) {
+                this.log.warn(`Other hosts of the system not readable: ${e.message}`);
+                inv.hosts = [...this.knownHosts.values()];
+            }
+        }
         const ai = aiAccess(this.config, process.versions.node);
         if (ai) {
             inv.ai = ai;
         }
-        const repo = repoInfo(this.repos, Object.keys(inv.software.adapters));
+        const names = new Set([
+            ...Object.keys(inv.software.adapters),
+            ...(inv.hosts ?? []).flatMap(h => Object.keys(h.adapters ?? {})),
+        ]);
+        const repo = repoInfo(this.repos, [...names]);
         if (repo) {
             inv.repo = repo;
         }
@@ -1014,6 +1337,56 @@ class BeeAdapter extends utils.Adapter {
             }
         }
         return inv;
+    }
+
+    /** The other hosts of the system, see collectHosts */
+    private async collectOtherHosts(): Promise<HostInventory[]> {
+        const instances = async (): Promise<ioBroker.InstanceObject[]> =>
+            (
+                await this.getObjectViewAsync('system', 'instance', {
+                    startkey: 'system.adapter.',
+                    endkey: 'system.adapter.香',
+                })
+            ).rows
+                .map(r => r.value as ioBroker.InstanceObject | undefined)
+                .filter((o): o is ioBroker.InstanceObject => !!o);
+        return collectHosts(
+            {
+                own: this.host || '',
+                hostObjects: async () =>
+                    (
+                        await this.getObjectViewAsync('system', 'host', {
+                            startkey: 'system.host.',
+                            endkey: 'system.host.香',
+                        })
+                    ).rows
+                        .map(r => r.value)
+                        .filter((o): o is ioBroker.HostObject => !!o),
+                alive: host => this.hostAlive(host),
+                send: (host, command, message, timeoutMs) => this.sendHost(host, command, message, timeoutMs),
+                instances,
+                describe: obj =>
+                    describeInstance(
+                        obj,
+                        id => this.getForeignStateAsync(id),
+                        () => this.webInstances(),
+                    ),
+                installedFrom: async () => {
+                    const rows = await this.getObjectViewAsync('system', 'adapter', {
+                        startkey: 'system.adapter.',
+                        endkey: 'system.adapter.香',
+                    });
+                    return Object.fromEntries(
+                        rows.rows
+                            .filter(r => r.value?.common?.name)
+                            .map(r => [r.value.common.name, r.value.common.installedFrom]),
+                    );
+                },
+                osUpdates: async host =>
+                    osUpdatesFrom(await this.getForeignStateAsync(`system.host.${host}.osPackageUpdates`), false),
+            },
+            this.knownHosts,
+        );
     }
 
     private async sendInventory(full: boolean): Promise<void> {
@@ -1209,7 +1582,7 @@ class BeeAdapter extends utils.Adapter {
         if (!d?.profile) {
             return;
         }
-        const inv = await this.inventory();
+        const inv = await this.inventory(false);
         const installed = installedVersions(inv);
         const key = `${d.profile.hash}:${d.retry}`;
         // a package with the version number of what is installed: once per job, never in a loop

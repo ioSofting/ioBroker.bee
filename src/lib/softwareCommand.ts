@@ -35,6 +35,8 @@ export interface SoftwareContext {
     adapterObj: ioBroker.Object | null | undefined;
     /** all instances of the adapter, on every host */
     instances: SoftwareInstance[];
+    /** Hosts of the system with the package of the adapter; missing: unknown (only the adapter object counts) */
+    installedOn?: string[];
 }
 
 /**
@@ -75,6 +77,9 @@ export function softwareRefusal(req: unknown, ctx: SoftwareContext): string | nu
     if (!ctx.adapterObj || ctx.adapterObj.type !== 'adapter') {
         return `${r.adapter} ist nicht installiert`;
     }
+    if (ctx.installedOn && !ctx.installedOn.includes(ctx.host)) {
+        return `${r.adapter} ist auf dem Host ${ctx.host} nicht installiert${ctx.installedOn.length ? ` (nur auf ${ctx.installedOn.join(', ')})` : ''}`;
+    }
     if (r.action === 'removeAdapter') {
         if (r.adapter === agent) {
             return `${agent} entfernen trennt die Anlage von der Flottenverwaltung; das geht nur am Gerät`;
@@ -86,6 +91,11 @@ export function softwareRefusal(req: unknown, ctx: SoftwareContext): string | nu
         const foreign = ctx.instances.filter(i => i.host !== ctx.host).map(i => i.id);
         if (foreign.length) {
             return `${r.adapter} hat Instanzen auf anderen Hosts (${foreign.join(', ')}); das geht nur am Gerät`;
+        }
+        // "iobroker del" removes the adapter object of the whole system, also for the package on the other host
+        const elsewhere = (ctx.installedOn ?? []).filter(h => h !== ctx.host);
+        if (elsewhere.length) {
+            return `${r.adapter} ist auch auf ${elsewhere.join(', ')} installiert; das geht nur am Gerät`;
         }
         return null;
     }

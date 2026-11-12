@@ -3,7 +3,7 @@ import { lstat, readdir } from 'node:fs/promises';
 import http from 'node:http';
 import https from 'node:https';
 import { basename, isAbsolute, join, normalize, resolve } from 'node:path';
-import { Transform, type Readable } from 'node:stream';
+import { Readable, Transform } from 'node:stream';
 import { pipeline } from 'node:stream/promises';
 import { createGzip } from 'node:zlib';
 import { MAX_LOG_UPLOAD_BYTES, type LogFile } from './protocol';
@@ -153,14 +153,20 @@ function limiter(max: number, count: (n: number) => void): Transform {
 /**
  * Uploads a log file to the server, compressed with gzip (a .gz file as it is)
  *
- * @param file path of the log file
+ * @param file path of the log file, or a log file of another host with its content
  * @param url upload URL of the own server (checked by the caller)
  * @param ticket one-time ticket of the server
  * @param ca trusted CAs for the certificate of the server
  * @returns the bytes sent
  */
-export async function uploadLog(file: string, url: string, ticket: string, ca: string[]): Promise<number> {
+export async function uploadLog(
+    file: string | { name: string; data: Buffer },
+    url: string,
+    ticket: string,
+    ca: string[],
+): Promise<number> {
     const u = new URL(url);
+    const name = typeof file === 'string' ? basename(file) : file.name;
     let sent = 0;
     const req = (u.protocol === 'https:' ? https : http).request(url, {
         method: 'POST',
@@ -169,7 +175,7 @@ export async function uploadLog(file: string, url: string, ticket: string, ca: s
         headers: {
             authorization: `Bearer ${ticket}`,
             'content-type': 'application/gzip',
-            'x-file-name': encodeURIComponent(basename(file)),
+            'x-file-name': encodeURIComponent(name),
         },
     });
     const answer = new Promise<void>((resolveAnswer, reject) => {
@@ -197,8 +203,8 @@ export async function uploadLog(file: string, url: string, ticket: string, ca: s
     });
     // an error of the request also ends the pipeline; then the answer tells why
     answer.catch(() => {});
-    const source: Readable = createReadStream(file);
-    const steps = file.endsWith('.gz')
+    const source: Readable = typeof file === 'string' ? createReadStream(file) : Readable.from([file.data]);
+    const steps = name.endsWith('.gz')
         ? [source, limiter(MAX_LOG_UPLOAD_BYTES, n => (sent = n)), req]
         : [source, createGzip(), limiter(MAX_LOG_UPLOAD_BYTES, n => (sent = n)), req];
     try {

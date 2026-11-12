@@ -1,6 +1,8 @@
 import { execFile } from 'node:child_process';
+import { readFileSync } from 'node:fs';
 import { readFile, statfs } from 'node:fs/promises';
 import os from 'node:os';
+import { join } from 'node:path';
 import { backitupInfo, mainBackitup } from './backup';
 import { instanceRunning, onlyWww, webExtensionOf } from './instances';
 import type { AdapterInventory, BackitupInfo, InstanceInventory, Inventory } from './protocol';
@@ -76,7 +78,13 @@ const OFF_DEVICE_KEYS = [
 
 export async function collectInventory(
     adapter: ioBroker.Adapter,
-    opts: { agentVersion: string; dataDir: string; lastBackup: Inventory['backup']['lastLocal'] },
+    opts: {
+        agentVersion: string;
+        dataDir: string;
+        lastBackup: Inventory['backup']['lastLocal'];
+        /** node_modules of ioBroker on this host; missing: every adapter object counts */
+        nodeModules?: string;
+    },
 ): Promise<Inventory> {
     const adapterRows = await adapter.getObjectViewAsync('system', 'adapter', {
         startkey: 'system.adapter.',
@@ -86,8 +94,13 @@ export async function collectInventory(
     for (const row of adapterRows.rows) {
         const common = row.value?.common;
         if (common?.name && common.version) {
+            // the objects are the same on every host: only what is installed here
+            const version = opts.nodeModules ? packageVersion(opts.nodeModules, common.name) : common.version;
+            if (!version) {
+                continue;
+            }
             adapters[common.name] = {
-                version: common.version,
+                version,
                 ...(common.installedFrom ? { installedFrom: common.installedFrom } : {}),
             };
         }
@@ -110,18 +123,14 @@ export async function collectInventory(
         );
     for (const row of instanceRows.rows) {
         const obj = row.value as ioBroker.InstanceObject | undefined;
-        if (!obj || obj.common.host !== adapter.host) {
+        if (!obj) {
             continue;
         }
-        const id = obj._id.replace(/^system\.adapter\./, '');
-        const web = webExtensionOf(obj);
-        instances[id] = {
-            enabled: !!obj.common.enabled,
-            alive: await instanceRunning(obj, sid => adapter.getForeignStateAsync(sid), webInstances),
-            mode: obj.common.mode,
-            ...(web ? { webInstance: web } : {}),
-            ...(onlyWww(obj) ? { onlyWWW: true } : {}),
-        };
+        if (obj.common.host === adapter.host) {
+            const id = obj._id.replace(/^system\.adapter\./, '');
+            instances[id] = await describeInstance(obj, sid => adapter.getForeignStateAsync(sid), webInstances);
+        }
+        // BackItUp saves the whole system, from whichever host it runs on
         if (obj.common.name === 'backitup') {
             backitups.push(obj);
             if (obj.common.enabled) {
@@ -170,6 +179,49 @@ export async function collectInventory(
         },
         backup: { lastLocal: opts.lastBackup ?? null, offDevice, backitup },
     };
+}
+
+/**
+ * How the inventory shows an instance
+ *
+ * @param obj the instance object
+ * @param readState reads a state
+ * @param webInstances the enabled web instances
+ */
+export async function describeInstance(
+    obj: ioBroker.InstanceObject,
+    readState: (id: string) => Promise<ioBroker.State | null | undefined>,
+    webInstances: () => Promise<string[]>,
+): Promise<InstanceInventory> {
+    const web = webExtensionOf(obj);
+    return {
+        enabled: !!obj.common.enabled,
+        alive: await instanceRunning(obj, readState, webInstances),
+        mode: obj.common.mode,
+        ...(web ? { webInstance: web } : {}),
+        ...(onlyWww(obj) ? { onlyWWW: true } : {}),
+    };
+}
+
+/**
+ * Version of the package of an adapter on this host, as js-controller finds it (getAdapterDir); null if it is not here,
+ * e.g. installed on another host of the system
+ *
+ * @param nodeModules node_modules of ioBroker
+ * @param name name of the adapter
+ */
+export function packageVersion(nodeModules: string, name: string): string | null {
+    for (const dir of [join(nodeModules, `iobroker.${name}`), join(nodeModules, `ioBroker.${name}`)]) {
+        try {
+            const pkg = JSON.parse(readFileSync(join(dir, 'package.json'), 'utf8')) as { version?: unknown };
+            if (typeof pkg.version === 'string' && pkg.version) {
+                return pkg.version;
+            }
+        } catch {
+            // not in this spelling
+        }
+    }
+    return null;
 }
 
 /** Installed adapter versions (name -> version) */

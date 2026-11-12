@@ -123,6 +123,13 @@ npm test          # unit tests of planner, preflight and diff
 
 ## Changelog
 
+### **WORK IN PROGRESS**
+
+- Multihost: one instance of bee maintains every host of the system. It reports the other hosts (online, js-controller, Node.js, adapters with their package there, instances, OS updates) and carries out commands there through their js-controller: install, update and remove adapters, add and delete instances, start and stop instances, restart ioBroker, OS updates and log files. Node.js, profiles, the console and remote access stay with the host of bee
+- Only adapters whose package is on the host of bee count as its own: the adapters of another host were reported as installed here, and their update failed with "is not installed"
+- BackItUp is found on any host of the system
+- Answers of js-controller to the agent arrive (`messagebox`): the OS update waited for 30 minutes without one
+
 ### 0.2.11 (2026-11-11)
 
 - Reports the backup of ioBroker by BackItUp: instance, automatic backup on, interval, targets outside the device, the last run with its error, the last good backup and the last one outside the device. The fleet management warns when there is no automatic backup, when it failed or when it is overdue

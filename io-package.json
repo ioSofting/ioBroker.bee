@@ -81,6 +81,7 @@
         "compact": false,
         "connectionType": "cloud",
         "dataSource": "push",
+        "messagebox": true,
         "logTransporter": true,
         "singletonHost": true,
         "enabled": true,

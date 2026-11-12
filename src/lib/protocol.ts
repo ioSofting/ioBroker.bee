@@ -128,6 +128,16 @@ export interface Inventory {
     ai?: AiAccess;
     /** Commands this agent understands (JobMessage.cmd); missing: none */
     commands?: AgentCommand[];
+    /**
+     * The other hosts of this ioBroker system (multihost), see HostInventory; the agent runs on the host of
+     * `hostname` and maintains these through js-controller (command 'hosts'). Empty: a single host. Missing: older
+     * agent (before 0.3.0), which also listed the adapters of other hosts as its own.
+     */
+    hosts?: HostInventory[];
+    /**
+     * Adapters and instances of the host of the agent only: an adapter whose package is not on this host (installed
+     * on another host of the system) is in HostInventory.adapters of that host.
+     */
     software: {
         jsController: string;
         node: string;
@@ -150,11 +160,49 @@ export interface Inventory {
         /** Is an off-device backup target configured (backitup)? */
         offDevice: boolean;
         /**
-         * BackItUp on the host of the agent, see BackitupInfo. null: no instance of BackItUp on this host. Missing:
+         * BackItUp of the system (since 0.3.0 on any host, before only the host of the agent), see BackitupInfo.
+         * null: no instance of BackItUp. Missing:
          * older agent (before 0.2.11). Only the settings are part of the history, not the runs.
          */
         backitup?: BackitupInfo | null;
     };
+}
+
+/**
+ * Another host of the ioBroker system (multihost, since agent 0.3.0), as its js-controller reports it to the agent:
+ * the agent maintains it with host commands (sendToHost), without an instance of its own there. Node.js, desired
+ * profiles, the console and remote access to admin are for the host of the agent only.
+ */
+export interface HostInventory {
+    /** Name of the host in ioBroker (system.host.<name>) */
+    name: string;
+    /** js-controller of the host runs (system.host.<name>.alive) */
+    alive: boolean;
+    jsController: string;
+    /** Missing: not known yet (the host did not answer since the agent started) */
+    node?: string;
+    npm?: string;
+    system?: {
+        platform: string;
+        arch: string;
+        /** As far as js-controller tells it, e.g. "linux" or "docker" */
+        os: string;
+        kernel: string;
+        model: string;
+        memTotal: number;
+        diskTotal: number;
+    };
+    /**
+     * Adapters whose package is on this host (host command getInstalled), without js-controller. Missing: the host did
+     * not answer since the agent started.
+     */
+    adapters?: Record<string, AdapterInventory>;
+    /** Instances of this host */
+    instances: Record<string, InstanceInventory>;
+    /** As Inventory.osUpdates; rebootRequired is always false: not readable from another host */
+    osUpdates?: OsUpdates;
+    /** Commands of the agent that work on this host (JobMessage.host) */
+    commands: AgentCommand[];
 }
 
 /**
@@ -302,8 +350,11 @@ export const INSTANCE_ID = /^[a-z0-9][a-z0-9_-]*\.\d{1,4}$/;
 
 export type InstanceAction = 'start' | 'stop' | 'restart';
 
-/** Commands from the asset detail an agent may understand (Inventory.commands) */
-export type AgentCommand = 'instance' | 'restart' | 'osUpgrade' | 'logs' | 'adapter' | 'software' | 'mcp';
+/**
+ * Commands from the asset detail an agent may understand (Inventory.commands). hosts: the agent reports the other
+ * hosts of the system (Inventory.hosts) and carries out commands there (JobMessage.host).
+ */
+export type AgentCommand = 'instance' | 'restart' | 'osUpgrade' | 'logs' | 'adapter' | 'software' | 'mcp' | 'hosts';
 
 /**
  * Command 'software' (since agent 0.2.7): removeAdapter removes an adapter with all its instances (not the agent,
@@ -421,6 +472,12 @@ export interface JobMessage {
     ref?: string;
     /** Who asked, for the log on the device */
     by?: string;
+    /**
+     * For instance, restart, osUpgrade, logList, logFetch, adapter and software: on this other host of the system
+     * (HostInventory.name, one of its HostInventory.commands); missing: on the host of the agent. Only to an agent
+     * with the command 'hosts': an older one would do it on its own host.
+     */
+    host?: string;
     /** For cmd 'instance' */
     instance?: { id: string; action: InstanceAction };
     /** For cmd 'osUpgrade': names out of OsUpdates.packages (the agent takes no others); restart ioBroker after it */

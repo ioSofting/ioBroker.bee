@@ -11,6 +11,9 @@ import { spawn } from 'node:child_process';
 import { appendFileSync, existsSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import type { JobStep } from './lib/protocol';
+import { executeStep, stepMismatch, type StepHost } from './lib/steps';
+
+export { cliArgs, npmArgs } from './lib/steps';
 
 export interface RunnerFile {
     mode: 'apply' | 'rollback';
@@ -38,72 +41,13 @@ function save(file: string, data: RunnerFile): void {
     renameSync(`${file}.tmp`, file);
 }
 
-/**
- * Calls of the CLI for one step, one after the other
- *
- * @param step step of the job
- * @param file local package (tgz) to install from instead of npm
- */
-export function cliArgs(step: JobStep, file?: string): string[][] {
-    if (file && step.adapter && step.action !== 'remove' && step.action !== 'backup') {
-        // the name is given: it cannot be taken from the file name <sha256>.tgz
-        const url = ['url', file, step.adapter];
-        // "url" only installs the package; "add" then creates the instance from it, without npm
-        return step.action === 'install' ? [url, ['add', step.adapter]] : [url];
-    }
-    switch (step.action) {
-        case 'backup':
-            return [['backup']];
-        case 'node':
-            // not with the CLI, see node.ts
-            return [];
-        case 'install':
-            // installs the package and creates one instance
-            return [['add', `${step.adapter}@${step.to}`]];
-        case 'upgrade':
-            return [['upgrade', `${step.adapter}@${step.to}`, '--yes']];
-        case 'downgrade':
-            return [['upgrade', `${step.adapter}@${step.to}`, '--yes', '--force']];
-        case 'remove':
-            return [['del', step.adapter!]];
-        case 'addInstance':
-            // with the number: "add" only creates the instance, the adapter is installed already
-            return [['add', step.adapter!, step.instance!.slice(step.adapter!.length + 1)]];
-        case 'removeInstance':
-            return [['del', step.instance!]];
-    }
-}
-
-/**
- * js-controller installs and upgrades only adapters of its repositories ("is not in the repository", "Unknown packet
- * name"). An adapter only on npm, like bee itself or an own adapter, it installs as admin does: with "url".
- */
-const NOT_IN_REPO = /is not in the repository|Unknown packet name/i;
-
-/**
- * The same step from npm, for an adapter that is not in the repositories of the system; null if there is none
- *
- * @param step step of the job
- */
-export function npmArgs(step: JobStep): string[][] | null {
-    if (!step.adapter || !step.to || !['install', 'upgrade', 'downgrade'].includes(step.action)) {
-        return null;
-    }
-    const url = ['url', `iobroker.${step.adapter}@${step.to}`, step.adapter];
-    // "url" only installs the package; "add" then creates the instance from it
-    return step.action === 'install' ? [url, ['add', step.adapter]] : [url];
-}
-
-async function runAll(file: RunnerFile, calls: string[][]): Promise<{ code: number; output: string }> {
-    let result = { code: 0, output: '' };
-    for (const args of calls) {
-        const r = await run(file, args);
-        result = { code: r.code, output: result.output + r.output };
-        if (r.code !== 0) {
-            break;
-        }
-    }
-    return result;
+/** The calls of the CLI on this host, see steps.ts */
+function localHost(file: RunnerFile): StepHost {
+    return {
+        run: args => run(file, args),
+        installed: adapter => Promise.resolve(installedVersion(file, adapter)),
+        note: text => appendFileSync(file.logFile, `\n${text}\n`),
+    };
 }
 
 /**
@@ -114,18 +58,8 @@ async function runAll(file: RunnerFile, calls: string[][]): Promise<{ code: numb
  */
 export async function runStep(file: RunnerFile, step: JobStep): Promise<{ code: number; output: string }> {
     const pkg = step.adapter ? file.files?.[step.adapter] : undefined;
-    const result = await runAll(file, cliArgs(step, pkg));
-    const alt = pkg ? null : npmArgs(step);
-    const failed = result.code !== 0 || checkResult(file, step, result.output) !== null;
-    if (alt && failed && NOT_IN_REPO.test(result.output)) {
-        appendFileSync(
-            file.logFile,
-            `\n[npm] ${step.adapter} is not in the repositories of this system: from npm, as admin installs it\n`,
-        );
-        const r = await runAll(file, alt);
-        return { code: r.code, output: result.output + r.output };
-    }
-    return result;
+    const { code, output } = await executeStep(step, localHost(file), pkg);
+    return { code, output };
 }
 
 function run(file: RunnerFile, args: string[]): Promise<{ code: number; output: string }> {
@@ -182,19 +116,7 @@ function installedVersion(file: RunnerFile, adapter: string): string | null {
  * @param output what the CLI printed
  */
 export function checkResult(file: RunnerFile, step: JobStep, output: string): string | null {
-    if (step.action === 'removeInstance') {
-        // js-controller keeps an instance others depend on, and still ends with 0
-        const refused = /Cannot remove instance[^\r\n]*/.exec(output);
-        return refused ? refused[0].trim() : null;
-    }
-    if (step.action === 'backup' || step.action === 'addInstance' || !step.adapter) {
-        return null;
-    }
-    const version = installedVersion(file, step.adapter);
-    if (step.action === 'remove') {
-        return version ? `${step.adapter} ist nach dem Entfernen noch installiert (${version})` : null;
-    }
-    return version === step.to ? null : `installiert ist ${version ?? 'nichts'} statt ${step.to}`;
+    return stepMismatch(step, output, step.adapter ? installedVersion(file, step.adapter) : null);
 }
 
 function tail(text: string, lines = 6): string {
