@@ -123,7 +123,7 @@ npm test          # unit tests of planner, preflight and diff
 
 ## Changelog
 
-### **WORK IN PROGRESS**
+### 0.3.0 (2026-11-12)
 
 - Multihost: one instance of bee maintains every host of the system. It reports the other hosts (online, js-controller, Node.js, adapters with their package there, instances, OS updates) and carries out commands there through their js-controller: install, update and remove adapters, add and delete instances, start and stop instances, restart ioBroker, OS updates and log files. Node.js, profiles, the console and remote access stay with the host of bee
 - Only adapters whose package is on the host of bee count as its own: the adapters of another host were reported as installed here, and their update failed with "is not installed"
