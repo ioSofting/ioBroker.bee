@@ -354,7 +354,8 @@ export type InstanceAction = 'start' | 'stop' | 'restart';
  * Commands from the asset detail an agent may understand (Inventory.commands). hosts: the agent reports the other
  * hosts of the system (Inventory.hosts) and carries out commands there (JobMessage.host).
  */
-export type AgentCommand = 'instance' | 'restart' | 'osUpgrade' | 'logs' | 'adapter' | 'software' | 'mcp' | 'hosts';
+export type AgentCommand =
+    'instance' | 'restart' | 'osUpgrade' | 'logs' | 'adapter' | 'software' | 'mcp' | 'hosts' | 'repoUpdate';
 
 /**
  * Command 'software' (since agent 0.2.7): removeAdapter removes an adapter with all its instances (not the agent,
@@ -453,6 +454,8 @@ export interface JobMessage {
      * adapter: install a version of an adapter right away, for an asset without desired profile (since 0.2.6)
      * software: remove an adapter, add or delete an instance right away (since 0.2.7)
      * mcp: a request of the AI access to the MCP server on the device (since 0.2.9)
+     * repoUpdate: load the active adapter repositories again, as admin does with "update adapter list"; they are the
+     * same for every host of the system (since 0.3.1)
      */
     cmd:
         | 'resync'
@@ -465,7 +468,8 @@ export interface JobMessage {
         | 'logFetch'
         | 'adapter'
         | 'software'
-        | 'mcp';
+        | 'mcp'
+        | 'repoUpdate';
     /** For cmd 'tunnel' */
     tunnel?: TunnelRequest;
     /** Commands: the agent answers on topic reply with this reference */

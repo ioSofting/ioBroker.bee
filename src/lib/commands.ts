@@ -19,6 +19,9 @@ import { compareVersions } from './util';
 /** Exists on Debian and Ubuntu when an update asks for a reboot of the system */
 export const REBOOT_REQUIRED = '/var/run/reboot-required';
 
+/** Longest wait for js-controller to load the repositories again (it downloads several megabytes) */
+export const REPO_TIMEOUT = 120_000;
+
 /**
  * What this system can do: OS updates need Linux and js-controller 6 (it lists them and runs apt);
  * logs: list and upload log files; adapter: install a version; software: remove an adapter, add or delete

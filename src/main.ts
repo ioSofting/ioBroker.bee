@@ -10,6 +10,7 @@ import {
     instanceRefusal,
     osUpdatesFrom,
     REBOOT_REQUIRED,
+    REPO_TIMEOUT,
     supportedCommands,
 } from './lib/commands';
 import { aiAccess, aiUserId, AiAccessManager, type McpClient } from './lib/ai';
@@ -427,7 +428,8 @@ class BeeAdapter extends utils.Adapter {
                 msg.cmd === 'restart' ||
                 msg.cmd === 'osUpgrade' ||
                 msg.cmd === 'adapter' ||
-                msg.cmd === 'software')
+                msg.cmd === 'software' ||
+                msg.cmd === 'repoUpdate')
         ) {
             await this.runCommand(msg);
         } else if (msg.ref && msg.cmd === 'logList') {
@@ -798,6 +800,8 @@ class BeeAdapter extends utils.Adapter {
                 await this.adapterCommand(ref, by, msg.adapter, remote);
             } else if (msg.cmd === 'software') {
                 await this.softwareCommand(ref, by, msg.software, remote);
+            } else if (msg.cmd === 'repoUpdate') {
+                await this.repoUpdateCommand(ref, by, remote);
             }
         } catch (e) {
             this.log.warn(`Command ${msg.cmd} of ${by} failed: ${e.message}`);
@@ -805,6 +809,49 @@ class BeeAdapter extends utils.Adapter {
         } finally {
             this.commandRunning = false;
         }
+    }
+
+    /**
+     * Loads the active adapter repositories again, as admin does with "update adapter list": js-controller of the own
+     * host downloads them, keeps them in system.repositories and checks for OS updates on the way. The repositories
+     * are the same for every host of the system.
+     */
+    private async repoUpdateCommand(ref: string, by: string, remote: string | null): Promise<void> {
+        if (remote) {
+            await this.reply(ref, 'error', 'Die Repositories gelten für das ganze System: ohne Host aufrufen');
+            return;
+        }
+        const config = await this.getForeignObjectAsync('system.config');
+        const active: unknown = config?.common?.activeRepo;
+        const names = (Array.isArray(active) ? active : [active]).filter(
+            (n): n is string => typeof n === 'string' && !!n,
+        );
+        if (!names.length) {
+            await this.reply(ref, 'error', 'In admin ist kein Repository aktiv');
+            return;
+        }
+        this.log.info(`Repositories ${names.join(', ')} loaded again on request of ${by} (fleet management)`);
+        await this.reply(ref, 'running', `Repository ${names.join(', ')} wird geladen`);
+        const answer = await this.sendHost(
+            this.host || '',
+            'getRepository',
+            { repo: names, update: true },
+            REPO_TIMEOUT,
+        );
+        const count = answer && typeof answer === 'object' && !Array.isArray(answer) ? Object.keys(answer).length : 0;
+        await this.readRepos();
+        await this.sendInventory(false);
+        if (!count) {
+            await this.reply(
+                ref,
+                'error',
+                answer === undefined
+                    ? `js-controller hat nach ${REPO_TIMEOUT / 1000} s nicht geantwortet`
+                    : 'js-controller hat kein Repository geliefert: Log von ioBroker ansehen (Download fehlgeschlagen?)',
+            );
+            return;
+        }
+        await this.reply(ref, 'done', `Repository ${names.join(', ')} geladen: ${count} Adapter`);
     }
 
     /** Start, stop or restart an instance of a host, the same way admin does it */
@@ -1306,7 +1353,7 @@ class BeeAdapter extends utils.Adapter {
         if (inv.remoteAccess.includes('console')) {
             inv.consoleUser = consoleUser();
         }
-        inv.commands = [...supportedCommands(inv.software.jsController), 'hosts'];
+        inv.commands = [...supportedCommands(inv.software.jsController), 'hosts', 'repoUpdate'];
         if (withHosts) {
             try {
                 inv.hosts = await this.collectOtherHosts();
