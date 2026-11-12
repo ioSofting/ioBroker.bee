@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "bee",
-        "version": "0.3.0",
+        "version": "0.3.1",
         "news": {
+            "0.3.1": {
+                "en": "The fleet management can load the adapter repositories of the system again, as admin does with \"update adapter list\"",
+                "de": "Die Flottenverwaltung kann die Adapter-Repositories des Systems neu laden, wie \"Adapterliste aktualisieren\" in admin"
+            },
             "0.3.0": {
                 "en": "Multihost: one instance of bee maintains every host of the system (adapters, instances, restart, OS updates, log files) through their js-controller. Adapters of another host are no longer reported as installed here, their update failed with \"is not installed\". BackItUp is found on any host. Answers of js-controller arrive, the OS update waited 30 minutes without them",
                 "de": "Multihost: eine Instanz von bee wartet alle Hosts des Systems (Adapter, Instanzen, Neustart, OS-Updates, Log-Dateien) über deren js-controller. Adapter eines anderen Hosts gelten hier nicht mehr als installiert, ihr Update scheiterte mit \"is not installed\". BackItUp wird auf jedem Host gefunden. Antworten von js-controller kommen an, das OS-Update wartete ohne sie 30 Minuten"

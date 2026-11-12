@@ -123,7 +123,7 @@ npm test          # unit tests of planner, preflight and diff
 
 ## Changelog
 
-### **WORK IN PROGRESS**
+### 0.3.1 (2026-11-12)
 
 - The fleet management can load the adapter repositories of the system again (command `repoUpdate`), as admin does with "update adapter list"
 
