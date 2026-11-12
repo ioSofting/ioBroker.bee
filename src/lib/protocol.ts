@@ -109,6 +109,11 @@ export interface Inventory {
      * it takes the first instance. Not part of the history.
      */
     accessTargets?: Partial<Record<AccessKind, AccessInstance[]>>;
+    /**
+     * Projects of vis-2: folders in the file storage of vis-2.0 with a vis-views.json, sorted (since agent 0.3.2).
+     * The remote access opens one of them directly, in the runtime or the editor. Missing: unknown.
+     */
+    visProjects?: string[];
     /** User the shell of the console runs as; only reported while the console is allowed */
     consoleUser?: string;
     /**

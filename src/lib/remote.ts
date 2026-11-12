@@ -62,6 +62,33 @@ export function describeTargets(targets: AccessTarget[]): AccessInstance[] {
     return targets.map(({ host: _host, ...t }) => t);
 }
 
+/**
+ * Projects of vis-2: the folders in the file storage of vis-2.0 that hold a vis-views.json, sorted, at most 100.
+ * Empty if vis-2 is not there or the storage cannot be read.
+ */
+export async function visProjects(adapter: ioBroker.Adapter): Promise<string[]> {
+    let entries: ioBroker.ReadDirResult[];
+    try {
+        entries = await adapter.readDirAsync('vis-2.0', '');
+    } catch {
+        return [];
+    }
+    const projects: string[] = [];
+    for (const e of entries) {
+        if (!e.isDir || projects.length >= 100) {
+            continue;
+        }
+        try {
+            if (await adapter.fileExistsAsync('vis-2.0', `${e.file}/vis-views.json`)) {
+                projects.push(e.file);
+            }
+        } catch {
+            // not readable: not offered
+        }
+    }
+    return projects.sort((a, b) => a.localeCompare(b));
+}
+
 /** The instance asked for, or the first one; null if it is not among the targets */
 export function chooseTarget(targets: AccessTarget[], instance: string | undefined): AccessTarget | null {
     return (instance ? targets.find(t => t.instance === instance) : targets[0]) ?? null;

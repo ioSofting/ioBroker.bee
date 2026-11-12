@@ -76,6 +76,7 @@ import {
     ACCESS_LABEL,
     chooseTarget,
     describeTargets,
+    visProjects,
     findTargets,
     trustedTunnelUrl,
     TunnelClient,
@@ -1350,6 +1351,10 @@ class BeeAdapter extends utils.Adapter {
             admin: describeTargets(await findTargets(this, 'admin')),
             vis: describeTargets(await findTargets(this, 'vis')),
         };
+        // the remote access opens a project of vis-2 directly
+        if (inv.accessTargets.vis?.length) {
+            inv.visProjects = await visProjects(this);
+        }
         if (inv.remoteAccess.includes('console')) {
             inv.consoleUser = consoleUser();
         }
