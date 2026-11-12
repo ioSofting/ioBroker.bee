@@ -43,7 +43,7 @@ If the owner installs adapters that are not part of the profile, the agent repor
 
 An asset can also run without profile (mode `free`, set in the fleet management for installations that are too different for a profile). The agent then gets no profile and changes nothing by itself; versions are installed with the command `adapter`. Every version of the agent handles this like an asset without profile.
 
-### Remote access to admin, vis-2 and the console
+### Remote access to admin, vis-2, the console and KNX
 
 A technician of the fleet manager can open admin or vis-2 of the system from the fleet management, without ioBroker.pro and without open ports on the device:
 
@@ -54,6 +54,8 @@ A technician of the fleet manager can open admin or vis-2 of the system from the
 The owner can switch off each kind in the tab *Remote access*; the agent then refuses the session and the fleet management shows why. Running sessions are visible in `info.remoteAccess`. After a connection loss the agent reconnects until the session expires, also across restarts of the adapter. The server ends the session early when the technician ends it or the device is revoked.
 
 **Console.** Off until the owner allows it (*Allow the console*), and only on Linux with `script` of util-linux (part of every Debian). Then every terminal the technician opens in the browser is a login shell on this system, as the user ioBroker runs as (usually `iobroker`), started in the ioBroker directory. No native module: `script` gives the shell a pseudo terminal, `stty` sets the size of its window. At most 4 shells per session; when the session or the connection ends, the shells get SIGHUP. `info.remoteAccessBy` shows how many shells are open. Whatever the shell may do beyond the rights of that user belongs in a sudo allow list for single commands, not in a general sudo. Note that the list the ioBroker installer writes (`/etc/sudoers.d/iobroker`) contains `apt`, `apt-get` and `dpkg` without password, which makes the console effectively root on a standard installation. Systems installed with `--hardened` have no sudo; there the OS updates below do not work either.
+
+**KNX for ETS.** Off until the owner allows it (*Allow ETS to reach the KNX gateway*). A technician can then program the KNX installation with ETS from afar: the program bee-knx (Windows, downloaded in the fleet management) offers a KNXnet/IP interface on 127.0.0.1:3671 of the technician's PC, the server carries it to the agent, and the agent connects to the KNX/IP gateway set in the tab, and to nothing else in this network. Without a gateway set, it takes the one of an instance of knx or openknx. The connection to the gateway is TCP or UDP (*Automatic*: TCP if the gateway answers within 2 seconds, otherwise UDP; for UDP the agent puts its own address into the frames, as the gateway must answer to it). At most 4 tunnels per session; when the session ends, the agent closes the tunnels to the gateway.
 
 ### AI access (MCP)
 
@@ -90,6 +92,7 @@ From the asset detail a technician (permission `operate`) can start, stop and re
 | | backup before every update | only disable for tests |
 | Remote access | allow admin, allow vis-2 | whether the fleet manager may open the interface remotely (both allowed by default) |
 | | allow the console | a shell on this system for the fleet manager (off by default, Linux only) |
+| | allow ETS to reach the KNX gateway, KNX/IP gateway, connection | KNX for ETS (off by default), see above; the gateway as IP or host with `:port`, empty: from the adapter knx or openknx |
 | | allow the AI access, user, write states, change objects | the MCP server of ioBroker for an AI of the fleet manager (off by default; reading only unless allowed), see above |
 
 ## States
@@ -122,6 +125,10 @@ npm test          # unit tests of planner, preflight and diff
 `src/lib/protocol.ts` and `src/lib/tunnel.ts` are shared with the server and must stay identical to `beekeeper-server/src/protocol.ts` and `beekeeper-server/src/tunnel.ts`.
 
 ## Changelog
+
+### 0.4.0 (2026-11-12)
+
+- KNX for ETS: the fleet management can program the KNX installation with ETS from afar, through the program bee-knx on the technician's PC; off until the owner allows it, only to the gateway set in the tab (or the one of knx/openknx), over TCP or UDP
 
 ### 0.3.2 (2026-11-12)
 

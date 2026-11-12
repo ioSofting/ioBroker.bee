@@ -117,6 +117,12 @@ export interface Inventory {
     /** User the shell of the console runs as; only reported while the console is allowed */
     consoleUser?: string;
     /**
+     * KNX for ETS (remote access of kind knx): the gateway in the LAN of the device, set in the instance of bee
+     * or taken from the adapter knx/openknx (since agent 0.4.0). Only while the owner allows KNX; gateway null:
+     * allowed, but no gateway known.
+     */
+    knx?: KnxInfo;
+    /**
      * Updates of operating system packages as js-controller (6 and newer) lists them, see OsUpdates.
      * Missing: unknown (older agent, older js-controller, no Linux). Not part of the history.
      */
@@ -539,11 +545,20 @@ export interface ReplyMessage {
 }
 
 /**
- * Kinds of remote access through the tunnel: the web interfaces admin, and web with vis-2, and a shell on the
- * device (console; off unless the owner switches it on, see tunnel.ts for its messages)
+ * Kinds of remote access through the tunnel: the web interfaces admin, and web with vis-2, a shell on the
+ * device (console; off unless the owner switches it on, see tunnel.ts for its messages), and KNX for ETS
+ * (knx; off unless the owner switches it on). A stream of knx carries KNXnet/IP frames back to back as over
+ * TCP (HPAIs "TCP, 0.0.0.0:0"); the agent passes them to its gateway, over UDP if the gateway has no TCP.
  */
-export type AccessKind = 'admin' | 'vis' | 'console';
-export const ACCESS_KINDS: AccessKind[] = ['admin', 'vis', 'console'];
+export type AccessKind = 'admin' | 'vis' | 'console' | 'knx';
+export const ACCESS_KINDS: AccessKind[] = ['admin', 'vis', 'console', 'knx'];
+
+export interface KnxInfo {
+    /** "192.168.1.20" or "host:port" */
+    gateway: string | null;
+    /** As set by the owner; auto: TCP if the gateway answers on it, otherwise UDP */
+    transport: 'auto' | 'tcp' | 'udp';
+}
 
 /** A local web interface the agent can carry a remote access to (Inventory.accessTargets) */
 export interface AccessInstance {

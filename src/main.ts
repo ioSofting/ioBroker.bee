@@ -16,6 +16,7 @@ import {
 import { aiAccess, aiUserId, AiAccessManager, type McpClient } from './lib/ai';
 import { recentOffDeviceBackup } from './lib/backup';
 import { consoleUser, findScript, MAX_SHELLS, startShell } from './lib/console';
+import { findGateway, gatewayText, KnxConnector, MAX_KNX_STREAMS, type KnxGateway, type KnxTransport } from './lib/knx';
 import { instanceRunning, onlyWww } from './lib/instances';
 import { enroll } from './lib/enrollment';
 import {
@@ -111,6 +112,10 @@ interface BeeConfig {
     allowVis: boolean;
     /** A shell on this system for the fleet management (off unless the owner switches it on) */
     allowConsole: boolean;
+    /** KNX for ETS from afar (off unless the owner switches it on); the gateway, empty: from the adapter knx */
+    allowKnx: boolean;
+    knxGateway: string;
+    knxTransport: KnxTransport;
     /** AI access: the MCP server of ioBroker for an AI of the fleet management (off unless the owner allows it) */
     allowAi: boolean;
     /** ...with writing states, with changing objects and files; as this ioBroker user */
@@ -182,6 +187,8 @@ class BeeAdapter extends utils.Adapter {
     private readonly tunnels = new Map<string, TunnelClient>();
     /** Running shells of the console per session */
     private readonly shells = new Map<string, number>();
+    /** Connections of ETS per KNX session */
+    private readonly knxStreams = new Map<string, number>();
     /** The other hosts of the system as last collected, by name */
     private readonly knownHosts = new Map<string, HostInventory>();
     /** The CLI on the other hosts of the system */
@@ -1170,7 +1177,36 @@ class BeeAdapter extends utils.Adapter {
         if (this.config.allowConsole === true && findScript()) {
             kinds.push('console');
         }
+        if (this.config.allowKnx === true) {
+            kinds.push('knx');
+        }
         return kinds;
+    }
+
+    private knxGateway(): Promise<KnxGateway | null> {
+        return findGateway(this, this.config.knxGateway || '', this.config.knxTransport || 'auto');
+    }
+
+    /** One connection of ETS to the gateway, at most MAX_KNX_STREAMS at the same time */
+    private openKnx(t: TunnelRequest, connector: KnxConnector, stream: Duplex): void {
+        const running = this.knxStreams.get(t.id) ?? 0;
+        if (running >= MAX_KNX_STREAMS) {
+            stream.destroy(new Error(`Höchstens ${MAX_KNX_STREAMS} Verbindungen von ETS je Sitzung`));
+            return;
+        }
+        this.knxStreams.set(t.id, running + 1);
+        void this.updateAccessStates();
+        connector.relay(stream, () => {
+            const n = (this.knxStreams.get(t.id) ?? 1) - 1;
+            if (n > 0) {
+                this.knxStreams.set(t.id, n);
+            } else {
+                this.knxStreams.delete(t.id);
+            }
+            if (!this.unloading) {
+                void this.updateAccessStates();
+            }
+        });
     }
 
     /** One shell for a stream of a console session, at most MAX_SHELLS at the same time */
@@ -1222,13 +1258,27 @@ class BeeAdapter extends utils.Adapter {
         }
         let refusal: string | null = null;
         let target: AccessTarget | null = null;
+        let knx: KnxConnector | null = null;
         const isConsole = t.kind === 'console';
         if (!this.allowedAccess().includes(t.kind)) {
-            refusal = !isConsole
-                ? `Fernzugriff auf ${ACCESS_LABEL[t.kind]} ist am Gerät abgeschaltet`
-                : this.config.allowConsole === true
-                  ? 'Die Konsole braucht Linux mit script (util-linux)'
-                  : 'Die Konsole ist am Gerät nicht freigegeben';
+            refusal =
+                t.kind === 'knx'
+                    ? 'KNX ist am Gerät nicht freigegeben'
+                    : !isConsole
+                      ? `Fernzugriff auf ${ACCESS_LABEL[t.kind]} ist am Gerät abgeschaltet`
+                      : this.config.allowConsole === true
+                        ? 'Die Konsole braucht Linux mit script (util-linux)'
+                        : 'Die Konsole ist am Gerät nicht freigegeben';
+        } else if (t.kind === 'knx') {
+            // only the gateway set here, whatever the server asks for
+            const gateway = await this.knxGateway();
+            if (!gateway) {
+                refusal = 'Kein KNX-Gateway: in der Instanz bee eintragen oder den Adapter knx einrichten';
+            } else if (this.tunnels.size >= 4) {
+                refusal = 'Zu viele gleichzeitige Fernzugriffe auf dem Gerät';
+            } else {
+                knx = new KnxConnector(gateway, { log: this.log });
+            }
         } else if (isConsole) {
             if (this.tunnels.size >= 4) {
                 refusal = 'Zu viele gleichzeitige Fernzugriffe auf dem Gerät';
@@ -1247,6 +1297,7 @@ class BeeAdapter extends utils.Adapter {
         const client = new TunnelClient(t, {
             target,
             ...(isConsole && !refusal ? { handler: (stream: Duplex) => this.openShell(t, stream) } : {}),
+            ...(knx && !refusal ? { handler: (stream: Duplex) => this.openKnx(t, knx, stream) } : {}),
             refusal,
             ca: trustedCas(this.creds?.ca || ''),
             log: this.log,
@@ -1254,6 +1305,7 @@ class BeeAdapter extends utils.Adapter {
                 if (this.tunnels.get(t.id) === c) {
                     this.tunnels.delete(t.id);
                     this.shells.delete(t.id);
+                    this.knxStreams.delete(t.id);
                     this.log.info(`Remote access to ${ACCESS_LABEL[t.kind]} by ${t.by} ended (${reason})`);
                 }
                 if (!this.unloading) {
@@ -1267,7 +1319,7 @@ class BeeAdapter extends utils.Adapter {
         } else {
             this.tunnels.set(t.id, client);
             this.log.info(
-                `Remote access to ${ACCESS_LABEL[t.kind]}${target ? ` (${target.instance})` : ''} ${resumed ? 'resumed' : 'opened'} by ${t.by} until ${new Date(t.expiresAt).toLocaleTimeString()}: ${t.purpose}`,
+                `Remote access to ${ACCESS_LABEL[t.kind]}${target ? ` (${target.instance})` : ''}${knx ? ` (gateway ${gatewayText(knx.gateway)})` : ''} ${resumed ? 'resumed' : 'opened'} by ${t.by} until ${new Date(t.expiresAt).toLocaleTimeString()}: ${t.purpose}`,
             );
         }
         client.start();
@@ -1284,6 +1336,9 @@ class BeeAdapter extends utils.Adapter {
 
     /** " (2 Shells offen)" for a console */
     private shellText(t: TunnelRequest): string {
+        if (t.kind === 'knx') {
+            return this.knxStreams.get(t.id) ? ' (ETS verbunden)' : '';
+        }
         if (t.kind !== 'console') {
             return '';
         }
@@ -1374,6 +1429,10 @@ class BeeAdapter extends utils.Adapter {
         }
         if (inv.remoteAccess.includes('console')) {
             inv.consoleUser = consoleUser();
+        }
+        if (inv.remoteAccess.includes('knx')) {
+            const gateway = await this.knxGateway();
+            inv.knx = { gateway: gateway ? gatewayText(gateway) : null, transport: this.config.knxTransport || 'auto' };
         }
         inv.commands = [...supportedCommands(inv.software.jsController), 'hosts', 'repoUpdate', 'visProjects'];
         if (withHosts) {

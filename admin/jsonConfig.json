@@ -141,6 +141,62 @@
                     "lg": 6,
                     "xl": 6
                 },
+                "_knxHeader": {
+                    "type": "header",
+                    "text": { "en": "KNX for ETS", "de": "KNX für ETS" },
+                    "size": 5,
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                },
+                "allowKnx": {
+                    "type": "checkbox",
+                    "label": { "en": "Allow ETS to reach the KNX gateway", "de": "ETS den Zugang zum KNX-Gateway erlauben" },
+                    "help": {
+                        "en": "Service staff can program the KNX installation with ETS from afar, through the program bee-knx on their PC. Only to the gateway below, nothing else in this network.",
+                        "de": "Servicepersonal kann die KNX-Anlage mit ETS aus der Ferne programmieren, über das Programm bee-knx auf seinem PC. Nur zum Gateway unten, zu nichts anderem in diesem Netz."
+                    },
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                },
+                "knxGateway": {
+                    "type": "text",
+                    "label": { "en": "KNX/IP gateway", "de": "KNX/IP-Gateway" },
+                    "placeholder": "192.168.1.20",
+                    "help": {
+                        "en": "IP address or host name, with :port if not 3671. Empty: as set in the adapter knx or openknx",
+                        "de": "IP-Adresse oder Hostname, mit :Port falls nicht 3671. Leer: wie im Adapter knx oder openknx eingestellt"
+                    },
+                    "hidden": "!data.allowKnx",
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 6,
+                    "lg": 6,
+                    "xl": 6
+                },
+                "knxTransport": {
+                    "type": "select",
+                    "label": { "en": "Connection to the gateway", "de": "Verbindung zum Gateway" },
+                    "options": [
+                        { "value": "auto", "label": { "en": "Automatic (TCP if possible, otherwise UDP)", "de": "Automatisch (TCP wenn möglich, sonst UDP)" } },
+                        { "value": "tcp", "label": { "en": "TCP", "de": "TCP" } },
+                        { "value": "udp", "label": { "en": "UDP", "de": "UDP" } }
+                    ],
+                    "hidden": "!data.allowKnx",
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 6,
+                    "lg": 6,
+                    "xl": 6
+                },
                 "_aiHeader": {
                     "type": "header",
                     "text": { "en": "AI access (MCP)", "de": "KI-Zugang (MCP)" },

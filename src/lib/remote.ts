@@ -16,14 +16,23 @@ export interface AccessTarget extends AccessInstance {
     host: string;
 }
 
-export const ACCESS_LABEL: Record<AccessKind, string> = { admin: 'admin', vis: 'vis-2', console: 'Konsole' };
+export const ACCESS_LABEL: Record<AccessKind, string> = {
+    admin: 'admin',
+    vis: 'vis-2',
+    console: 'Konsole',
+    knx: 'KNX',
+};
 
 /**
  * Local web interfaces for a kind: the enabled admin instances, or web instances for vis-2 (only with vis-2
  * installed), on this host, in the order of the instance number.
  */
 export async function findTargets(adapter: ioBroker.Adapter, kind: AccessKind): Promise<AccessTarget[]> {
-    if (kind === 'console' || (kind === 'vis' && !(await adapter.getForeignObjectAsync('system.adapter.vis-2')))) {
+    if (
+        kind === 'console' ||
+        kind === 'knx' ||
+        (kind === 'vis' && !(await adapter.getForeignObjectAsync('system.adapter.vis-2')))
+    ) {
         return [];
     }
     const name = kind === 'admin' ? 'admin' : 'web';
