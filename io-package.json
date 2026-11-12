@@ -84,8 +84,8 @@
         ],
         "platform": "Javascript/Node.js",
         "icon": "bee.svg",
-        "extIcon": "https://raw.githubusercontent.com/ioBroker/ioBroker.bee/main/admin/bee.svg",
-        "readme": "https://github.com/ioBroker/ioBroker.bee/blob/main/README.md",
+        "extIcon": "https://raw.githubusercontent.com/ioSofting/ioBroker.bee/main/admin/bee.svg",
+        "readme": "https://github.com/ioSofting/ioBroker.bee/blob/main/README.md",
         "loglevel": "info",
         "mode": "daemon",
         "type": "general",
@@ -185,7 +185,7 @@
         "enrollToken"
     ],
     "native": {
-        "enrollUrl": "https://bee.iobroker.click",
+        "enrollUrl": "https://beekeeper.one",
         "enrollToken": "",
         "comment": "",
         "allowAdmin": true,
