@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "bee",
-        "version": "0.3.1",
+        "version": "0.3.2",
         "news": {
+            "0.3.2": {
+                "en": "Reports the projects of vis-2, also live on request: the fleet management opens a project directly in the runtime or the editor",
+                "de": "Meldet die Projekte von vis-2, auf Anfrage auch live: die Flottenverwaltung öffnet ein Projekt direkt in der Runtime oder im Editor"
+            },
             "0.3.1": {
                 "en": "The fleet management can load the adapter repositories of the system again, as admin does with \"update adapter list\"",
                 "de": "Die Flottenverwaltung kann die Adapter-Repositories des Systems neu laden, wie \"Adapterliste aktualisieren\" in admin"

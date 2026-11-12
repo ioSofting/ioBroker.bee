@@ -123,6 +123,10 @@ npm test          # unit tests of planner, preflight and diff
 
 ## Changelog
 
+### 0.3.2 (2026-11-12)
+
+- Reports the projects of vis-2 (folders with a `vis-views.json`), also live on request of the fleet management: it opens a project directly in the runtime or the editor
+
 ### 0.3.1 (2026-11-12)
 
 - The fleet management can load the adapter repositories of the system again (command `repoUpdate`), as admin does with "update adapter list"
