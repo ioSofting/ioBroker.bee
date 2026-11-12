@@ -4,8 +4,8 @@
         "version": "0.4.0",
         "news": {
             "0.4.0": {
-                "en": "KNX for ETS: the fleet management can program the KNX installation with ETS from afar (program bee-knx on the PC); off until allowed, only to the configured gateway",
-                "de": "KNX für ETS: Die Flottenverwaltung kann die KNX-Anlage aus der Ferne mit ETS programmieren (Programm bee-knx auf dem PC); aus, bis es erlaubt wird, nur zum eingestellten Gateway"
+                "en": "KNX for ETS: the fleet management can program the KNX installation with ETS from afar (program bee-knx on the PC); off until allowed, only to the configured gateway. Enrollment URL preset to https://beekeeper.one",
+                "de": "KNX für ETS: Die Flottenverwaltung kann die KNX-Anlage aus der Ferne mit ETS programmieren (Programm bee-knx auf dem PC); aus, bis es erlaubt wird, nur zum eingestellten Gateway. Enrollment-URL voreingestellt auf https://beekeeper.one"
             },
             "0.3.2": {
                 "en": "Reports the projects of vis-2, also live on request: the fleet management opens a project directly in the runtime or the editor",

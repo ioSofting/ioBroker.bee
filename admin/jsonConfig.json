@@ -21,7 +21,7 @@
                 "enrollUrl": {
                     "type": "text",
                     "label": { "en": "Enrollment URL", "de": "Enrollment-URL" },
-                    "placeholder": "https://bee.iobroker.click",
+                    "placeholder": "https://beekeeper.one",
                     "xs": 12,
                     "sm": 12,
                     "md": 6,

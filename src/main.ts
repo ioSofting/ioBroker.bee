@@ -144,7 +144,7 @@ interface Persisted {
     notified: Record<string, number>;
 }
 
-/** Host of the broker for the status, e.g. "bee.iobroker.click" */
+/** Host of the broker for the status, e.g. "beekeeper.one" */
 function hostOf(url: string | undefined): string {
     try {
         return new URL(url || '').hostname || 'der Flottenverwaltung';

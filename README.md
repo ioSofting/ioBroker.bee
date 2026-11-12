@@ -82,7 +82,7 @@ From the asset detail a technician (permission `operate`) can start, stop and re
 
 | Tab | Setting | Meaning |
 | --- | --- | --- |
-| Enrollment | Enrollment URL, token | from the factory image or the fleet manager; the URL is preset to `https://bee.iobroker.click`, the token is stored encrypted |
+| Enrollment | Enrollment URL, token | from the factory image or the fleet manager; the URL is preset to `https://beekeeper.one`, the token is stored encrypted |
 | | comment | free text shown in the fleet management next to the installation, e.g. `Womo Mercedes KA-1525`; sent on enrollment and with the inventory. It helps to recognize the installation but proves nothing: the identity is the device certificate |
 | Maintenance window | start, end | daily window for updates, may span midnight (e.g. 22:00–05:00) |
 | | conditions | table of `state operator value`, e.g. `victron.0.soc >= 50`, `modem.0.roaming == false`, `presence.0.home == false` |
@@ -129,6 +129,7 @@ npm test          # unit tests of planner, preflight and diff
 ### 0.4.0 (2026-11-12)
 
 - KNX for ETS: the fleet management can program the KNX installation with ETS from afar, through the program bee-knx on the technician's PC; off until the owner allows it, only to the gateway set in the tab (or the one of knx/openknx), over TCP or UDP
+- Enrollment URL preset to `https://beekeeper.one` (new instances; existing ones keep theirs, see the README of the server, "Umzug auf eine neue Domain")
 
 ### 0.3.2 (2026-11-12)
 
