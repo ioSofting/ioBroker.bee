@@ -360,7 +360,16 @@ export type InstanceAction = 'start' | 'stop' | 'restart';
  * hosts of the system (Inventory.hosts) and carries out commands there (JobMessage.host).
  */
 export type AgentCommand =
-    'instance' | 'restart' | 'osUpgrade' | 'logs' | 'adapter' | 'software' | 'mcp' | 'hosts' | 'repoUpdate';
+    | 'instance'
+    | 'restart'
+    | 'osUpgrade'
+    | 'logs'
+    | 'adapter'
+    | 'software'
+    | 'mcp'
+    | 'hosts'
+    | 'repoUpdate'
+    | 'visProjects';
 
 /**
  * Command 'software' (since agent 0.2.7): removeAdapter removes an adapter with all its instances (not the agent,
@@ -461,6 +470,8 @@ export interface JobMessage {
      * mcp: a request of the AI access to the MCP server on the device (since 0.2.9)
      * repoUpdate: load the active adapter repositories again, as admin does with "update adapter list"; they are the
      * same for every host of the system (since 0.3.1)
+     * visProjects: list the projects of vis-2 right now, as Inventory.visProjects (answer: ReplyMessage.projects; since
+     * 0.3.2); only reads, also during a job
      */
     cmd:
         | 'resync'
@@ -474,7 +485,8 @@ export interface JobMessage {
         | 'adapter'
         | 'software'
         | 'mcp'
-        | 'repoUpdate';
+        | 'repoUpdate'
+        | 'visProjects';
     /** For cmd 'tunnel' */
     tunnel?: TunnelRequest;
     /** Commands: the agent answers on topic reply with this reference */
@@ -520,6 +532,8 @@ export interface ReplyMessage {
     message?: string;
     /** For cmd 'logList': the log files, newest first */
     files?: LogFile[];
+    /** For cmd 'visProjects': the projects of vis-2, sorted */
+    projects?: string[];
     /** For cmd 'mcp' */
     mcp?: McpReply;
 }

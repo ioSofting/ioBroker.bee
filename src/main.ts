@@ -433,6 +433,9 @@ class BeeAdapter extends utils.Adapter {
                 msg.cmd === 'repoUpdate')
         ) {
             await this.runCommand(msg);
+        } else if (msg.ref && msg.cmd === 'visProjects') {
+            // only reads: also during a job or another command
+            await this.visProjectsCommand(msg.ref);
         } else if (msg.ref && msg.cmd === 'logList') {
             // only reads: also during a job or another command
             await this.logListCommand(msg.ref, msg.host);
@@ -691,6 +694,20 @@ class BeeAdapter extends utils.Adapter {
         } catch (e) {
             await this.reply(ref, 'error', e.message);
         }
+    }
+
+    /** The projects of vis-2 right now, for the remote access of the fleet management */
+    private async visProjectsCommand(ref: string): Promise<void> {
+        const projects = await visProjects(this);
+        const msg: ReplyMessage = {
+            v: PROTOCOL_VERSION,
+            ts: Date.now(),
+            ref,
+            state: 'done',
+            message: `${projects.length} Projekte in vis-2`,
+            projects,
+        };
+        await this.transport?.publish('reply', msg);
     }
 
     /** Uploads a log file to the own server, one at a time */
@@ -1358,7 +1375,7 @@ class BeeAdapter extends utils.Adapter {
         if (inv.remoteAccess.includes('console')) {
             inv.consoleUser = consoleUser();
         }
-        inv.commands = [...supportedCommands(inv.software.jsController), 'hosts', 'repoUpdate'];
+        inv.commands = [...supportedCommands(inv.software.jsController), 'hosts', 'repoUpdate', 'visProjects'];
         if (withHosts) {
             try {
                 inv.hosts = await this.collectOtherHosts();
