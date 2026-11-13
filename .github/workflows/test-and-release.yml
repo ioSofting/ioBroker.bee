@@ -1,6 +1,6 @@
 # Checks every push and pull request. A tag vX.Y.Z (or vX.Y.Z-beta.N) publishes the version on npm
 # through trusted publishing (OIDC, no token): the package iobroker.bee trusts this workflow file of
-# ioBroker/ioBroker.bee. Prereleases get the npm tag "next".
+# ioSofting/ioBroker.bee. Prereleases get the npm tag "next".
 #
 # Release: version in package.json, io-package.json (with news) and package-lock.json, changelog in the
 # README as "### X.Y.Z (date)", commit, then: git tag vX.Y.Z && git push origin vX.Y.Z
