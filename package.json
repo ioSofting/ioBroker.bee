@@ -3,8 +3,8 @@
   "version": "0.4.0",
   "description": "Fleet agent for ioBroker: reports inventory to a beekeeper server and converges the system to the desired version profile",
   "author": {
-    "name": "Denis Haev",
-    "email": "dogafox@gmail.com"
+    "name": "ioSofting GmbH",
+    "email": "iosofting@gmail.com"
   },
   "contributors": [],
   "homepage": "https://github.com/ioSofting/ioBroker.bee",

@@ -207,4 +207,4 @@ npm test          # unit tests of planner, preflight and diff
 
 ## License
 
-Proprietary (UNLICENSED). Copyright (c) 2026 Denis Haev. All rights reserved.
+Proprietary (UNLICENSED), see [LICENSE](LICENSE). Copyright (c) 2026 ioSofting GmbH. All rights reserved.

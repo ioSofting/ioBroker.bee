@@ -77,7 +77,7 @@
             "de": "Meldet das Inventar dieses Systems an einen beekeeper-Flottenserver und gleicht es auf das zugewiesene Versionsprofil ab"
         },
         "authors": [
-            "Denis Haev <dogafox@gmail.com>"
+            "ioSofting GmbH <iosofting@gmail.com>"
         ],
         "keywords": [
             "fleet",
