@@ -21,6 +21,8 @@ export const ACCESS_LABEL: Record<AccessKind, string> = {
     vis: 'vis-2',
     console: 'Konsole',
     knx: 'KNX',
+    // the interface of Home Assistant is carried by bee-ha, never by this agent
+    ha: 'Home Assistant',
 };
 
 /**
@@ -31,6 +33,7 @@ export async function findTargets(adapter: ioBroker.Adapter, kind: AccessKind): 
     if (
         kind === 'console' ||
         kind === 'knx' ||
+        kind === 'ha' ||
         (kind === 'vis' && !(await adapter.getForeignObjectAsync('system.adapter.vis-2')))
     ) {
         return [];

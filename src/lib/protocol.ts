@@ -1,5 +1,6 @@
 /**
- * Wire protocol between beekeeper (server) and ioBroker.bee (agent).
+ * Wire protocol between beekeeper (server) and its agents: ioBroker.bee on ioBroker, bee-ha (beekeeper-server/bee-ha)
+ * next to Home Assistant.
  *
  * This file exists in both repositories: beekeeper-server/src/protocol.ts and ioBroker.bee/src/lib/protocol.ts.
  * Both copies must stay identical. Bump PROTOCOL_VERSION on breaking changes.
@@ -87,8 +88,31 @@ export interface InstanceInventory {
     onlyWWW?: boolean;
 }
 
+/**
+ * The system an agent looks after: ioBroker (ioBroker.bee) or Home Assistant (bee-ha). For Home Assistant the
+ * parts of the inventory about ioBroker (software, hosts, repo, backup by BackItUp) stay empty, and there are
+ * no profiles, rollouts or commands.
+ */
+export type Platform = 'iobroker' | 'homeassistant';
+
+/** Home Assistant as bee-ha sees it next to it (Inventory.homeassistant) */
+export interface HomeAssistantInfo {
+    /** e.g. "2026.11.1"; null: not known (the configuration folder is not readable for the agent) */
+    version: string | null;
+    /** How it is installed, as far as the agent knows: container, os (Home Assistant OS), supervised, core */
+    installation: string;
+    /** Name of the home (core.config), if readable */
+    locationName?: string;
+    /** Home Assistant answers on its address (the last check of the agent) */
+    reachable: boolean;
+}
+
 /** Slowly changing inventory. Volatile metrics belong into StateMessage, they would flood the history. */
 export interface Inventory {
+    /** Missing: ioBroker (every ioBroker.bee) */
+    platform?: Platform;
+    /** Only with platform 'homeassistant' */
+    homeassistant?: HomeAssistantInfo;
     agentVersion: string;
     uuid: string;
     hostname: string;
@@ -549,9 +573,10 @@ export interface ReplyMessage {
  * device (console; off unless the owner switches it on, see tunnel.ts for its messages), and KNX for ETS
  * (knx; off unless the owner switches it on). A stream of knx carries KNXnet/IP frames back to back as over
  * TCP (HPAIs "TCP, 0.0.0.0:0"); the agent passes them to its gateway, over UDP if the gateway has no TCP.
+ * ha: the web interface of Home Assistant (agent bee-ha only).
  */
-export type AccessKind = 'admin' | 'vis' | 'console' | 'knx';
-export const ACCESS_KINDS: AccessKind[] = ['admin', 'vis', 'console', 'knx'];
+export type AccessKind = 'admin' | 'vis' | 'console' | 'knx' | 'ha';
+export const ACCESS_KINDS: AccessKind[] = ['admin', 'vis', 'console', 'knx', 'ha'];
 
 export interface KnxInfo {
     /** "192.168.1.20" or "host:port" */
