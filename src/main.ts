@@ -1,12 +1,14 @@
 import * as utils from '@iobroker/adapter-core';
 import { existsSync, mkdirSync } from 'node:fs';
-import { readFile } from 'node:fs/promises';
+import { readFile, rm, stat } from 'node:fs/promises';
 import os from 'node:os';
 import { basename, join } from 'node:path';
 import type { Duplex } from 'node:stream';
 import {
     ACTION_DONE,
+    chooseAdminInstance,
     chooseOsPackages,
+    controllerRefusal,
     instanceRefusal,
     osUpdatesFrom,
     REBOOT_REQUIRED,
@@ -14,9 +16,20 @@ import {
     supportedCommands,
 } from './lib/commands';
 import { aiAccess, aiUserId, AiAccessManager, type McpClient } from './lib/ai';
-import { recentOffDeviceBackup } from './lib/backup';
+import { aptFailure, aptUpdateArgs, aptUpgradeArgs, hasAptGet, runApt } from './lib/apt';
+import { Monitor, monitorText, validRules } from './lib/monitor';
+import { backupPath, OWN_BACKUPS_KEEP, pruneOwnBackups, recentOffDeviceBackup } from './lib/backup';
 import { consoleUser, findScript, MAX_SHELLS, startShell } from './lib/console';
-import { findGateway, gatewayText, KnxConnector, MAX_KNX_STREAMS, type KnxGateway, type KnxTransport } from './lib/knx';
+import {
+    findGateway,
+    gatewayText,
+    KnxConnector,
+    MAX_KNX_STREAMS,
+    parseGateway,
+    type KnxGateway,
+    type KnxTransport,
+} from './lib/knx';
+import { addressRefusal, lanInfo, MAX_LAN_STREAMS, ownNetworks, relayTcp, targetRefusal } from './lib/lan';
 import { instanceRunning, onlyWww } from './lib/instances';
 import { enroll } from './lib/enrollment';
 import {
@@ -71,6 +84,7 @@ import {
     type ReplyMessage,
     type ResultMessage,
     type StateMessage,
+    type LanTarget,
     type TunnelRequest,
 } from './lib/protocol';
 import {
@@ -84,7 +98,7 @@ import {
     type AccessTarget,
 } from './lib/remote';
 import { Transport, trustedCas } from './lib/transport';
-import { CONSOLE, consoleMessage } from './lib/tunnel';
+import { CONSOLE, consoleMessage, metaPort, type TunnelStream } from './lib/tunnel';
 import { diffFlat, flatten, readJson, sleep, writeJsonAtomic } from './lib/util';
 import {
     adapterCommandPaths,
@@ -116,6 +130,14 @@ interface BeeConfig {
     allowKnx: boolean;
     knxGateway: string;
     knxTransport: KnxTransport;
+    /**
+     * Devices in the network (a LOGO!, an S7) for their tools from afar, off unless the owner switches it on; the
+     * networks (empty: the own subnets) and the ports (empty: any). The networks also bound the KNX gateways the
+     * fleet management names besides the one above.
+     */
+    allowLan: boolean;
+    lanNetworks: string;
+    lanPorts: string;
     /** AI access: the MCP server of ioBroker for an AI of the fleet management (off unless the owner allows it) */
     allowAi: boolean;
     /** ...with writing states, with changing objects and files; as this ioBroker user */
@@ -126,6 +148,8 @@ interface BeeConfig {
     windowEnd: string;
     ignoreWindow: boolean;
     conditions: Condition[];
+    /** Monitoring: rules on states, reported to the fleet management (table "Überwachung") */
+    monitors: unknown;
     minFreeMb: number;
     signalStateId: string;
     heartbeatMinutes: number;
@@ -141,6 +165,8 @@ interface Persisted {
     results: Record<string, 'done' | 'blocked'>;
     lastResult: ResultMessage | null;
     lastBackup: Inventory['backup']['lastLocal'];
+    /** Backups the agent made itself before jobs, oldest first; it keeps OWN_BACKUPS_KEEP of them */
+    ownBackups?: string[];
     notified: Record<string, number>;
 }
 
@@ -167,6 +193,9 @@ class BeeAdapter extends utils.Adapter {
     private enrollBackoff = 30_000;
     private seq = 0;
     private lastFlat: Record<string, unknown> | null = null;
+    /** Monitoring of states (lib/monitor); null without rules */
+    private monitor: Monitor | null = null;
+    private monitorSendTimer: NodeJS.Timeout | null = null;
     private uuid = '';
     private errorLog: { ts: number; from: string; message: string }[] = [];
     private errorsSinceHeartbeat = 0;
@@ -252,6 +281,7 @@ class BeeAdapter extends utils.Adapter {
         await this.requireLog?.(true);
 
         await this.subscribeStatesAsync('control.*');
+        await this.startMonitor();
         // the repositories of admin, for the updates of the adapters in the fleet management
         await this.subscribeForeignObjectsAsync('system.repositories');
         await this.subscribeForeignObjectsAsync('system.config');
@@ -827,12 +857,85 @@ class BeeAdapter extends utils.Adapter {
                 await this.softwareCommand(ref, by, msg.software, remote);
             } else if (msg.cmd === 'repoUpdate') {
                 await this.repoUpdateCommand(ref, by, remote);
+            } else if (msg.cmd === 'controller') {
+                await this.controllerCommand(ref, by, msg.controller, target.name);
             }
         } catch (e) {
             this.log.warn(`Command ${msg.cmd} of ${by} failed: ${e.message}`);
             await this.reply(ref, 'error', e.message);
         } finally {
             this.commandRunning = false;
+        }
+    }
+
+    /**
+     * Upgrades js-controller of this or another host, as admin does it: js-controller starts its upgrade manager as a
+     * process of its own, which stops ioBroker (with this agent on the own host), installs the version with npm and
+     * starts ioBroker again. The answer is "running"; the server sees the outcome in the version of the next inventory.
+     *
+     * @param ref reference of the command
+     * @param by who asked
+     * @param req the version
+     * @param hostName the host
+     */
+    private async controllerCommand(
+        ref: string,
+        by: string,
+        req: JobMessage['controller'],
+        hostName: string,
+    ): Promise<void> {
+        const remote = hostName !== this.host;
+        const hostObj = await this.getForeignObjectAsync(`system.host.${hostName}`);
+        const installed = String(hostObj?.common?.installedVersion || '');
+        const platform = remote ? this.knownHosts.get(hostName)?.system?.platform || '' : process.platform;
+        const refusal = controllerRefusal(req, installed, platform);
+        if (refusal) {
+            await this.reply(ref, 'error', refusal);
+            return;
+        }
+        const version = req!.version;
+        const admins = await this.getObjectViewAsync('system', 'instance', {
+            startkey: 'system.adapter.admin.',
+            endkey: 'system.adapter.admin.香',
+        });
+        const adminInstance = chooseAdminInstance(
+            admins.rows.map(r => r.value),
+            hostName,
+        );
+        if (adminInstance === null) {
+            await this.reply(
+                ref,
+                'error',
+                'Das Update von js-controller braucht eine Instanz von admin: auf ihrem Port zeigt js-controller den Fortschritt',
+            );
+            return;
+        }
+        this.log.warn(
+            `Upgrade of js-controller${remote ? ` on ${hostName}` : ''} from ${installed} to ${version} on request of ${by} (fleet management)`,
+        );
+        const answer = (await this.sendHost(hostName, 'upgradeController', { version, adminInstance }, 60_000)) as
+            { result?: boolean } | undefined;
+        if (!answer?.result) {
+            await this.reply(
+                ref,
+                'error',
+                answer === undefined
+                    ? 'js-controller hat nicht geantwortet'
+                    : 'js-controller kann sich hier nicht selbst aktualisieren (etwa in Docker ohne das offizielle Image)',
+            );
+            return;
+        }
+        // the answer goes out first: on the own host the upgrade manager stops ioBroker with this agent in a moment
+        await this.reply(
+            ref,
+            'running',
+            `js-controller ${version} wird installiert; ioBroker${remote ? ` auf ${hostName}` : ''} ist dabei einige Minuten nicht erreichbar`,
+        );
+        if (remote) {
+            // the inventory of the other hosts shows the new version once it runs again
+            for (const ms of [3, 6, 10, 15, 20].map(m => m * 60_000)) {
+                this.timers.push(setTimeout(() => void this.sendInventory(false), ms));
+            }
         }
     }
 
@@ -1133,7 +1236,20 @@ class BeeAdapter extends utils.Adapter {
             `Upgrade of OS packages ${names}${remote ? ` on ${hostName}` : ''} on request of ${by} (fleet management)`,
         );
         await this.reply(ref, 'running', `apt${remote ? ` auf ${hostName}` : ''}: ${names}`);
-        // js-controller runs apt (with sudo if it is not root) and answers when it is through
+        if (
+            !remote &&
+            hasAptGet() &&
+            (await this.osUpgradeOwn(
+                ref,
+                packages.map(p => p.name),
+                !!req?.restart,
+                hostName,
+            ))
+        ) {
+            return;
+        }
+        // another host, or sudo does not allow apt-get here: js-controller runs apt (with sudo if it is not root) and
+        // answers when it is through
         const answer = (await Promise.race([
             this.sendToHostAsync(host, 'upgradeOsPackages', {
                 packages: packages.map(p => ({ name: p.name })),
@@ -1157,9 +1273,65 @@ class BeeAdapter extends utils.Adapter {
             );
             this.inventorySoon();
         } else {
-            const error = answer?.error || 'js-controller meldet einen Fehler';
+            const error = answer?.error
+                ? aptFailure(answer.error, remote ? hostName : undefined)
+                : 'js-controller meldet einen Fehler';
+            this.log.warn(`OS upgrade failed: ${answer?.error || error}`);
+            await this.reply(ref, 'error', error);
+        }
+    }
+
+    /**
+     * OS updates of the own host with apt-get (see lib/apt): package lists first, then only the chosen packages,
+     * without questions
+     *
+     * @param ref the command
+     * @param names the chosen packages
+     * @param restart restart ioBroker afterwards
+     * @param hostName the own host
+     * @returns false if sudo does not allow apt-get here; js-controller tries then
+     */
+    private async osUpgradeOwn(ref: string, names: string[], restart: boolean, hostName: string): Promise<boolean> {
+        const update = await runApt(aptUpdateArgs(), 10 * 60_000);
+        if (update.denied) {
+            this.log.info('sudo does not allow apt-get here, js-controller upgrades the packages');
+            return false;
+        }
+        if (!update.ok) {
+            // one source that fails (a repository that moved, say) does not keep the others from being read
+            this.log.warn(`apt-get update: ${aptFailure(update.output)}`);
+        }
+        const upgrade = await runApt(aptUpgradeArgs(names), 45 * 60_000);
+        if (upgrade.ok) {
+            this.log.info(`OS packages upgraded: ${names.join(', ')}`);
+            await this.reply(
+                ref,
+                'done',
+                `${names.length} ${names.length === 1 ? 'Paket' : 'Pakete'} aktualisiert${update.ok ? '' : ' (nicht alle Paketlisten ließen sich aktualisieren)'}${restart ? ', ioBroker startet neu' : ''}`,
+            );
+        } else {
+            const error = aptFailure(upgrade.output);
             this.log.warn(`OS upgrade failed: ${error}`);
             await this.reply(ref, 'error', error);
+        }
+        // fresh lists show other packages: js-controller lists them anew when it reads the repository
+        await this.refreshOsList(hostName);
+        if (upgrade.ok && restart) {
+            await this.sendHost(hostName, 'restartController', null, 10_000);
+        } else {
+            this.inventorySoon();
+        }
+        return true;
+    }
+
+    /** js-controller lists the OS updates anew (apt list --upgradeable) only after it read the repository */
+    private async refreshOsList(hostName: string): Promise<void> {
+        const id = `system.host.${hostName}.osPackageUpdates`;
+        const before = (await this.getForeignStateAsync(id))?.ts ?? 0;
+        await this.sendHost(hostName, 'getRepository', { update: false }, 120_000);
+        // it answers first and lists afterwards
+        for (let i = 0; i < 15 && ((await this.getForeignStateAsync(id))?.ts ?? 0) <= before; i++) {
+            await sleep(2_000);
         }
     }
 
@@ -1180,6 +1352,9 @@ class BeeAdapter extends utils.Adapter {
         if (this.config.allowKnx === true) {
             kinds.push('knx');
         }
+        if (this.config.allowLan === true) {
+            kinds.push('lan');
+        }
         return kinds;
     }
 
@@ -1197,6 +1372,37 @@ class BeeAdapter extends utils.Adapter {
         this.knxStreams.set(t.id, running + 1);
         void this.updateAccessStates();
         connector.relay(stream, () => {
+            const n = (this.knxStreams.get(t.id) ?? 1) - 1;
+            if (n > 0) {
+                this.knxStreams.set(t.id, n);
+            } else {
+                this.knxStreams.delete(t.id);
+            }
+            if (!this.unloading) {
+                void this.updateAccessStates();
+            }
+        });
+    }
+
+    /** One connection of a tool to a device in the network, on the port its stream names */
+    private openLan(t: TunnelRequest, lan: LanTarget, stream: TunnelStream): void {
+        const port = metaPort(stream.meta);
+        const allowed = lanInfo(this.config).ports;
+        if (!port || !lan.ports.includes(port) || (allowed && !allowed.includes(port))) {
+            stream.destroy(new Error(`Port ${port ?? '?'} ist für ${lan.name} nicht freigegeben`));
+            return;
+        }
+        const running = this.knxStreams.get(t.id) ?? 0;
+        if (running >= MAX_LAN_STREAMS) {
+            stream.destroy(new Error(`Höchstens ${MAX_LAN_STREAMS} Verbindungen je Sitzung`));
+            return;
+        }
+        this.knxStreams.set(t.id, running + 1);
+        void this.updateAccessStates();
+        relayTcp(stream, lan.host, port, error => {
+            if (error) {
+                this.log.info(`Remote access to ${lan.name} (${lan.host}:${port}): ${error}`);
+            }
             const n = (this.knxStreams.get(t.id) ?? 1) - 1;
             if (n > 0) {
                 this.knxStreams.set(t.id, n);
@@ -1259,20 +1465,47 @@ class BeeAdapter extends utils.Adapter {
         let refusal: string | null = null;
         let target: AccessTarget | null = null;
         let knx: KnxConnector | null = null;
+        let lan: LanTarget | null = null;
         const isConsole = t.kind === 'console';
         if (!this.allowedAccess().includes(t.kind)) {
             refusal =
                 t.kind === 'knx'
                     ? 'KNX ist am Gerät nicht freigegeben'
-                    : !isConsole
-                      ? `Fernzugriff auf ${ACCESS_LABEL[t.kind]} ist am Gerät abgeschaltet`
-                      : this.config.allowConsole === true
-                        ? 'Die Konsole braucht Linux mit script (util-linux)'
-                        : 'Die Konsole ist am Gerät nicht freigegeben';
+                    : t.kind === 'lan'
+                      ? 'Geräte im Netz sind am Gerät nicht freigegeben'
+                      : !isConsole
+                        ? `Fernzugriff auf ${ACCESS_LABEL[t.kind]} ist am Gerät abgeschaltet`
+                        : this.config.allowConsole === true
+                          ? 'Die Konsole braucht Linux mit script (util-linux)'
+                          : 'Die Konsole ist am Gerät nicht freigegeben';
+        } else if (t.kind === 'lan') {
+            // the device the server names, only inside what the owner allows here
+            const own = ownNetworks();
+            refusal =
+                targetRefusal(t.lan, lanInfo(this.config, own), own.addresses) ??
+                (this.tunnels.size >= 4 ? 'Zu viele gleichzeitige Fernzugriffe auf dem Gerät' : null);
+            if (!refusal) {
+                lan = t.lan!;
+            }
         } else if (t.kind === 'knx') {
-            // only the gateway set here, whatever the server asks for
-            const gateway = await this.knxGateway();
-            if (!gateway) {
+            // the gateway set here; another one of the list in the portal only inside the allowed network
+            let gateway: KnxGateway | null = null;
+            if (t.knxGateway) {
+                const own = ownNetworks();
+                gateway = parseGateway(t.knxGateway, this.config.knxTransport || 'auto');
+                const why = gateway
+                    ? addressRefusal(gateway.host, lanInfo(this.config, own), own.addresses)
+                    : `${t.knxGateway} ist kein Gateway`;
+                if (why) {
+                    refusal = `KNX-Gateway: ${why}`;
+                    gateway = null;
+                }
+            } else {
+                gateway = await this.knxGateway();
+            }
+            if (refusal) {
+                // said above
+            } else if (!gateway) {
                 refusal = 'Kein KNX-Gateway: in der Instanz bee eintragen oder den Adapter knx einrichten';
             } else if (this.tunnels.size >= 4) {
                 refusal = 'Zu viele gleichzeitige Fernzugriffe auf dem Gerät';
@@ -1298,6 +1531,7 @@ class BeeAdapter extends utils.Adapter {
             target,
             ...(isConsole && !refusal ? { handler: (stream: Duplex) => this.openShell(t, stream) } : {}),
             ...(knx && !refusal ? { handler: (stream: Duplex) => this.openKnx(t, knx, stream) } : {}),
+            ...(lan && !refusal ? { handler: (stream: TunnelStream) => this.openLan(t, lan, stream) } : {}),
             refusal,
             ca: trustedCas(this.creds?.ca || ''),
             log: this.log,
@@ -1319,7 +1553,7 @@ class BeeAdapter extends utils.Adapter {
         } else {
             this.tunnels.set(t.id, client);
             this.log.info(
-                `Remote access to ${ACCESS_LABEL[t.kind]}${target ? ` (${target.instance})` : ''}${knx ? ` (gateway ${gatewayText(knx.gateway)})` : ''} ${resumed ? 'resumed' : 'opened'} by ${t.by} until ${new Date(t.expiresAt).toLocaleTimeString()}: ${t.purpose}`,
+                `Remote access to ${ACCESS_LABEL[t.kind]}${target ? ` (${target.instance})` : ''}${knx ? ` (gateway ${gatewayText(knx.gateway)})` : ''}${lan ? ` ${lan.name} (${lan.host}, ports ${lan.ports.join(', ')})` : ''} ${resumed ? 'resumed' : 'opened'} by ${t.by} until ${new Date(t.expiresAt).toLocaleTimeString()}: ${t.purpose}`,
             );
         }
         client.start();
@@ -1338,6 +1572,10 @@ class BeeAdapter extends utils.Adapter {
     private shellText(t: TunnelRequest): string {
         if (t.kind === 'knx') {
             return this.knxStreams.get(t.id) ? ' (ETS verbunden)' : '';
+        }
+        if (t.kind === 'lan') {
+            const n = this.knxStreams.get(t.id) ?? 0;
+            return `${t.lan ? ` ${t.lan.name}` : ''}${n ? ` (${n} ${n === 1 ? 'Verbindung' : 'Verbindungen'})` : ''}`;
         }
         if (t.kind !== 'console') {
             return '';
@@ -1430,9 +1668,15 @@ class BeeAdapter extends utils.Adapter {
         if (inv.remoteAccess.includes('console')) {
             inv.consoleUser = consoleUser();
         }
+        if (this.monitor) {
+            inv.monitors = this.monitor.status();
+        }
         if (inv.remoteAccess.includes('knx')) {
             const gateway = await this.knxGateway();
             inv.knx = { gateway: gateway ? gatewayText(gateway) : null, transport: this.config.knxTransport || 'auto' };
+        }
+        if (inv.remoteAccess.includes('lan') || inv.remoteAccess.includes('knx')) {
+            inv.lan = lanInfo(this.config);
         }
         inv.commands = [...supportedCommands(inv.software.jsController), 'hosts', 'repoUpdate', 'visProjects'];
         if (withHosts) {
@@ -1515,6 +1759,52 @@ class BeeAdapter extends utils.Adapter {
             },
             this.knownHosts,
         );
+    }
+
+    /** Watches the states of the rules in the table "Überwachung" */
+    private async startMonitor(): Promise<void> {
+        const rules = validRules(this.config.monitors);
+        if (!rules.length) {
+            return;
+        }
+        const monitor = new Monitor(rules);
+        for (const id of monitor.stateIds()) {
+            try {
+                monitor.setUnit(id, (await this.getForeignObjectAsync(id))?.common?.unit);
+                monitor.update(id, await this.getForeignStateAsync(id));
+                await this.subscribeForeignStatesAsync(id);
+            } catch (e) {
+                this.log.warn(`Monitoring: ${id} not readable: ${e.message}`);
+            }
+        }
+        this.monitor = monitor;
+        this.log.info(
+            `Monitoring ${rules.length} ${rules.length === 1 ? 'rule' : 'rules'} on ${monitor.stateIds().length} states`,
+        );
+        // the delays and "no update for n minutes" run out without any new value
+        this.timers.push(setInterval(() => this.checkMonitor(), 10_000));
+        this.checkMonitor();
+    }
+
+    /** An alert that starts or stops goes to the fleet management right away, not with the next inventory */
+    private checkMonitor(): void {
+        const changed = this.monitor?.evaluate() ?? [];
+        for (const m of changed) {
+            const text = `Monitoring: ${monitorText(m)}`;
+            if (m.alert || m.missing) {
+                this.log.warn(text);
+            } else {
+                this.log.info(text);
+            }
+        }
+        if (changed.length && !this.monitorSendTimer) {
+            // several rules on one state flip together: one inventory for all
+            this.monitorSendTimer = setTimeout(() => {
+                this.monitorSendTimer = null;
+                void this.sendInventory(false);
+            }, 2_000);
+            this.timers.push(this.monitorSendTimer);
+        }
     }
 
     private async sendInventory(full: boolean): Promise<void> {
@@ -1677,7 +1967,7 @@ class BeeAdapter extends utils.Adapter {
         }
         const backup = job.steps.find(s => s.action === 'backup' && s.status === 'ok');
         if (backup?.detail) {
-            this.persisted.lastBackup = { ts: backup.ts || Date.now(), file: backup.detail, size: 0 };
+            await this.keepOwnBackup(backupPath(backup.detail), backup.ts || Date.now());
         }
         await this.savePersisted();
         this.log.info(`Job ${job.profileName}: ${result} (${job.detail})`);
@@ -1688,6 +1978,34 @@ class BeeAdapter extends utils.Adapter {
         await this.updateInfoStates();
         // the desired state may have changed while the job was running
         setTimeout(() => void this.reconcile(), 1000);
+    }
+
+    /**
+     * Notes a backup made before a job and deletes the own ones beyond OWN_BACKUPS_KEEP: without that, every update
+     * left another archive on the card. BackItUp and backups made by hand stay untouched.
+     */
+    private async keepOwnBackup(file: string, ts: number): Promise<void> {
+        let size = 0;
+        try {
+            size = (await stat(file)).size;
+        } catch {
+            // gone already
+        }
+        // before 0.5.0 only the last one was noted (with its size in the text): it counts as the first own one
+        const earlier =
+            this.persisted.ownBackups ??
+            (this.persisted.lastBackup?.file ? [backupPath(this.persisted.lastBackup.file)] : []);
+        const { keep, remove } = pruneOwnBackups(earlier, file);
+        for (const old of remove) {
+            try {
+                await rm(old, { force: true });
+                this.log.info(`Deleted own backup ${old} (keeping the last ${OWN_BACKUPS_KEEP})`);
+            } catch (e) {
+                this.log.warn(`Cannot delete own backup ${old}: ${e.message}`);
+            }
+        }
+        this.persisted.ownBackups = keep;
+        this.persisted.lastBackup = { ts, file, size };
     }
 
     /** Converges on the desired state if possible. Never runs two jobs at once. */
@@ -1856,6 +2174,10 @@ class BeeAdapter extends utils.Adapter {
     }
 
     private async onStateChange(id: string, state: ioBroker.State | null | undefined): Promise<void> {
+        if (this.monitor?.watches(id)) {
+            this.monitor.update(id, state);
+            this.checkMonitor();
+        }
         if (!state || state.ack) {
             return;
         }

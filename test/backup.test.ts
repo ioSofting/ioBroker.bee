@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { backitupInfo, cronDays, mainBackitup, recentOffDeviceBackup } from '../src/lib/backup';
+import { backitupInfo, backupPath, cronDays, mainBackitup, pruneOwnBackups, recentOffDeviceBackup } from '../src/lib/backup';
 
 const DAY = 24 * 3600_000;
 const NOW = Date.UTC(2026, 10, 11, 20, 0);
@@ -132,5 +132,28 @@ describe('backup: BackItUp', () => {
         const off = instance({}, 'backitup.2', false);
         assert.equal(mainBackitup([off, ccu, main])?._id, 'system.adapter.backitup.1');
         assert.equal(mainBackitup([]), undefined);
+    });
+});
+
+describe('own backups before jobs', () => {
+    const dir = '/opt/iobroker/backups/';
+    const file = (day: number): string => `${dir}2026_11_${String(day).padStart(2, '0')}-02_00_00_backupiobroker.tar.gz`;
+
+    it('reads the path from the step, with or without the size', () => {
+        assert.equal(backupPath(`${file(20)} (48 MB)`), file(20));
+        assert.equal(backupPath(file(20)), file(20));
+    });
+
+    it('keeps the last three and deletes only archives of iobroker backup', () => {
+        assert.deepEqual(pruneOwnBackups([], file(1)), { keep: [file(1)], remove: [] });
+        assert.deepEqual(pruneOwnBackups([file(1), file(2), file(3)], file(4)), {
+            keep: [file(2), file(3), file(4)],
+            remove: [file(1)],
+        });
+        // the same file again (a job repeated within the second) counts once
+        assert.deepEqual(pruneOwnBackups([file(2), file(3), file(4)], file(4)).remove, []);
+        // something that is no archive of iobroker backup is forgotten, never deleted
+        const strange = pruneOwnBackups(['/etc/passwd', file(2), file(3)], file(4));
+        assert.deepEqual(strange, { keep: [file(2), file(3), file(4)], remove: [] });
     });
 });

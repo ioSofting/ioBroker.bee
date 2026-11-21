@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "bee",
-        "version": "0.4.0",
+        "version": "0.5.0",
         "news": {
+            "0.5.0": {
+                "en": "Devices in the network: a LOGO!, an S7 or another controller in this network can be programmed from afar through bee-knx, and further KNX gateways; off until allowed, only in the allowed networks and ports. Monitoring of states (tab \"Überwachung\"). js-controller upgrade from the fleet management. OS updates with apt-get update first. Only the last three own backups are kept",
+                "de": "Geräte im Netz: Eine LOGO!, eine S7 oder eine andere Steuerung in diesem Netz lässt sich über bee-knx aus der Ferne programmieren, dazu weitere KNX-Gateways; aus, bis es erlaubt wird, nur in den erlaubten Netzen und Ports. Überwachung von Datenpunkten (Tab „Überwachung“). js-controller-Update aus der Flottenverwaltung. OS-Updates mit vorherigem apt-get update. Nur die letzten drei eigenen Sicherungen bleiben"
+            },
             "0.4.0": {
                 "en": "KNX for ETS: the fleet management can program the KNX installation with ETS from afar (program bee-knx on the PC); off until allowed, only to the configured gateway. Enrollment URL preset to https://beekeeper.one",
                 "de": "KNX für ETS: Die Flottenverwaltung kann die KNX-Anlage aus der Ferne mit ETS programmieren (Programm bee-knx auf dem PC); aus, bis es erlaubt wird, nur zum eingestellten Gateway. Enrollment-URL voreingestellt auf https://beekeeper.one"
@@ -198,6 +202,9 @@
         "allowKnx": false,
         "knxGateway": "",
         "knxTransport": "auto",
+        "allowLan": false,
+        "lanNetworks": "",
+        "lanPorts": "",
         "allowAi": false,
         "aiUser": "admin",
         "aiSetState": false,
@@ -206,6 +213,7 @@
         "windowEnd": "05:00",
         "ignoreWindow": false,
         "conditions": [],
+        "monitors": [],
         "minFreeMb": 1024,
         "signalStateId": "",
         "heartbeatMinutes": 60,

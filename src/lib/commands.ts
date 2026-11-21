@@ -24,16 +24,78 @@ export const REPO_TIMEOUT = 120_000;
 
 /**
  * What this system can do: OS updates need Linux and js-controller 6 (it lists them and runs apt);
- * logs: list and upload log files; adapter: install a version; software: remove an adapter, add or delete
- * an instance; mcp: AI access (whether the owner allows it is Inventory.ai)
+ * controller: js-controller upgrades itself (Linux, js-controller 5); logs: list and upload log files;
+ * adapter: install a version; software: remove an adapter, add or delete an instance; mcp: AI access (whether
+ * the owner allows it is Inventory.ai)
  */
 export function supportedCommands(jsController: string, platform: string = process.platform): AgentCommand[] {
     const commands: AgentCommand[] = ['instance', 'restart'];
     if (platform === 'linux' && jsController && compareVersions(jsController, '6.0.0') >= 0) {
         commands.push('osUpgrade');
     }
+    if (controllerUpgradable(jsController, platform)) {
+        commands.push('controller');
+    }
     commands.push('logs', 'adapter', 'software', 'mcp');
     return commands;
+}
+
+/**
+ * Whether js-controller can upgrade itself on request (host command upgradeController, since js-controller 5): its
+ * upgrade manager runs `iobroker stop`, npm in /opt/iobroker and `iobroker start`, so only on Linux. In a Docker
+ * container without the official image js-controller refuses it itself.
+ *
+ * @param jsController installed version
+ * @param platform process.platform of the host
+ */
+export function controllerUpgradable(jsController: string, platform: string): boolean {
+    return platform === 'linux' && !!jsController && compareVersions(jsController, '5.0.0') >= 0;
+}
+
+/** A version of js-controller as npm knows it, e.g. 7.0.7 or 7.1.0-alpha.3 */
+const CONTROLLER_VERSION = /^\d+\.\d+\.\d+(?:-[\w.-]+)?$/;
+
+/**
+ * Why an upgrade of js-controller is refused; null if it may run
+ *
+ * @param req the request of the server
+ * @param installed the installed version
+ * @param platform process.platform of the host
+ */
+export function controllerRefusal(
+    req: { version?: unknown } | undefined,
+    installed: string,
+    platform: string,
+): string | null {
+    if (!controllerUpgradable(installed, platform)) {
+        return 'js-controller aktualisiert sich nur unter Linux und ab Version 5 selbst';
+    }
+    const version = req?.version;
+    if (typeof version !== 'string' || !CONTROLLER_VERSION.test(version)) {
+        return 'Ungültige Version';
+    }
+    if (compareVersions(version, installed) <= 0) {
+        return version === installed
+            ? `js-controller ${installed} ist schon installiert`
+            : `js-controller ${installed} ist installiert: zurückstufen geht nicht`;
+    }
+    return null;
+}
+
+/**
+ * The instance of admin whose port the upgrade manager of js-controller uses for its page with the progress (admin is
+ * stopped with ioBroker): an enabled one on the host, else any enabled one, else any one; null without admin
+ *
+ * @param instances the objects system.adapter.admin.*
+ * @param host the host of js-controller
+ */
+export function chooseAdminInstance(instances: ioBroker.Object[], host: string): number | null {
+    const admins = instances.filter(o => o?.type === 'instance' && /^system\.adapter\.admin\.\d+$/.test(o._id));
+    const pick =
+        admins.find(o => o.common?.enabled && (o.common as ioBroker.InstanceCommon).host === host) ??
+        admins.find(o => o.common?.enabled) ??
+        admins[0];
+    return pick ? Number(pick._id.split('.').pop()) : null;
 }
 
 /**

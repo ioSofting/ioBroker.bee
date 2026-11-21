@@ -1,9 +1,9 @@
 /**
  * Wire protocol between beekeeper (server) and its agents: ioBroker.bee on ioBroker, bee-ha (beekeeper-server/bee-ha)
- * next to Home Assistant.
+ * next to Home Assistant, bee-linux on a Linux server.
  *
- * This file exists in both repositories: beekeeper-server/src/protocol.ts and ioBroker.bee/src/lib/protocol.ts.
- * Both copies must stay identical. Bump PROTOCOL_VERSION on breaking changes.
+ * This file exists in three repositories: beekeeper-server/src/protocol.ts, ioBroker.bee/src/lib/protocol.ts and
+ * bee-linux/src/lib/protocol.ts. All copies must stay identical. Bump PROTOCOL_VERSION on breaking changes.
  *
  * Topics (one tree per tenant and device, ACL restricts a device to its own tree):
  *   fleet/<tenant>/<device>/state      device -> server  heartbeat, online flag (also Last Will)
@@ -89,11 +89,135 @@ export interface InstanceInventory {
 }
 
 /**
- * The system an agent looks after: ioBroker (ioBroker.bee) or Home Assistant (bee-ha). For Home Assistant the
- * parts of the inventory about ioBroker (software, hosts, repo, backup by BackItUp) stay empty, and there are
- * no profiles, rollouts or commands.
+ * The system an agent looks after: ioBroker (ioBroker.bee), Home Assistant (bee-ha) or a Linux server (bee-linux).
+ * For Home Assistant and Linux the parts of the inventory about ioBroker (software, hosts, repo, backup by BackItUp)
+ * stay empty, and there are no profiles or rollouts.
  */
-export type Platform = 'iobroker' | 'homeassistant';
+export type Platform = 'iobroker' | 'homeassistant' | 'linux';
+
+/** A filesystem of a Linux server (LinuxInfo.mounts); percentages rounded, so that the inventory rarely changes */
+export interface LinuxMount {
+    /** e.g. "/", "/var/lib/docker" */
+    path: string;
+    /** e.g. "/dev/sda1" */
+    device: string;
+    /** e.g. "ext4" */
+    fstype: string;
+    /** Bytes */
+    size: number;
+    /** Used share of the space, 0-100 */
+    usedPct: number;
+    /** Used share of the inodes, 0-100; null: the filesystem reports none (btrfs) */
+    inodesPct: number | null;
+}
+
+/**
+ * What the agent checks on a Linux server, set in the portal (command 'checks'):
+ * - service: a unit of systemd is active (target: "nginx" or "nginx.service")
+ * - tcp: a port answers (target: "host:port")
+ * - http: an address answers with status (default 200-399) and optionally a text in the body (target: the URL)
+ * - cert: the TLS certificate of "host:port" (SNI host) is valid for at least warnDays more (default 14)
+ * - file: a file or the newest file in a folder is at most maxAgeHours old (default 26), e.g. a backup
+ * - journal: lines of the journal matching the regular expression `text` in the last windowMinutes (default 60),
+ *   of the unit `target` (empty: all); more than maxCount (default 0) is a failure
+ */
+export type CheckKind = 'service' | 'tcp' | 'http' | 'cert' | 'file' | 'journal';
+export const CHECK_KINDS: CheckKind[] = ['service', 'tcp', 'http', 'cert', 'file', 'journal'];
+
+export interface CheckSpec {
+    /** Stable id, given by the portal */
+    id: string;
+    /** Name shown in the portal, e.g. "Webseite Shop" */
+    name: string;
+    kind: CheckKind;
+    target: string;
+    /** http: expected status */
+    status?: number;
+    /** http: text the body must contain; journal: regular expression */
+    text?: string;
+    /** Seconds for tcp, http and cert (default 10) */
+    timeout?: number;
+    /** cert: days before the end that count as warning */
+    warnDays?: number;
+    /** file */
+    maxAgeHours?: number;
+    /** journal */
+    windowMinutes?: number;
+    maxCount?: number;
+    /** Severity of the deviation when the check fails: 1 mittel, 2 hoch (default), 3 kritisch */
+    severity?: 1 | 2 | 3;
+}
+
+/** Result of a check; the text has no times or durations, so that the inventory only changes with the result */
+export interface CheckResult {
+    id: string;
+    /** ok, warn (works, but not for long: certificate), fail */
+    state: 'ok' | 'warn' | 'fail';
+    /** e.g. "active", "HTTP 503", "gültig bis 2026-12-01" */
+    text: string;
+    /** Since when the check has this state */
+    since: number;
+}
+
+/** A process of pm2 (LinuxInfo.pm2) */
+export interface Pm2Process {
+    name: string;
+    /** online, stopped, errored, launching ... */
+    status: string;
+    restarts: number;
+}
+
+/** A container of Docker (LinuxInfo.docker) */
+export interface DockerContainer {
+    name: string;
+    image: string;
+    /** running, exited, restarting, paused, created, dead */
+    state: string;
+    /** healthy, unhealthy, starting; missing: no health check */
+    health?: string;
+    /** Exit code of an exited container */
+    exitCode?: number;
+}
+
+/**
+ * A Linux server as bee-linux sees it (Inventory.linux). Load, memory and the free space of / come with the
+ * heartbeat (StateMessage). Not part of the history.
+ */
+export interface LinuxInfo {
+    /** PRETTY_NAME of /etc/os-release, e.g. "Debian GNU/Linux 12 (bookworm)" (also in system.os) */
+    distro: string;
+    cpus: number;
+    swapTotal: number;
+    mounts: LinuxMount[];
+    /** Units of systemd in state failed */
+    failedUnits: string[];
+    /** The clock is synchronized (timedatectl); null: unknown */
+    ntpSynced: boolean | null;
+    /** The checks of the portal the agent runs: the hash it got with them (JobMessage.checks), null: none yet */
+    checksHash: string | null;
+    checks: CheckResult[];
+    /**
+     * The journal of the last 24 hours, counted every 10 minutes: lines of priority error and worse per unit (the 10
+     * with the most), of the kernel, and failed logins of SSH. null: the agent may not read the journal (group
+     * systemd-journal).
+     */
+    journal: {
+        errors: { unit: string; count: number }[];
+        kernelErrors: number;
+        sshFailed: number;
+    } | null;
+    /** Processes of pm2 (of BEE_PM2_USER through sudo); null: no pm2 */
+    pm2: Pm2Process[] | null;
+    /** Containers of Docker; null: no Docker, or the agent may not ask it */
+    docker: DockerContainer[] | null;
+    /** What sudo allows the agent: apt (update and upgrade of packages), reboot */
+    sudo: { apt: boolean; reboot: boolean };
+    /**
+     * The newest version of bee-linux on npm, looked up by the agent every few hours when it may update itself
+     * (command agentUpdate; since 0.3.0). null: not known.
+     */
+    agentLatest?: string | null;
+}
 
 /** Home Assistant as bee-ha sees it next to it (Inventory.homeassistant) */
 export interface HomeAssistantInfo {
@@ -113,6 +237,8 @@ export interface Inventory {
     platform?: Platform;
     /** Only with platform 'homeassistant' */
     homeassistant?: HomeAssistantInfo;
+    /** Only with platform 'linux' */
+    linux?: LinuxInfo;
     agentVersion: string;
     uuid: string;
     hostname: string;
@@ -146,6 +272,18 @@ export interface Inventory {
      * allowed, but no gateway known.
      */
     knx?: KnxInfo;
+    /**
+     * Devices in the network (remote access of kind lan, and KNX gateways named by the server): the boundary the
+     * owner sets in the instance of bee (since agent 0.5.0). Only while the owner allows devices in the network or
+     * KNX; missing: neither, or an older agent.
+     */
+    lan?: LanInfo;
+    /**
+     * Monitoring: rules on states set in the instance of bee, e.g. "victron.0.voltage < 11.5, warning", and how they
+     * stand (since agent 0.5.0). A rule that alerts is a deviation of the asset. Missing: no rules or older agent.
+     * Not part of the history.
+     */
+    monitors?: MonitorStatus[];
     /**
      * Updates of operating system packages as js-controller (6 and newer) lists them, see OsUpdates.
      * Missing: unknown (older agent, older js-controller, no Linux). Not part of the history.
@@ -200,6 +338,11 @@ export interface Inventory {
          * older agent (before 0.2.11). Only the settings are part of the history, not the runs.
          */
         backitup?: BackitupInfo | null;
+        /**
+         * The automatic backup of Home Assistant (bee-ha), see HaBackupInfo. null: never set up. Missing: not a Home
+         * Assistant, or the configuration folder is not mounted for the agent.
+         */
+        homeassistant?: HaBackupInfo | null;
     };
 }
 
@@ -238,6 +381,25 @@ export interface HostInventory {
     osUpdates?: OsUpdates;
     /** Commands of the agent that work on this host (JobMessage.host) */
     commands: AgentCommand[];
+}
+
+/**
+ * The automatic backup of Home Assistant, as set in Settings, System, Backups: bee-ha reads it from the storage file
+ * .storage/backup in the configuration folder (Home Assistant 2025.1 and newer), without a token.
+ */
+export interface HaBackupInfo {
+    /** Automatic backups are set up and not on "never" */
+    scheduled: boolean;
+    /** Longest gap between two automatic backups in days (daily: 1; custom days, e.g. Monday and Thursday: 4) */
+    everyDays: number;
+    /** Locations outside the device (backup agents other than backup.local and hassio.local), e.g. "cloud.cloud" */
+    targets: string[];
+    /** The last automatic backup started (ms) */
+    lastAttempt: number | null;
+    /** The last automatic backup finished (ms); with a target outside the device, it went there too */
+    lastOk: number | null;
+    /** Size of the last finished one (bytes) */
+    lastSize: number | null;
 }
 
 /**
@@ -285,6 +447,8 @@ export interface AiAccess {
     setState: boolean;
     /** Changing objects, files and scripts is allowed */
     objectChange: boolean;
+    /** Managing users is allowed (Home Assistant: the switch "Benutzer verwalten" of the integration Beekeeper) */
+    users?: boolean;
     /** Why the MCP server cannot run on this device, e.g. Node.js too old; missing: it can */
     error?: string;
 }
@@ -334,6 +498,18 @@ export interface McpReply {
 /** Longest text of a tool result the agent sends back (characters); longer ones are cut and marked truncated */
 export const MAX_MCP_RESULT = 512 * 1024;
 
+/**
+ * Tools of Home Assistant (integration Beekeeper) that only the portal calls, not the AI directly: create_user gets
+ * a password the portal makes and keeps in the access data of the asset (src/mcp.ts device_create_ha_login)
+ */
+export const HA_PORTAL_TOOLS = ['create_user'];
+
+/**
+ * Tools of Home Assistant that install something, as device_update_adapter for ioBroker: the AI gets them only with
+ * the permission assign and where an admin allowed updates by the AI for the asset (aiPolicy.update)
+ */
+export const HA_UPDATE_TOOLS = ['install_update'];
+
 /** A package of the operating system that can be upgraded, from a line of `apt list --upgradeable` */
 export interface OsPackage {
     name: string;
@@ -341,6 +517,8 @@ export interface OsPackage {
     version?: string;
     /** Installed version */
     from?: string;
+    /** From a security suite, e.g. "bookworm-security", "noble-security" */
+    security?: boolean;
 }
 
 /**
@@ -373,11 +551,16 @@ export interface OsUpdates {
  * "openssl/stable-security 3.0.15-1~deb12u1 arm64 [upgradable from: 3.0.14-1~deb12u2]"
  */
 export function parseOsPackage(line: string): OsPackage | null {
-    const m = /^([a-z0-9][a-z0-9+.-]*)\/\S*\s+(\S+)(?:.*\[[^\]:]*:\s*([^\]\s]+)\])?/i.exec(line.trim());
+    const m = /^([a-z0-9][a-z0-9+.-]*)\/(\S*)\s+(\S+)(?:.*\[[^\]:]*:\s*([^\]\s]+)\])?/i.exec(line.trim());
     if (!m) {
         return null;
     }
-    return { name: m[1], version: m[2], ...(m[3] ? { from: m[3] } : {}) };
+    return {
+        name: m[1],
+        version: m[3],
+        ...(m[4] ? { from: m[4] } : {}),
+        ...(/(^|[,-])security(,|$)/.test(m[2]) ? { security: true } : {}),
+    };
 }
 
 /** Instance id as the commands accept it, e.g. "javascript.0" */
@@ -387,7 +570,8 @@ export type InstanceAction = 'start' | 'stop' | 'restart';
 
 /**
  * Commands from the asset detail an agent may understand (Inventory.commands). hosts: the agent reports the other
- * hosts of the system (Inventory.hosts) and carries out commands there (JobMessage.host).
+ * hosts of the system (Inventory.hosts) and carries out commands there (JobMessage.host). controller: js-controller
+ * can upgrade itself (ioBroker.bee from 0.5.0, Linux, js-controller 5 or newer).
  */
 export type AgentCommand =
     | 'instance'
@@ -399,7 +583,13 @@ export type AgentCommand =
     | 'mcp'
     | 'hosts'
     | 'repoUpdate'
-    | 'visProjects';
+    | 'visProjects'
+    | 'checks'
+    | 'reboot'
+    | 'agentUpdate'
+    | 'diagnose'
+    | 'unit'
+    | 'controller';
 
 /**
  * Command 'software' (since agent 0.2.7): removeAdapter removes an adapter with all its instances (not the agent,
@@ -502,6 +692,17 @@ export interface JobMessage {
      * same for every host of the system (since 0.3.1)
      * visProjects: list the projects of vis-2 right now, as Inventory.visProjects (answer: ReplyMessage.projects; since
      * 0.3.2); only reads, also during a job
+     * checks: the checks of the portal for a Linux server (bee-linux), replacing the ones before; no answer, the agent
+     * reports LinuxInfo.checksHash
+     * reboot: restart the operating system (bee-linux)
+     * agentUpdate: install the newest version of the agent itself (bee-linux from 0.4.0: from npm, never from the
+     * server); the agent answers when the installation started, then it restarts
+     * diagnose: details for a deviation, for a person who clicks on it (bee-linux from 0.5.0; answer: ReplyMessage.text);
+     * only reads, with fixed arguments per code
+     * unit: restart a failed unit of systemd, or clear its failed state (bee-linux from 0.5.0, SERVICES=1)
+     * controller: upgrade js-controller, as admin does it: js-controller starts its upgrade manager, which stops
+     * ioBroker, installs the version with npm and starts ioBroker again (ioBroker.bee from 0.5.0). The agent answers
+     * "running" once js-controller took the order; the outcome is the version in the next inventory of that host.
      */
     cmd:
         | 'resync'
@@ -516,7 +717,19 @@ export interface JobMessage {
         | 'software'
         | 'mcp'
         | 'repoUpdate'
-        | 'visProjects';
+        | 'visProjects'
+        | 'checks'
+        | 'reboot'
+        | 'agentUpdate'
+        | 'diagnose'
+        | 'unit'
+        | 'controller';
+    /** For cmd 'diagnose': the code of the deviation and what it is about */
+    diagnose?: { code: string; subject?: string };
+    /** For cmd 'unit' */
+    unit?: { name: string; action: 'restart' | 'reset-failed' };
+    /** For cmd 'controller': the version of js-controller to install, newer than the installed one */
+    controller?: { version: string };
     /** For cmd 'tunnel' */
     tunnel?: TunnelRequest;
     /** Commands: the agent answers on topic reply with this reference */
@@ -524,15 +737,20 @@ export interface JobMessage {
     /** Who asked, for the log on the device */
     by?: string;
     /**
-     * For instance, restart, osUpgrade, logList, logFetch, adapter and software: on this other host of the system
+     * For instance, restart, osUpgrade, logList, logFetch, adapter, software and controller: on this other host of the system
      * (HostInventory.name, one of its HostInventory.commands); missing: on the host of the agent. Only to an agent
      * with the command 'hosts': an older one would do it on its own host.
      */
     host?: string;
     /** For cmd 'instance' */
     instance?: { id: string; action: InstanceAction };
-    /** For cmd 'osUpgrade': names out of OsUpdates.packages (the agent takes no others); restart ioBroker after it */
-    osUpgrade?: { packages: string[]; restart: boolean };
+    /**
+     * For cmd 'osUpgrade': names out of OsUpdates.packages (the agent takes no others); restart: restart ioBroker
+     * after it; reboot: restart the operating system after it (bee-linux)
+     */
+    osUpgrade?: { packages: string[]; restart: boolean; reboot?: boolean };
+    /** For cmd 'checks': all checks and a hash of them, which the agent reports back (LinuxInfo.checksHash) */
+    checks?: { hash: string; list: CheckSpec[] };
     /**
      * For cmd 'logFetch': upload the file (a name out of the list) compressed with gzip, "POST url" with the
      * header "Authorization: Bearer <ticket>". The url must belong to the own server; the ticket is good once.
@@ -564,6 +782,8 @@ export interface ReplyMessage {
     files?: LogFile[];
     /** For cmd 'visProjects': the projects of vis-2, sorted */
     projects?: string[];
+    /** For cmd 'diagnose': the details, plain text */
+    text?: string;
     /** For cmd 'mcp' */
     mcp?: McpReply;
 }
@@ -573,10 +793,69 @@ export interface ReplyMessage {
  * device (console; off unless the owner switches it on, see tunnel.ts for its messages), and KNX for ETS
  * (knx; off unless the owner switches it on). A stream of knx carries KNXnet/IP frames back to back as over
  * TCP (HPAIs "TCP, 0.0.0.0:0"); the agent passes them to its gateway, over UDP if the gateway has no TCP.
- * ha: the web interface of Home Assistant (agent bee-ha only).
+ * ha: the web interface of Home Assistant (agent bee-ha only). lan: a device in the network of the asset, e.g. a
+ * LOGO! or an S7 (off unless the owner switches it on): every stream is one TCP connection to TunnelRequest.lan,
+ * its OPEN frame names the port (portMeta in tunnel.ts).
  */
-export type AccessKind = 'admin' | 'vis' | 'console' | 'knx' | 'ha';
-export const ACCESS_KINDS: AccessKind[] = ['admin', 'vis', 'console', 'knx', 'ha'];
+export type AccessKind = 'admin' | 'vis' | 'console' | 'knx' | 'ha' | 'lan';
+export const ACCESS_KINDS: AccessKind[] = ['admin', 'vis', 'console', 'knx', 'ha', 'lan'];
+
+/**
+ * What the owner lets the fleet reach in the network of the device (Inventory.lan). The agent checks every request
+ * against it; the portal only shows it.
+ */
+export interface LanInfo {
+    /** Devices in the network may be reached (switch in the instance) */
+    devices: boolean;
+    /** Networks the devices and KNX gateways named by the server must be in, e.g. "192.168.0.0/24"; only private ones */
+    networks: string[];
+    /** Ports the devices may be reached on; null: any */
+    ports: number[] | null;
+}
+
+/** A device in the network for a remote access of kind lan, from the list of the asset in the portal */
+export interface LanTarget {
+    name: string;
+    /** IPv4 address */
+    host: string;
+    /** TCP ports, at most MAX_LAN_PORTS */
+    ports: number[];
+}
+
+/** Ports of one device in the network: LOGO! 8 needs two (102, 10005), an S7 one */
+export const MAX_LAN_PORTS = 8;
+
+/** What a rule of the monitoring raises: info = Hinweis, warning = Mittel, error = Hoch, critical = Kritisch */
+export type MonitorSeverity = 'info' | 'warning' | 'error' | 'critical';
+export const MONITOR_SEVERITIES: MonitorSeverity[] = ['info', 'warning', 'error', 'critical'];
+
+/** When a rule alerts: the value compared with its limit, or stale: no update of the state for `value` minutes */
+export type MonitorOp = '<' | '<=' | '>' | '>=' | '==' | '!=' | 'stale';
+export const MONITOR_OPS: MonitorOp[] = ['<', '<=', '>', '>=', '==', '!=', 'stale'];
+
+/** A rule of the monitoring and how it stands right now (Inventory.monitors) */
+export interface MonitorStatus {
+    /** The same as long as state, condition and limit stay: "victron.0.voltage < 11.5" */
+    id: string;
+    label?: string;
+    stateId: string;
+    op: MonitorOp;
+    /** The limit as set ("11.5"); with stale the minutes */
+    value: string;
+    severity: MonitorSeverity;
+    /** common.unit of the state, e.g. "V" */
+    unit?: string;
+    /** The condition holds, longer than the delay of the rule: a deviation of the asset */
+    alert: boolean;
+    /** Since when the condition holds (ms), with alert */
+    since?: number;
+    /** The value: when the alert began, otherwise the last one seen */
+    val?: string | number | boolean | null;
+    /** Last update of the state (ms) */
+    ts?: number;
+    /** The state does not exist or has no value */
+    missing?: boolean;
+}
 
 export interface KnxInfo {
     /** "192.168.1.20" or "host:port" */
@@ -619,6 +898,13 @@ export interface TunnelRequest {
     purpose: string;
     /** Instance to connect to, one of Inventory.accessTargets of this kind; missing: the first one */
     instance?: string;
+    /** Kind lan: the device in the network (the agent checks it against Inventory.lan) */
+    lan?: LanTarget;
+    /**
+     * Kind knx: a gateway from the list of the asset instead of the one set in the instance, "192.168.0.10" or
+     * "host:port" (since agent 0.5.0; the agent checks it against Inventory.lan). Missing: the one of the instance.
+     */
+    knxGateway?: string;
 }
 
 export type JobState =

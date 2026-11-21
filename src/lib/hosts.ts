@@ -1,5 +1,6 @@
 import type { CallResult } from './steps';
 import type { AdapterInventory, AgentCommand, HostInventory, InstanceInventory, LogFile } from './protocol';
+import { controllerUpgradable } from './commands';
 import { compareVersions } from './util';
 
 /**
@@ -168,6 +169,9 @@ export function hostCommands(jsController: string, platform: string): AgentComma
     const commands: AgentCommand[] = ['instance', 'restart'];
     if (platform === 'linux' && jsController && compareVersions(jsController, '6.0.0') >= 0) {
         commands.push('osUpgrade');
+    }
+    if (controllerUpgradable(jsController, platform)) {
+        commands.push('controller');
     }
     commands.push('logs', 'adapter', 'software');
     return commands;

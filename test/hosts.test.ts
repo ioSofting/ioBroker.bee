@@ -98,8 +98,18 @@ describe('inventory of the other hosts', () => {
     });
 
     it('knows what works on a host', () => {
-        assert.deepEqual(hostCommands('8.0.0', 'linux'), ['instance', 'restart', 'osUpgrade', 'logs', 'adapter', 'software']);
-        assert.deepEqual(hostCommands('5.0.19', 'linux'), ['instance', 'restart', 'logs', 'adapter', 'software']);
+        assert.deepEqual(hostCommands('8.0.0', 'linux'), [
+            'instance',
+            'restart',
+            'osUpgrade',
+            'controller',
+            'logs',
+            'adapter',
+            'software',
+        ]);
+        assert.deepEqual(hostCommands('5.0.19', 'linux'), ['instance', 'restart', 'controller', 'logs', 'adapter', 'software']);
+        assert.ok(!hostCommands('4.0.24', 'linux').includes('controller'));
+        assert.ok(!hostCommands('8.0.0', 'win32').includes('controller'));
         assert.ok(!hostCommands('8.0.0', 'win32').includes('osUpgrade'));
     });
 

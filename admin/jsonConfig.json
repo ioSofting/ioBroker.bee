@@ -156,8 +156,8 @@
                     "type": "checkbox",
                     "label": { "en": "Allow ETS to reach the KNX gateway", "de": "ETS den Zugang zum KNX-Gateway erlauben" },
                     "help": {
-                        "en": "Service staff can program the KNX installation with ETS from afar, through the program bee-knx on their PC. Only to the gateway below, nothing else in this network.",
-                        "de": "Servicepersonal kann die KNX-Anlage mit ETS aus der Ferne programmieren, über das Programm bee-knx auf seinem PC. Nur zum Gateway unten, zu nichts anderem in diesem Netz."
+                        "en": "Service staff can program the KNX installation with ETS from afar, through the program bee-knx on their PC. To the gateway below, and to further gateways named in the fleet management if they are in the allowed network (see devices in the network below).",
+                        "de": "Servicepersonal kann die KNX-Anlage mit ETS aus der Ferne programmieren, über das Programm bee-knx auf seinem PC. Zum Gateway unten, und zu weiteren Gateways aus der Flottenverwaltung, wenn sie im erlaubten Netz liegen (siehe Geräte im Netz unten)."
                     },
                     "newLine": true,
                     "xs": 12,
@@ -191,6 +191,51 @@
                         { "value": "udp", "label": { "en": "UDP", "de": "UDP" } }
                     ],
                     "hidden": "!data.allowKnx",
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 6,
+                    "lg": 6,
+                    "xl": 6
+                },
+                "allowLan": {
+                    "type": "checkbox",
+                    "label": { "en": "Allow devices in the network to be reached", "de": "Geräte im Netz erreichbar machen" },
+                    "help": {
+                        "en": "Service staff can program a device in this network with its own tool from afar, e.g. a LOGO! with LOGO!Soft Comfort or an S7 with TIA Portal, through the program bee-knx on their PC. Which devices, the fleet management says; only inside the networks and ports below, never this device itself.",
+                        "de": "Servicepersonal kann ein Gerät in diesem Netz mit seinem eigenen Werkzeug aus der Ferne programmieren, etwa eine LOGO! mit LOGO!Soft Comfort oder eine S7 mit TIA Portal, über das Programm bee-knx auf seinem PC. Welche Geräte, sagt die Flottenverwaltung; nur in den Netzen und Ports unten, nie dieses Gerät selbst."
+                    },
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                },
+                "lanNetworks": {
+                    "type": "text",
+                    "label": { "en": "Allowed networks", "de": "Erlaubte Netze" },
+                    "placeholder": "192.168.0.0/24, 192.168.0.3",
+                    "help": {
+                        "en": "Networks or single addresses, separated by commas; only private ones (10.x, 172.16-31.x, 192.168.x). Empty: the own subnets of this device. Also applies to further KNX gateways.",
+                        "de": "Netze oder einzelne Adressen, mit Komma getrennt; nur private (10.x, 172.16–31.x, 192.168.x). Leer: die eigenen Subnetze dieses Geräts. Gilt auch für weitere KNX-Gateways."
+                    },
+                    "hidden": "!data.allowLan && !data.allowKnx",
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 6,
+                    "lg": 6,
+                    "xl": 6
+                },
+                "lanPorts": {
+                    "type": "text",
+                    "label": { "en": "Allowed ports", "de": "Erlaubte Ports" },
+                    "placeholder": "102, 10005",
+                    "help": {
+                        "en": "Separated by commas. Empty: any port. LOGO! 8: 102 and 10005, S7: 102",
+                        "de": "Mit Komma getrennt. Leer: jeder Port. LOGO! 8: 102 und 10005, S7: 102"
+                    },
+                    "hidden": "!data.allowLan",
                     "xs": 12,
                     "sm": 12,
                     "md": 6,
@@ -367,6 +412,70 @@
                             "title": { "en": "Value", "de": "Wert" },
                             "width": "20%"
                         }
+                    ]
+                }
+            }
+        },
+        "monitoring": {
+            "type": "panel",
+            "label": { "en": "Monitoring", "de": "Überwachung" },
+            "items": {
+                "_monitorText": {
+                    "type": "staticText",
+                    "text": {
+                        "en": "Each line watches a state. Once its condition holds for longer than the delay, the fleet management shows a deviation with this severity and notifies by mail or Telegram as set there; once the condition is gone for as long, the deviation ends. Example: victron.0.voltage, \"<\", 11.5, Warning. \"No update for (min)\" reports a state that stopped changing, e.g. because its adapter hangs.",
+                        "de": "Jede Zeile überwacht einen Datenpunkt. Gilt die Bedingung länger als die Verzögerung, zeigt die Flottenverwaltung eine Abweichung mit diesem Schweregrad und benachrichtigt per Mail oder Telegram, wie dort eingestellt; ist sie ebenso lange vorbei, endet die Abweichung. Beispiel: victron.0.voltage, \"<\", 11,5, Warnung. \"Keine Aktualisierung seit (min)\" meldet einen Datenpunkt, der sich nicht mehr ändert, etwa weil sein Adapter hängt."
+                    },
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                },
+                "monitors": {
+                    "type": "table",
+                    "label": { "en": "Rules", "de": "Regeln" },
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12,
+                    "items": [
+                        { "type": "text", "attr": "label", "title": { "en": "Label", "de": "Bezeichnung" }, "width": "18%" },
+                        { "type": "objectId", "attr": "stateId", "title": { "en": "State", "de": "Datenpunkt" }, "width": "30%" },
+                        {
+                            "type": "select",
+                            "attr": "op",
+                            "title": { "en": "Reports when", "de": "Meldet, wenn" },
+                            "options": [
+                                { "label": "<", "value": "<" },
+                                { "label": "<=", "value": "<=" },
+                                { "label": ">", "value": ">" },
+                                { "label": ">=", "value": ">=" },
+                                { "label": "==", "value": "==" },
+                                { "label": "!=", "value": "!=" },
+                                { "label": { "en": "no update for (min)", "de": "keine Aktualisierung seit (min)" }, "value": "stale" }
+                            ],
+                            "default": "<",
+                            "width": "14%"
+                        },
+                        { "type": "text", "attr": "value", "title": { "en": "Value", "de": "Wert" }, "width": "10%" },
+                        {
+                            "type": "select",
+                            "attr": "severity",
+                            "title": { "en": "Severity", "de": "Schweregrad" },
+                            "options": [
+                                { "label": { "en": "Info", "de": "Hinweis" }, "value": "info" },
+                                { "label": { "en": "Warning", "de": "Warnung" }, "value": "warning" },
+                                { "label": { "en": "Error", "de": "Fehler" }, "value": "error" },
+                                { "label": { "en": "Critical", "de": "Kritisch" }, "value": "critical" }
+                            ],
+                            "default": "warning",
+                            "width": "14%"
+                        },
+                        { "type": "number", "attr": "delay", "title": { "en": "Delay (s)", "de": "Verzögerung (s)" }, "min": 0, "default": 60, "width": "14%" }
                     ]
                 }
             }

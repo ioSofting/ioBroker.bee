@@ -23,6 +23,7 @@ export const ACCESS_LABEL: Record<AccessKind, string> = {
     knx: 'KNX',
     // the interface of Home Assistant is carried by bee-ha, never by this agent
     ha: 'Home Assistant',
+    lan: 'Gerät im Netz',
 };
 
 /**

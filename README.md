@@ -43,7 +43,7 @@ If the owner installs adapters that are not part of the profile, the agent repor
 
 An asset can also run without profile (mode `free`, set in the fleet management for installations that are too different for a profile). The agent then gets no profile and changes nothing by itself; versions are installed with the command `adapter`. Every version of the agent handles this like an asset without profile.
 
-### Remote access to admin, vis-2, the console and KNX
+### Remote access to admin, vis-2, the console, KNX and devices in the network
 
 A technician of the fleet manager can open admin or vis-2 of the system from the fleet management, without ioBroker.pro and without open ports on the device:
 
@@ -56,6 +56,8 @@ The owner can switch off each kind in the tab *Remote access*; the agent then re
 **Console.** Off until the owner allows it (*Allow the console*), and only on Linux with `script` of util-linux (part of every Debian). Then every terminal the technician opens in the browser is a login shell on this system, as the user ioBroker runs as (usually `iobroker`), started in the ioBroker directory. No native module: `script` gives the shell a pseudo terminal, `stty` sets the size of its window. At most 4 shells per session; when the session or the connection ends, the shells get SIGHUP. `info.remoteAccessBy` shows how many shells are open. Whatever the shell may do beyond the rights of that user belongs in a sudo allow list for single commands, not in a general sudo. Note that the list the ioBroker installer writes (`/etc/sudoers.d/iobroker`) contains `apt`, `apt-get` and `dpkg` without password, which makes the console effectively root on a standard installation. Systems installed with `--hardened` have no sudo; there the OS updates below do not work either.
 
 **KNX for ETS.** Off until the owner allows it (*Allow ETS to reach the KNX gateway*). A technician can then program the KNX installation with ETS from afar: the program bee-knx (Windows, downloaded in the fleet management) offers a KNXnet/IP interface on 127.0.0.1:3671 of the technician's PC, the server carries it to the agent, and the agent connects to the KNX/IP gateway set in the tab, and to nothing else in this network. Without a gateway set, it takes the one of an instance of knx or openknx. The connection to the gateway is TCP or UDP (*Automatic*: TCP if the gateway answers within 2 seconds, otherwise UDP; for UDP the agent puts its own address into the frames, as the gateway must answer to it). At most 4 tunnels per session; when the session ends, the agent closes the tunnels to the gateway.
+
+**Devices in the network.** Off until the owner allows it (*Allow devices in the network to be reached*). A technician can then program a controller in this network with its own tool, e.g. a LOGO! with LOGO!Soft Comfort or an S7 with TIA Portal: the fleet management keeps a list of devices per installation, bee-knx on the technician's PC offers each one on an address of its own (`127.0.0.<n>`, same ports), and every connection of the tool reaches the agent as one stream naming its port. The agent connects only to private addresses in the *allowed networks* (empty: the own subnets of this system), never to this system itself, and only on the *allowed ports* (empty: any). Further KNX gateways from the list of the fleet management need *Allow ETS to reach the KNX gateway* and an address in the allowed networks. At most 16 connections at a time; when the session ends, they are closed.
 
 ### AI access (MCP)
 
@@ -87,12 +89,14 @@ From the asset detail a technician (permission `operate`) can start, stop and re
 | Maintenance window | start, end | daily window for updates, may span midnight (e.g. 22:00–05:00) |
 | | conditions | table of `state operator value`, e.g. `victron.0.soc >= 50`, `modem.0.roaming == false`, `presence.0.home == false` |
 | | minimum free space | for download, unpacking and backup |
+| Monitoring | rules | table of label, state, "reports when" (`<`, `<=`, `>`, `>=`, `==`, `!=` or "no update for (min)"), value, severity and delay, e.g. `victron.0.voltage < 11,5`, warning, 60 s: the fleet management shows a deviation while the condition holds longer than the delay, and notifies as set there |
 | Advanced | heartbeat, check interval, MQTT keepalive | trade-off between reaction time and mobile data |
 | | observation after update, start timeout | verification of a rollout |
 | | backup before every update | only disable for tests |
 | Remote access | allow admin, allow vis-2 | whether the fleet manager may open the interface remotely (both allowed by default) |
 | | allow the console | a shell on this system for the fleet manager (off by default, Linux only) |
 | | allow ETS to reach the KNX gateway, KNX/IP gateway, connection | KNX for ETS (off by default), see above; the gateway as IP or host with `:port`, empty: from the adapter knx or openknx |
+| | allow devices in the network to be reached, allowed networks, allowed ports | devices in the network (off by default), see above; networks as `192.168.0.0/24` or single addresses, ports as `102, 10005` |
 | | allow the AI access, user, write states, change objects | the MCP server of ioBroker for an AI of the fleet manager (off by default; reading only unless allowed), see above |
 
 ## States
@@ -125,6 +129,17 @@ npm test          # unit tests of planner, preflight and diff
 `src/lib/protocol.ts` and `src/lib/tunnel.ts` are shared with the server and must stay identical to `beekeeper-server/src/protocol.ts` and `beekeeper-server/src/tunnel.ts`.
 
 ## Changelog
+
+### 0.5.0 (2026-11-21)
+
+- js-controller upgrades itself on request of the fleet management, as admin does it (on Linux, js-controller 5 or newer, on this host and the other hosts): only to a newer version; the page with the progress uses the port of admin
+- Protocol: the same file as in the server and in bee-linux again
+- Monitoring (tab "Überwachung"): rules on any state, e.g. `victron.0.voltage < 11.5`, warning, or "no update for 30 min"; once a condition holds longer than its delay (default 60 s) the fleet management shows a deviation with that severity and notifies by mail or Telegram, and once it is gone as long, the deviation ends. Up to 100 rules
+- OS updates of the own host with apt-get instead of js-controller: first `apt-get update` (old package lists made apt ask the mirror for versions it no longer has, 404), then exactly the chosen packages with `install --only-upgrade` (js-controller's `apt upgrade <name>` upgraded all of them), without questions and keeping changed configuration files; afterwards js-controller lists the updates anew. Other hosts of the system: still js-controller, with a clear message when the lists there are out of date
+- Own backups before jobs (`iobroker backup`): only the last three are kept, older ones are deleted; their size is reported. Before, they were never cleaned up and reported with size 0
+- The fleet management now refuses a js-controller upgrade without a recent backup outside the device too (same rule as for Node.js); an admin can override it with a reason
+- Devices in the network: the fleet management can reach a LOGO!, an S7 or another controller in this network through bee-knx, each connection on its own port; off until the owner allows it, only private addresses in the allowed networks and on the allowed ports
+- KNX for ETS: further KNX gateways from the list of the fleet management, within the allowed networks
 
 ### 0.4.0 (2026-11-12)
 

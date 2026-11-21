@@ -181,3 +181,29 @@ export function recentOffDeviceBackup(
         now - b.lastOffDevice <= backupMaxAgeDays(b) * DAY
     );
 }
+
+/** The agent keeps this many of the backups it made itself before jobs; older ones it deletes */
+export const OWN_BACKUPS_KEEP = 3;
+
+/** "…/2026_11_20-02_41_00_backupiobroker.tar.gz (48 MB)", as the step shows it, to the path */
+export function backupPath(detail: string): string {
+    return detail.replace(/\s+\(\d+ MB\)$/, '').trim();
+}
+
+/**
+ * Which of its own backups the agent keeps, and which it deletes. Only files it made itself, never those of BackItUp
+ * or one made by hand in the same folder; and only archives of `iobroker backup`.
+ *
+ * @param own the own backups so far, oldest first
+ * @param added the one just made
+ * @param keep how many to keep
+ */
+export function pruneOwnBackups(
+    own: string[],
+    added: string,
+    keep = OWN_BACKUPS_KEEP,
+): { keep: string[]; remove: string[] } {
+    const all = [...own.filter(p => p && p !== added), added];
+    const cut = Math.max(0, all.length - keep);
+    return { keep: all.slice(cut), remove: all.slice(0, cut).filter(p => /_backupiobroker\.tar\.gz$/.test(p)) };
+}

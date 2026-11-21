@@ -10,7 +10,8 @@
  *   type (1 byte) | stream id (4 bytes, big endian) | payload
  *
  *   OPEN   server -> agent  new stream; the agent connects it to the local web interface, or starts a shell
- *                            (console, see CONSOLE)
+ *                            (console, see CONSOLE). Payload (optional): what the stream is for, e.g. the port
+ *                            of a device in the network (kind lan, see openPort); older agents ignore it
  *   DATA   both             bytes of the stream, at most MAX_PAYLOAD
  *   END    both             no more bytes in this direction (half close)
  *   RESET  both             abort; payload: reason (UTF-8)
@@ -56,6 +57,18 @@ export const CLOSE = {
  *   EXIT    agent -> server  the shell ended; payload: exit code or signal (UTF-8)
  */
 export const CONSOLE = { DATA: 1, RESIZE: 2, EXIT: 3 } as const;
+
+/** OPEN of a stream to a device in the network (kind lan): the TCP port, 2 bytes big endian */
+export function portMeta(port: number): Buffer {
+    const b = Buffer.alloc(2);
+    b.writeUInt16BE(port);
+    return b;
+}
+
+/** The port of a stream of kind lan; null: none given */
+export function metaPort(meta: Buffer): number | null {
+    return meta.length === 2 ? meta.readUInt16BE(0) || null : null;
+}
 const MAX_CONSOLE_MESSAGE = 1024 * 1024;
 
 export function consoleMessage(type: number, payload: Buffer = Buffer.alloc(0)): Buffer {
@@ -125,6 +138,8 @@ export class TunnelStream extends Duplex {
     constructor(
         private readonly mux: Mux,
         readonly id: number,
+        /** Payload of the OPEN frame: what the stream is for (empty: the default target) */
+        readonly meta: Buffer = Buffer.alloc(0),
     ) {
         super({ allowHalfOpen: true });
     }
@@ -237,15 +252,15 @@ export class Mux {
         return this.closed;
     }
 
-    open(): TunnelStream {
+    open(meta?: Buffer): TunnelStream {
         if (this.closed) {
             throw new Error('tunnel closed');
         }
         const id = this.nextId;
         this.nextId = this.nextId >= 0xffffffff ? 1 : this.nextId + 1;
-        const stream = new TunnelStream(this, id);
+        const stream = new TunnelStream(this, id, meta);
         this.streams.set(id, stream);
-        this.sendFrame(FRAME.OPEN, id);
+        this.sendFrame(FRAME.OPEN, id, meta);
         return stream;
     }
 
@@ -261,7 +276,7 @@ export class Mux {
                 this.sendFrame(FRAME.RESET, id, Buffer.from('refused'));
                 return;
             }
-            const stream = new TunnelStream(this, id);
+            const stream = new TunnelStream(this, id, Buffer.from(payload));
             this.streams.set(id, stream);
             this.onStream(stream);
             return;
