@@ -268,7 +268,8 @@ describe('node: job', () => {
  * The script with stand-ins for apt, dpkg, systemctl, node and setcap: node -v answers from a file that the
  * stand-in of apt-get writes, systemctl start gives the verdict of the agent (file "verdict"), once.
  */
-describe('node: script', { skip: process.platform === 'win32' && !process.env.BEE_TEST_BASH }, () => {
+// The script runs on Debian only (GNU sed and sort); macOS and Windows test it with BEE_TEST_BASH and GNU tools
+describe('node: script', { skip: process.platform !== 'linux' && !process.env.BEE_TEST_BASH }, () => {
     const script = join(__dirname, '..', 'scripts', 'node-update.sh');
     const stubs: Record<string, string> = {
         node: 'cat "$STATE/node"',
