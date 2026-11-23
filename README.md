@@ -129,6 +129,10 @@ npm test          # unit tests of planner, preflight and diff
 `src/lib/protocol.ts` and `src/lib/tunnel.ts` are shared with the server and must stay identical to `beekeeper-server/src/protocol.ts` and `beekeeper-server/src/tunnel.ts`.
 
 ## Changelog
+<!--
+    Placeholder for the next version (at the beginning of the line):
+    ### **WORK IN PROGRESS**
+-->
 
 ### 0.5.0 (2026-11-21)
 
@@ -222,4 +226,8 @@ npm test          # unit tests of planner, preflight and diff
 
 ## License
 
-Proprietary (UNLICENSED), see [LICENSE](LICENSE). Copyright (c) 2026 ioSofting GmbH. All rights reserved.
+Copyright (c) 2026 ioSofting GmbH
+
+Licensed under [CC BY-NC-ND 4.0](LICENSE) (Creative Commons Attribution-NonCommercial-NoDerivatives 4.0
+International). Commercial use, in particular with the fleet management [Beekeeper](https://beekeeper.one), needs a contract
+with ioSofting GmbH.

@@ -30,46 +30,6 @@
             "0.2.10": {
                 "en": "Adapters that are not in the repositories of the system (bee itself, own adapters only on npm) are installed and updated from npm, as admin does",
                 "de": "Adapter, die nicht in den Repositories des Systems stehen (bee selbst, eigene Adapter nur auf npm), werden wie in admin aus npm installiert und aktualisiert"
-            },
-            "0.2.9": {
-                "en": "AI access: an AI of the fleet management may use the MCP server of ioBroker on this system, only if the owner allows it in the tab Remote access, with the rights set there, and only during a session opened in the fleet management. Node.js 22 or newer is required",
-                "de": "KI-Zugang: eine KI der Flottenverwaltung darf den MCP-Server von ioBroker auf diesem System nutzen, nur wenn der Besitzer es im Tab Fernzugriff erlaubt, mit den dort eingestellten Rechten und nur während einer in der Flottenverwaltung geöffneten Sitzung. Node.js 22 oder neuer ist nötig"
-            },
-            "0.2.8": {
-                "en": "Reports the repositories set in admin and the versions of the installed adapters there, so the fleet management shows the available updates as admin does",
-                "de": "Meldet die in admin eingestellten Repositories und die Versionen der installierten Adapter darin, damit die Flottenverwaltung die verfügbaren Updates wie admin anzeigt"
-            },
-            "0.2.7": {
-                "en": "Command software: removes an adapter, adds or deletes an instance right away on request of the fleet management; the desired state can carry the mode free (without profile), shown in info.mode",
-                "de": "Befehl software: entfernt einen Adapter, legt eine Instanz an oder löscht sie, sofort auf Anforderung der Flottenverwaltung; der Sollzustand kann den Modus free (ohne Profil) tragen, sichtbar in info.mode"
-            },
-            "0.2.6": {
-                "en": "Installs a version of an adapter right away on an asset without desired profile, like from admin; the list of log files was empty on normal installations, the agent now finds iobroker.json in iobroker-data as js-controller does",
-                "de": "Installiert eine Version eines Adapters sofort auf einer Anlage ohne Sollprofil, wie aus admin heraus; die Liste der Log-Dateien war auf normalen Installationen leer, der Agent findet iobroker.json jetzt wie js-controller in iobroker-data"
-            },
-            "0.2.5": {
-                "en": "Log files of ioBroker for the fleet management: lists them and uploads one compressed on request",
-                "de": "Log-Dateien von ioBroker für die Flottenverwaltung: listet sie auf und überträgt auf Anforderung eine davon komprimiert"
-            },
-            "0.2.4": {
-                "en": "Updates Node.js to the major line of the profile as the first step of a job, and goes back to the old version if the instances do not run again under the new one; settings show the connection in color and the server; instances without a process refuse commands",
-                "de": "Hebt Node.js als ersten Schritt eines Auftrags auf die Hauptversion des Profils und kehrt zur alten Version zurück, wenn die Instanzen unter der neuen nicht wieder laufen; die Einstellungen zeigen die Verbindung farbig und den Server; Instanzen ohne Prozess lehnen Befehle ab"
-            },
-            "0.2.3": {
-                "en": "Instances running as a web extension inside a web instance (e.g. mcp) and adapters with only files for web (e.g. material) have no process of their own and are no longer reported as not running; the check after an update no longer rolls them back",
-                "de": "Instanzen, die als Web-Erweiterung in einer web-Instanz laufen (etwa mcp), und Adapter nur mit Dateien für web (etwa material) haben keinen eigenen Prozess und gelten nicht mehr als nicht laufend; die Prüfung nach einem Update rollt sie nicht mehr zurück"
-            },
-            "0.2.2": {
-                "en": "Console: a shell on this system for the fleet management, off unless the owner allows it (Linux only); commands from the fleet management: start, stop and restart instances, restart ioBroker, install OS updates listed by js-controller; enrollment URL preset to https://bee.iobroker.click",
-                "de": "Konsole: eine Shell auf diesem System für die Flottenverwaltung, aus, bis der Besitzer sie erlaubt (nur Linux); Befehle der Flottenverwaltung: Instanzen starten, stoppen und neu starten, ioBroker neu starten, von js-controller gemeldete OS-Updates einspielen; Enrollment-URL mit https://bee.iobroker.click vorbelegt"
-            },
-            "0.2.0": {
-                "en": "Remote access to admin and vis-2 through a tunnel to the fleet server, switchable per kind by the owner; versions and adapter packages (tgz) set per asset by the fleet server",
-                "de": "Fernzugriff auf admin und vis-2 über einen Tunnel zum Flottenserver, je Art vom Besitzer abschaltbar; Versionen und Adapterpakete (tgz) je Anlage vom Flottenserver"
-            },
-            "0.1.0": {
-                "en": "Initial prototype: enrollment, inventory, desired state via MQTT, adapter rollout with preflight, backup, verification and rollback",
-                "de": "Erster Prototyp: Anmeldung, Inventar, Sollzustand über MQTT, Adapter-Rollout mit Vorprüfung, Sicherung, Verifikation und Rollback"
             }
         },
         "titleLang": {
@@ -108,84 +68,88 @@
         "adminUI": {
             "config": "json"
         },
-        "license": "UNLICENSED",
+        "licenseInformation": {
+            "license": "CC-BY-NC-ND-4.0",
+            "type": "commercial",
+            "link": "https://beekeeper.one"
+        },
         "dependencies": [
             {
                 "js-controller": ">=6.0.11"
             }
-        ],
-        "notifications": [
-            {
-                "scope": "bee",
-                "name": {
-                    "en": "Fleet management",
-                    "de": "Flottenverwaltung"
-                },
-                "description": {
-                    "en": "Messages of the fleet agent for the owner of the system",
-                    "de": "Meldungen des Flotten-Agenten für den Endkunden der Anlage"
-                },
-                "categories": [
-                    {
-                        "category": "modeChanged",
-                        "name": {
-                            "en": "Own installation detected",
-                            "de": "Eigeninstallation erkannt"
-                        },
-                        "severity": "notify",
-                        "description": {
-                            "en": "Adapters were installed that are not part of the version profile. The system receives no automatic updates any more.",
-                            "de": "Es wurden Adapter installiert, die nicht zum Versionsprofil gehören. Die Anlage erhält keine automatischen Updates mehr."
-                        },
-                        "regex": [],
-                        "limit": 5
-                    },
-                    {
-                        "category": "updateAvailable",
-                        "name": {
-                            "en": "New software state available",
-                            "de": "Neuer Softwarestand verfügbar"
-                        },
-                        "severity": "info",
-                        "description": {
-                            "en": "The fleet management provides a new state. Self-managed systems are not updated automatically.",
-                            "de": "Die Flottenverwaltung stellt einen neuen Stand bereit. Eigenverantwortliche Anlagen werden nicht automatisch aktualisiert."
-                        },
-                        "regex": [],
-                        "limit": 5
-                    },
-                    {
-                        "category": "updated",
-                        "name": {
-                            "en": "System updated",
-                            "de": "Anlage aktualisiert"
-                        },
-                        "severity": "info",
-                        "description": {
-                            "en": "The fleet management updated this system",
-                            "de": "Die Flottenverwaltung hat diese Anlage aktualisiert"
-                        },
-                        "regex": [],
-                        "limit": 10
-                    },
-                    {
-                        "category": "rejected",
-                        "name": {
-                            "en": "Rejected by fleet server",
-                            "de": "Vom Flottenserver abgewiesen"
-                        },
-                        "severity": "alert",
-                        "description": {
-                            "en": "The fleet server does not know this device. The agent stopped itself.",
-                            "de": "Der Flottenserver kennt dieses Gerät nicht. Der Agent hat sich beendet."
-                        },
-                        "regex": [],
-                        "limit": 1
-                    }
-                ]
-            }
         ]
     },
+    "notifications": [
+        {
+            "scope": "bee",
+            "name": {
+                "en": "Fleet management",
+                "de": "Flottenverwaltung"
+            },
+            "description": {
+                "en": "Messages of the fleet agent for the owner of the system",
+                "de": "Meldungen des Flotten-Agenten für den Endkunden der Anlage"
+            },
+            "categories": [
+                {
+                    "category": "modeChanged",
+                    "name": {
+                        "en": "Own installation detected",
+                        "de": "Eigeninstallation erkannt"
+                    },
+                    "severity": "notify",
+                    "description": {
+                        "en": "Adapters were installed that are not part of the version profile. The system receives no automatic updates any more.",
+                        "de": "Es wurden Adapter installiert, die nicht zum Versionsprofil gehören. Die Anlage erhält keine automatischen Updates mehr."
+                    },
+                    "regex": [],
+                    "limit": 5
+                },
+                {
+                    "category": "updateAvailable",
+                    "name": {
+                        "en": "New software state available",
+                        "de": "Neuer Softwarestand verfügbar"
+                    },
+                    "severity": "info",
+                    "description": {
+                        "en": "The fleet management provides a new state. Self-managed systems are not updated automatically.",
+                        "de": "Die Flottenverwaltung stellt einen neuen Stand bereit. Eigenverantwortliche Anlagen werden nicht automatisch aktualisiert."
+                    },
+                    "regex": [],
+                    "limit": 5
+                },
+                {
+                    "category": "updated",
+                    "name": {
+                        "en": "System updated",
+                        "de": "Anlage aktualisiert"
+                    },
+                    "severity": "info",
+                    "description": {
+                        "en": "The fleet management updated this system",
+                        "de": "Die Flottenverwaltung hat diese Anlage aktualisiert"
+                    },
+                    "regex": [],
+                    "limit": 10
+                },
+                {
+                    "category": "rejected",
+                    "name": {
+                        "en": "Rejected by fleet server",
+                        "de": "Vom Flottenserver abgewiesen"
+                    },
+                    "severity": "alert",
+                    "description": {
+                        "en": "The fleet server does not know this device. The agent stopped itself.",
+                        "de": "Der Flottenserver kennt dieses Gerät nicht. Der Agent hat sich beendet."
+                    },
+                    "regex": [],
+                    "limit": 1
+                }
+            ]
+        }
+    ],
     "encryptedNative": [
         "enrollToken"
     ],
