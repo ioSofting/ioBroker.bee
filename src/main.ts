@@ -32,6 +32,7 @@ import {
 import { addressRefusal, lanInfo, MAX_LAN_STREAMS, ownNetworks, relayTcp, targetRefusal } from './lib/lan';
 import { instanceRunning, onlyWww } from './lib/instances';
 import { enroll } from './lib/enrollment';
+import { identityAction, tokenHash, type DeviceFile } from './lib/identity';
 import {
     adaptersFromInstalled,
     collectHosts,
@@ -247,7 +248,27 @@ class BeeAdapter extends utils.Adapter {
         const meta = await this.getForeignObjectAsync('system.meta.uuid');
         this.uuid = (meta?.native as { uuid?: string } | undefined)?.uuid || '';
 
+        // the stored identity, unless the settings carry another token than the one it came from
+        // (js-controller keeps iobroker-data/bee.N when the instance is deleted)
+        const stored = await readJson<DeviceFile>(join(this.dataDir, 'device.json'));
+        const identity = identityAction(stored, this.config.enrollToken);
+        const reenroll = !!stored && identity === 'enroll';
+        if (reenroll) {
+            this.log.warn(
+                `Another enrollment token is set: device ${stored.deviceId} (tenant ${stored.tenantId}, asset ${stored.assetId}) is given up, the agent enrolls anew`,
+            );
+            // what came from the old asset must not act on the new one; device.json goes on success
+            for (const file of ['desired.json', 'control.json', 'tunnels.json']) {
+                await rm(join(this.dataDir, file), { force: true });
+            }
+        }
+
         this.persisted = { ...this.persisted, ...(await readJson<Persisted>(join(this.dataDir, 'state.json'))) };
+        if (reenroll) {
+            this.persisted.results = {};
+            this.persisted.lastResult = null;
+            await this.savePersisted();
+        }
         this.desired = await readJson<DesiredMessage>(join(this.dataDir, 'desired.json'));
         this.control = await readJson<ControlMessage>(join(this.dataDir, 'control.json'));
 
@@ -295,7 +316,13 @@ class BeeAdapter extends utils.Adapter {
             onChange: () => void this.updateAccessStates(),
         });
 
-        this.creds = await readJson<EnrollResponse>(join(this.dataDir, 'device.json'));
+        this.creds = identity === 'enroll' ? null : stored;
+        if (identity === 'adopt') {
+            await writeJsonAtomic(join(this.dataDir, 'device.json'), {
+                ...stored,
+                tokenHash: tokenHash(this.config.enrollToken),
+            });
+        }
         await this.updateAccessStates();
         if (this.creds) {
             this.startTransport();
@@ -372,8 +399,11 @@ class BeeAdapter extends utils.Adapter {
         });
         if (result.kind === 'ok') {
             this.creds = result.creds;
-            await writeJsonAtomic(join(this.dataDir, 'device.json'), result.creds);
-            this.log.info(`Enrolled as ${result.creds.deviceId} (asset ${result.creds.assetId})`);
+            const file: DeviceFile = { ...result.creds, tokenHash: tokenHash(this.config.enrollToken) };
+            await writeJsonAtomic(join(this.dataDir, 'device.json'), file);
+            this.log.info(
+                `Enrolled as ${result.creds.deviceId} (tenant ${result.creds.tenantId}, asset ${result.creds.assetId})`,
+            );
             await this.updateInfoStates();
             this.startTransport();
         } else if (result.kind === 'rejected') {

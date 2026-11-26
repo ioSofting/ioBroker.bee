@@ -9,6 +9,7 @@ Fleet agent for ioBroker. It connects a delivered ioBroker system (in a house, a
 ## How it works
 
 1. **Enrollment.** The factory image contains the enrollment URL and a one-time token bound to the asset (the managed installation). On first start the agent sends the token and the system UUID and receives its own device certificate. The token is used up.
+   **To another asset or tenant:** create an enrollment token for the target asset in the portal and enter it in the settings (tab *Enrollment*). The agent notices the other token, enrolls anew and connects as a new device of the target asset; revoke the old device in the portal of the old asset. Deleting and adding the instance alone is not enough: js-controller keeps `iobroker-data/bee.0/`, and without another token the agent connects with the certificate stored there.
 2. **Control channel.** MQTT over TLS with the device certificate, to the platform's own broker. The broker certificate may come from the platform CA (handed out at enrollment) or from a public CA such as Let's Encrypt; for the latter the agent uses the public root certificates shipped with Node.js. Heartbeat and Last Will report online status, the inventory is sent completely on connect and as a diff afterwards, all payloads gzip-compressed. Keepalive and heartbeat are configurable to keep mobile data low.
 3. **Desired state instead of commands.** The server publishes the desired profile as a retained message. A system that was offline for months reads the current profile, not a backlog of orders.
 4. **Reconciliation.** The agent compares the profile with the installed versions and plans install, upgrade, downgrade (and removal only when the server asks for it on return to managed mode). It never touches adapters that are not in the profile.
@@ -133,6 +134,10 @@ npm test          # unit tests of planner, preflight and diff
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+
+### 0.5.1 (2026-11-26)
+
+- Another enrollment token in the settings now leads to a new enrollment, e.g. to move the installation to an asset of another tenant. Before, the agent kept connecting with the certificate in `iobroker-data/bee.0/device.json`, also after the instance was deleted and added again (js-controller keeps that folder). The desired state, the emergency stop and the remote sessions of the old asset are dropped
 
 ### 0.5.0 (2026-11-21)
 

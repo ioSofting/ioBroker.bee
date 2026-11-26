@@ -1,8 +1,12 @@
 {
     "common": {
         "name": "bee",
-        "version": "0.5.0",
+        "version": "0.5.1",
         "news": {
+            "0.5.1": {
+                "en": "Another enrollment token in the settings enrolls the device anew, e.g. to move it to an asset of another tenant; before, the agent kept connecting with the old certificate in iobroker-data/bee.0, also after the instance was deleted and added again",
+                "de": "Ein anderes Enrollment-Token in den Einstellungen meldet das Gerät neu an, etwa um es einer Anlage eines anderen Mandanten zuzuordnen; vorher verband sich der Agent weiter mit dem alten Zertifikat aus iobroker-data/bee.0, auch nach dem Löschen und Neuanlegen der Instanz"
+            },
             "0.5.0": {
                 "en": "Devices in the network: a LOGO!, an S7 or another controller in this network can be programmed from afar through bee-knx, and further KNX gateways; off until allowed, only in the allowed networks and ports. Monitoring of states (tab \"Überwachung\"). js-controller upgrade from the fleet management. OS updates with apt-get update first. Only the last three own backups are kept",
                 "de": "Geräte im Netz: Eine LOGO!, eine S7 oder eine andere Steuerung in diesem Netz lässt sich über bee-knx aus der Ferne programmieren, dazu weitere KNX-Gateways; aus, bis es erlaubt wird, nur in den erlaubten Netzen und Ports. Überwachung von Datenpunkten (Tab „Überwachung“). js-controller-Update aus der Flottenverwaltung. OS-Updates mit vorherigem apt-get update. Nur die letzten drei eigenen Sicherungen bleiben"
@@ -26,10 +30,6 @@
             "0.2.11": {
                 "en": "Reports the backup by BackItUp (automatic backup on, interval, targets outside the device, last run, last good backup and last one outside the device); the fleet management warns when there is none, when it failed or when it is overdue. The update of Node.js needs a recent backup outside the device",
                 "de": "Meldet die Sicherung durch BackItUp (automatische Sicherung an, Abstand, Ziele außerhalb des Geräts, letzter Lauf, letzte erfolgreiche und letzte externe Sicherung); die Flottenverwaltung warnt, wenn es keine gibt, sie fehlgeschlagen oder überfällig ist. Das Update von Node.js braucht eine aktuelle Sicherung außerhalb des Geräts"
-            },
-            "0.2.10": {
-                "en": "Adapters that are not in the repositories of the system (bee itself, own adapters only on npm) are installed and updated from npm, as admin does",
-                "de": "Adapter, die nicht in den Repositories des Systems stehen (bee selbst, eigene Adapter nur auf npm), werden wie in admin aus npm installiert und aktualisiert"
             }
         },
         "titleLang": {
