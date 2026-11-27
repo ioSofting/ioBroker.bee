@@ -1,8 +1,21 @@
 {
     "common": {
         "name": "bee",
-        "version": "0.5.3",
+        "version": "0.6.0",
         "news": {
+            "0.6.0": {
+                "en": "Web interfaces in the network: a table of name and IP:port in the tab Remote access; the fleet management opens each device by its name in the browser, through the tunnel, and only the addresses of this table (private addresses or this system)",
+                "de": "Weboberflächen im Netz: eine Tabelle mit Name und IP:Port im Reiter Fernzugriff; die Flottenverwaltung öffnet jedes Gerät über seinen Namen im Browser, durch den Tunnel, und nur die Adressen dieser Tabelle (private Adressen oder dieses System)",
+                "ru": "Веб-интерфейсы в сети: таблица с именем и IP:порт на вкладке «Удалённый доступ»; система управления парком открывает каждое устройство по его имени в браузере через туннель и только по адресам из этой таблицы (частные адреса или эта система)",
+                "pt": "Interfaces web na rede: uma tabela com nome e IP:porta na aba Acesso remoto; a gestão de frota abre cada dispositivo pelo seu nome no navegador, através do túnel, e somente os endereços desta tabela (endereços privados ou este sistema)",
+                "nl": "Webinterfaces in het netwerk: een tabel met naam en IP:poort op het tabblad Toegang op afstand; het vlootbeheer opent elk apparaat via zijn naam in de browser, door de tunnel, en alleen de adressen uit deze tabel (privéadressen of dit systeem)",
+                "fr": "Interfaces web dans le réseau : un tableau avec nom et IP:port dans l'onglet Accès à distance ; la gestion de flotte ouvre chaque appareil par son nom dans le navigateur, à travers le tunnel, et uniquement les adresses de ce tableau (adresses privées ou ce système)",
+                "it": "Interfacce web nella rete: una tabella con nome e IP:porta nella scheda Accesso remoto; la gestione della flotta apre ogni dispositivo tramite il suo nome nel browser, attraverso il tunnel, e solo gli indirizzi di questa tabella (indirizzi privati o questo sistema)",
+                "es": "Interfaces web en la red: una tabla con nombre e IP:puerto en la pestaña Acceso remoto; la gestión de flota abre cada dispositivo por su nombre en el navegador, a través del túnel, y solo las direcciones de esta tabla (direcciones privadas o este sistema)",
+                "pl": "Interfejsy webowe w sieci: tabela z nazwą i IP:port w zakładce Dostęp zdalny; zarządzanie flotą otwiera każde urządzenie po jego nazwie w przeglądarce, przez tunel, i tylko adresy z tej tabeli (adresy prywatne lub ten system)",
+                "uk": "Веб-інтерфейси в мережі: таблиця з назвою та IP:порт на вкладці «Віддалений доступ»; система керування парком відкриває кожен пристрій за його назвою в браузері через тунель і лише за адресами з цієї таблиці (приватні адреси або ця система)",
+                "zh-cn": "网络中的 Web 界面：在“远程访问”选项卡中提供名称和 IP:端口 的表格；设备群管理按名称在浏览器中通过隧道打开每台设备，且仅限此表中的地址（私有地址或本系统）"
+            },
             "0.5.3": {
                 "en": "Requires Node.js 22.19 or newer, as the MCP server of ioBroker does. Maintenance window: start and end on a line of their own on narrow screens",
                 "de": "Benötigt Node.js 22.19 oder neuer, wie der MCP-Server von ioBroker. Wartungsfenster: Beginn und Ende auf schmalen Bildschirmen in eigener Zeile",

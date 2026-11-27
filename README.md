@@ -138,7 +138,7 @@ npm test          # unit tests of planner, preflight and diff
     ### **WORK IN PROGRESS**
 -->
 
-### **WORK IN PROGRESS**
+### 0.6.0 (2026-11-27)
 
 - Web interfaces in the network: a table of name and `IP:port` in the tab *Remote access*; the fleet management opens each device by its name in the browser, through the tunnel, and only the addresses of this table (private addresses or this system)
 
