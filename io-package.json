@@ -1,8 +1,21 @@
 {
     "common": {
         "name": "bee",
-        "version": "0.5.1",
+        "version": "0.5.2",
         "news": {
+            "0.5.2": {
+                "en": "Settings and notifications in all languages of ioBroker. Timers of the adapter, so that js-controller clears them when the instance stops. Requires admin 7.6.20 or newer; no installation from GitHub",
+                "de": "Einstellungen und Meldungen in allen Sprachen von ioBroker. Timer des Adapters, die js-controller beim Stoppen der Instanz aufräumt. Benötigt admin 7.6.20 oder neuer; keine Installation von GitHub",
+                "ru": "Настройки и уведомления на всех языках ioBroker. Таймеры адаптера, которые js-controller очищает при остановке экземпляра. Требуется admin 7.6.20 или новее; установка с GitHub не поддерживается",
+                "pt": "Configurações e notificações em todos os idiomas do ioBroker. Temporizadores do adaptador, que o js-controller limpa quando a instância para. Requer admin 7.6.20 ou mais recente; sem instalação a partir do GitHub",
+                "nl": "Instellingen en meldingen in alle talen van ioBroker. Timers van de adapter, die js-controller opruimt wanneer de instantie stopt. Vereist admin 7.6.20 of nieuwer; geen installatie vanaf GitHub",
+                "fr": "Paramètres et notifications dans toutes les langues d'ioBroker. Minuteries de l'adaptateur, que js-controller supprime à l'arrêt de l'instance. Nécessite admin 7.6.20 ou plus récent ; pas d'installation depuis GitHub",
+                "it": "Impostazioni e notifiche in tutte le lingue di ioBroker. Timer dell'adattatore, che js-controller cancella quando l'istanza si arresta. Richiede admin 7.6.20 o successivo; nessuna installazione da GitHub",
+                "es": "Ajustes y notificaciones en todos los idiomas de ioBroker. Temporizadores del adaptador, que js-controller elimina al detenerse la instancia. Requiere admin 7.6.20 o posterior; sin instalación desde GitHub",
+                "pl": "Ustawienia i powiadomienia we wszystkich językach ioBroker. Timery adaptera, które js-controller usuwa po zatrzymaniu instancji. Wymaga admin 7.6.20 lub nowszego; bez instalacji z GitHub",
+                "uk": "Налаштування та сповіщення всіма мовами ioBroker. Таймери адаптера, які js-controller очищає під час зупинки екземпляра. Потрібен admin 7.6.20 або новіший; встановлення з GitHub не підтримується",
+                "zh-cn": "设置和通知支持 ioBroker 的所有语言。使用适配器的定时器，实例停止时由 js-controller 清除。需要 admin 7.6.20 或更高版本；不支持从 GitHub 安装"
+            },
             "0.5.1": {
                 "en": "Another enrollment token in the settings enrolls the device anew, e.g. to move it to an asset of another tenant; before, the agent kept connecting with the old certificate in iobroker-data/bee.0, also after the instance was deleted and added again",
                 "de": "Ein anderes Enrollment-Token in den Einstellungen meldet das Gerät neu an, etwa um es einer Anlage eines anderen Mandanten zuzuordnen; vorher verband sich der Agent weiter mit dem alten Zertifikat aus iobroker-data/bee.0, auch nach dem Löschen und Neuanlegen der Instanz",
@@ -80,19 +93,6 @@
                 "pl": "Multihost: jedna instancja bee obsługuje wszystkie hosty systemu (adaptery, instancje, restart, aktualizacje systemu operacyjnego, pliki logów) przez ich js-controller. Adaptery innego hosta nie są już tutaj zgłaszane jako zainstalowane, ich aktualizacja kończyła się błędem \"is not installed\". BackItUp jest wykrywany na każdym hoście. Odpowiedzi js-controller docierają, bez nich aktualizacja systemu operacyjnego czekała 30 minut",
                 "uk": "Мультихост: один екземпляр bee обслуговує всі хости системи (адаптери, екземпляри, перезапуск, оновлення ОС, файли журналів) через їхній js-controller. Адаптери іншого хоста більше не вважаються встановленими тут, їхнє оновлення завершувалося помилкою \"is not installed\". BackItUp виявляється на будь-якому хості. Відповіді js-controller надходять, без них оновлення ОС чекало 30 хвилин",
                 "zh-cn": "多主机：一个 bee 实例通过各主机的 js-controller 维护系统的所有主机（适配器、实例、重启、操作系统更新、日志文件）。其他主机的适配器不再在此处报告为已安装，此前其更新会因 \"is not installed\" 而失败。可在任意主机上找到 BackItUp。js-controller 的应答能够送达，此前操作系统更新会因收不到应答而等待 30 分钟"
-            },
-            "0.2.11": {
-                "en": "Reports the backup by BackItUp (automatic backup on, interval, targets outside the device, last run, last good backup and last one outside the device); the fleet management warns when there is none, when it failed or when it is overdue. The update of Node.js needs a recent backup outside the device",
-                "de": "Meldet die Sicherung durch BackItUp (automatische Sicherung an, Abstand, Ziele außerhalb des Geräts, letzter Lauf, letzte erfolgreiche und letzte externe Sicherung); die Flottenverwaltung warnt, wenn es keine gibt, sie fehlgeschlagen oder überfällig ist. Das Update von Node.js braucht eine aktuelle Sicherung außerhalb des Geräts",
-                "ru": "Передаёт сведения о резервном копировании через BackItUp (включено ли автоматическое резервное копирование, интервал, хранилища вне устройства, последний запуск, последняя успешная резервная копия и последняя вне устройства); система управления парком предупреждает, если резервной копии нет, если она не удалась или просрочена. Для обновления Node.js нужна свежая резервная копия вне устройства",
-                "pt": "Reporta o backup do BackItUp (backup automático ativo, intervalo, destinos fora do dispositivo, última execução, último backup bem-sucedido e último fora do dispositivo); a gestão de frota avisa quando não há nenhum, quando falhou ou quando está atrasado. A atualização do Node.js requer um backup recente fora do dispositivo",
-                "nl": "Meldt de back-up door BackItUp (automatische back-up aan, interval, doelen buiten het apparaat, laatste uitvoering, laatste geslaagde back-up en laatste buiten het apparaat); het vlootbeheer waarschuwt als er geen is, als deze is mislukt of als deze achterstallig is. De update van Node.js vereist een recente back-up buiten het apparaat",
-                "fr": "Signale la sauvegarde par BackItUp (sauvegarde automatique activée, intervalle, destinations hors de l'appareil, dernière exécution, dernière sauvegarde réussie et dernière hors de l'appareil) ; la gestion de flotte avertit lorsqu'il n'y en a aucune, lorsqu'elle a échoué ou lorsqu'elle est en retard. La mise à jour de Node.js nécessite une sauvegarde récente hors de l'appareil",
-                "it": "Comunica il backup di BackItUp (backup automatico attivo, intervallo, destinazioni esterne al dispositivo, ultima esecuzione, ultimo backup riuscito e ultimo esterno al dispositivo); la gestione della flotta avvisa quando non ce n'è nessuno, quando è fallito o quando è in ritardo. L'aggiornamento di Node.js richiede un backup recente esterno al dispositivo",
-                "es": "Informa de la copia de seguridad de BackItUp (copia automática activada, intervalo, destinos fuera del dispositivo, última ejecución, última copia correcta y última fuera del dispositivo); la gestión de flota avisa cuando no hay ninguna, cuando ha fallado o cuando está atrasada. La actualización de Node.js requiere una copia de seguridad reciente fuera del dispositivo",
-                "pl": "Przekazuje informacje o kopii zapasowej z BackItUp (czy automatyczna kopia jest włączona, interwał, miejsca docelowe poza urządzeniem, ostatnie uruchomienie, ostatnia udana kopia i ostatnia poza urządzeniem); system zarządzania flotą ostrzega, gdy kopii nie ma, gdy się nie powiodła lub gdy jest zaległa. Aktualizacja Node.js wymaga aktualnej kopii zapasowej poza urządzeniem",
-                "uk": "Передає відомості про резервне копіювання через BackItUp (чи ввімкнено автоматичне резервне копіювання, інтервал, сховища поза пристроєм, останній запуск, остання успішна резервна копія та остання поза пристроєм); система керування парком попереджає, якщо резервної копії немає, якщо вона не вдалася або прострочена. Для оновлення Node.js потрібна свіжа резервна копія поза пристроєм",
-                "zh-cn": "报告 BackItUp 的备份情况（自动备份是否开启、间隔、设备外的目标、上次运行、上次成功的备份以及上次设备外的备份）；当没有备份、备份失败或备份逾期时，设备群管理会发出警告。更新 Node.js 需要一份近期的设备外备份"
             }
         },
         "titleLang": {

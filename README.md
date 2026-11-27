@@ -135,7 +135,7 @@ npm test          # unit tests of planner, preflight and diff
     ### **WORK IN PROGRESS**
 -->
 
-### **WORK IN PROGRESS**
+### 0.5.2 (2026-11-27)
 
 - Settings and notifications in all languages of ioBroker
 - Timers of the adapter instead of those of Node.js, so that js-controller clears them when the instance stops
