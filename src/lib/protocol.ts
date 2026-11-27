@@ -255,8 +255,9 @@ export interface Inventory {
     remoteAccess?: AccessKind[];
     /**
      * Enabled instances per kind on the host of the agent (admin; web for vis-2, only with vis-2 installed),
-     * to choose from when opening a remote access. An empty list: nothing to offer. Missing: older agent,
-     * it takes the first instance. Not part of the history.
+     * to choose from when opening a remote access; for kind web the web interfaces of devices in the network the
+     * owner lists in the instance of bee, by name (since agent 0.6.0). An empty list: nothing to offer. Missing:
+     * older agent, it takes the first instance. Not part of the history.
      */
     accessTargets?: Partial<Record<AccessKind, AccessInstance[]>>;
     /**
@@ -795,10 +796,16 @@ export interface ReplyMessage {
  * TCP (HPAIs "TCP, 0.0.0.0:0"); the agent passes them to its gateway, over UDP if the gateway has no TCP.
  * ha: the web interface of Home Assistant (agent bee-ha only). lan: a device in the network of the asset, e.g. a
  * LOGO! or an S7 (off unless the owner switches it on): every stream is one TCP connection to TunnelRequest.lan,
- * its OPEN frame names the port (portMeta in tunnel.ts).
+ * its OPEN frame names the port (portMeta in tunnel.ts). web: the web interface of a device in the network, e.g. a
+ * router, an inverter or a camera, in the browser as admin: the owner lists name and address in the instance of bee
+ * (Inventory.accessTargets.web), the server names the device (TunnelRequest.instance), the agent connects to the
+ * address of its own list and nowhere else (since agent 0.6.0).
  */
-export type AccessKind = 'admin' | 'vis' | 'console' | 'knx' | 'ha' | 'lan';
-export const ACCESS_KINDS: AccessKind[] = ['admin', 'vis', 'console', 'knx', 'ha', 'lan'];
+export type AccessKind = 'admin' | 'vis' | 'console' | 'knx' | 'ha' | 'lan' | 'web';
+export const ACCESS_KINDS: AccessKind[] = ['admin', 'vis', 'console', 'knx', 'ha', 'lan', 'web'];
+
+/** Web interfaces of devices in the network one agent offers (kind web) */
+export const MAX_WEB_DEVICES = 32;
 
 /**
  * What the owner lets the fleet reach in the network of the device (Inventory.lan). The agent checks every request
@@ -866,15 +873,20 @@ export interface KnxInfo {
 
 /** A local web interface the agent can carry a remote access to (Inventory.accessTargets) */
 export interface AccessInstance {
-    /** e.g. "admin.1", "web.0" */
+    /** e.g. "admin.1", "web.0"; kind web: the name of the device as the owner entered it, e.g. "Router" */
     instance: string;
     port: number;
-    /** HTTPS (instance setting "secure") */
+    /** HTTPS (instance setting "secure"; kind web: https:// or port 443 in the address) */
     secure: boolean;
-    /** Login required (instance setting "auth") */
+    /** Login required (instance setting "auth"); kind web: false, the device asks for its own login */
     auth: boolean;
     /** Without login every request runs as this user (instance setting "defaultUser") */
     defaultUser?: string;
+    /**
+     * Kind web: where the device is in the network of the asset, as the owner entered it (IPv4 address or host
+     * name, without port), e.g. "192.168.0.1". The portal shows it, and sends it to the device as Host header.
+     */
+    address?: string;
 }
 
 /** WebSocket path of the tunnel endpoint on the server */
@@ -896,7 +908,10 @@ export interface TunnelRequest {
     /** Who opens the access and why; shown on the device */
     by: string;
     purpose: string;
-    /** Instance to connect to, one of Inventory.accessTargets of this kind; missing: the first one */
+    /**
+     * Instance to connect to, one of Inventory.accessTargets of this kind; missing: the first one. Kind web: the
+     * name of the device, required (the agent looks up its address in its own list)
+     */
     instance?: string;
     /** Kind lan: the device in the network (the agent checks it against Inventory.lan) */
     lan?: LanTarget;

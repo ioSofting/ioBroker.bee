@@ -209,6 +209,42 @@
                     "lg": 6,
                     "xl": 6
                 },
+                "_webHeader": {
+                    "type": "header",
+                    "text": "Web interfaces in the network",
+                    "size": 5,
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                },
+                "_webText": {
+                    "type": "staticText",
+                    "text": "Each line is a device in this network whose web interface service staff may open in the browser from the fleet management, by its name, e.g. a router, an inverter or a camera. Address as IP:port, e.g. 192.168.0.1 or 192.168.0.20:8080 (without port: 80), with https:// for HTTPS (port 443 is HTTPS anyway); a host name of this network works too. Only private addresses (10.x, 172.16-31.x, 192.168.x) or this system itself (127.0.0.1). The fleet management sees name and address; the device asks for its own login. An empty table offers nothing.",
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12
+                },
+                "webDevices": {
+                    "type": "table",
+                    "label": "Web interfaces",
+                    "uniqueColumns": ["name"],
+                    "newLine": true,
+                    "xs": 12,
+                    "sm": 12,
+                    "md": 12,
+                    "lg": 12,
+                    "xl": 12,
+                    "items": [
+                        { "type": "text", "attr": "name", "title": "Name", "maxLength": 60, "width": "40%" },
+                        { "type": "text", "attr": "address", "title": "IP:port", "width": "60%" }
+                    ]
+                },
                 "_aiHeader": {
                     "type": "header",
                     "text": "AI access (MCP)",

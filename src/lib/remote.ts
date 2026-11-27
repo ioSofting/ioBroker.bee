@@ -15,6 +15,8 @@ import type { Timers } from './util';
 /** A local web interface, with the address to connect to (stays on the device) */
 export interface AccessTarget extends AccessInstance {
     host: string;
+    /** HTTPS to a device in the network named by host name: the name for SNI */
+    servername?: string;
 }
 
 export const ACCESS_LABEL: Record<AccessKind, string> = {
@@ -25,6 +27,7 @@ export const ACCESS_LABEL: Record<AccessKind, string> = {
     // the interface of Home Assistant is carried by bee-ha, never by this agent
     ha: 'Home Assistant',
     lan: 'Gerät im Netz',
+    web: 'Weboberfläche',
 };
 
 /**
@@ -36,6 +39,9 @@ export async function findTargets(adapter: ioBroker.Adapter, kind: AccessKind): 
         kind === 'console' ||
         kind === 'knx' ||
         kind === 'ha' ||
+        kind === 'lan' ||
+        // web interfaces of devices in the network come from the table of the instance (web.ts)
+        kind === 'web' ||
         (kind === 'vis' && !(await adapter.getForeignObjectAsync('system.adapter.vis-2')))
     ) {
         return [];
@@ -144,6 +150,8 @@ export interface TunnelClientOptions {
 }
 
 const MAX_BACKOFF = 60_000;
+/** A device in the network may be switched off: the browser learns it after this, not after the timeout of TCP */
+const CONNECT_TIMEOUT = 10_000;
 /** The server pings every 25 s; without a ping for this long the connection is dead */
 const DEAD_AFTER = 90_000;
 /** Longest session the agent accepts, whatever the server says */
@@ -268,10 +276,19 @@ export class TunnelClient {
             stream.destroy(new Error('no target'));
             return;
         }
-        // a local HTTPS interface has its own, usually self-signed certificate: loopback, nothing to verify
+        // a local HTTPS interface has its own, usually self-signed certificate: loopback or a device in the own
+        // network chosen by the owner, nothing to verify
         const sock = t.secure
-            ? tls.connect({ host: t.host, port: t.port, rejectUnauthorized: false })
+            ? tls.connect({
+                  host: t.host,
+                  port: t.port,
+                  rejectUnauthorized: false,
+                  ...(t.servername ? { servername: t.servername } : {}),
+              })
             : net.connect(t.port, t.host);
+        sock.setTimeout(CONNECT_TIMEOUT);
+        sock.once(t.secure ? 'secureConnect' : 'connect', () => sock.setTimeout(0));
+        sock.once('timeout', () => sock.destroy(new Error(`${t.host}:${t.port} antwortet nicht`)));
         stream.pipe(sock);
         sock.pipe(stream);
         // a regular end runs through the pipes in both directions (half close); only errors cut off

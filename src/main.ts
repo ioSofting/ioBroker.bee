@@ -31,6 +31,7 @@ import {
     type KnxTransport,
 } from './lib/knx';
 import { addressRefusal, lanInfo, MAX_LAN_STREAMS, ownNetworks, relayTcp, targetRefusal } from './lib/lan';
+import { describeWebDevices, resolveWebDevice, webDevices } from './lib/web';
 import { instanceRunning, onlyWww } from './lib/instances';
 import { enroll } from './lib/enrollment';
 import { identityAction, tokenHash, type DeviceFile } from './lib/identity';
@@ -140,6 +141,11 @@ interface BeeConfig {
     allowLan: boolean;
     lanNetworks: string;
     lanPorts: string;
+    /**
+     * Web interfaces of devices in the network for the browser of the fleet management (table "Weboberflächen im
+     * Netz": name and address); a line in it is the consent, an empty table offers none
+     */
+    webDevices: unknown;
     /** AI access: the MCP server of ioBroker for an AI of the fleet management (off unless the owner allows it) */
     allowAi: boolean;
     /** ...with writing states, with changing objects and files; as this ioBroker user */
@@ -307,6 +313,7 @@ class BeeAdapter extends utils.Adapter {
 
         await this.subscribeStatesAsync('control.*');
         await this.startMonitor();
+        this.checkWebDevices();
         // the repositories of admin, for the updates of the adapters in the fleet management
         await this.subscribeForeignObjectsAsync('system.repositories');
         await this.subscribeForeignObjectsAsync('system.config');
@@ -1398,7 +1405,23 @@ class BeeAdapter extends utils.Adapter {
         if (this.config.allowLan === true) {
             kinds.push('lan');
         }
+        if (webDevices(this.config.webDevices).devices.length) {
+            kinds.push('web');
+        }
         return kinds;
+    }
+
+    /** Says in the log which lines of the table "Weboberflächen im Netz" are not used, and why */
+    private checkWebDevices(): void {
+        const { devices, errors } = webDevices(this.config.webDevices);
+        for (const e of errors) {
+            this.log.warn(`Web interfaces in the network: ${e} (not offered)`);
+        }
+        if (devices.length) {
+            this.log.info(
+                `Web interfaces in the network offered to the fleet management: ${devices.map(d => `${d.name} (${d.secure ? 'https://' : ''}${d.address}:${d.port})`).join(', ')}`,
+            );
+        }
     }
 
     private knxGateway(): Promise<KnxGateway | null> {
@@ -1517,11 +1540,13 @@ class BeeAdapter extends utils.Adapter {
                     ? 'KNX ist am Gerät nicht freigegeben'
                     : t.kind === 'lan'
                       ? 'Geräte im Netz sind am Gerät nicht freigegeben'
-                      : !isConsole
-                        ? `Fernzugriff auf ${ACCESS_LABEL[t.kind]} ist am Gerät abgeschaltet`
-                        : this.config.allowConsole === true
-                          ? 'Die Konsole braucht Linux mit script (util-linux)'
-                          : 'Die Konsole ist am Gerät nicht freigegeben';
+                      : t.kind === 'web'
+                        ? 'Am Gerät ist keine Weboberfläche im Netz eingetragen'
+                        : !isConsole
+                          ? `Fernzugriff auf ${ACCESS_LABEL[t.kind]} ist am Gerät abgeschaltet`
+                          : this.config.allowConsole === true
+                            ? 'Die Konsole braucht Linux mit script (util-linux)'
+                            : 'Die Konsole ist am Gerät nicht freigegeben';
         } else if (t.kind === 'lan') {
             // the device the server names, only inside what the owner allows here
             const own = ownNetworks();
@@ -1559,6 +1584,19 @@ class BeeAdapter extends utils.Adapter {
         } else if (isConsole) {
             if (this.tunnels.size >= 4) {
                 refusal = 'Zu viele gleichzeitige Fernzugriffe auf dem Gerät';
+            }
+        } else if (t.kind === 'web') {
+            // only a device of the table of this instance, by its name: the server never names an address
+            const device = webDevices(this.config.webDevices).devices.find(d => d.name === t.instance);
+            const resolved = device ? await resolveWebDevice(device) : null;
+            if (!device) {
+                refusal = `${t.instance || 'Das Gerät'} steht nicht in der Liste der Weboberflächen am Gerät`;
+            } else if (typeof resolved === 'string') {
+                refusal = resolved;
+            } else if (this.tunnels.size >= 4) {
+                refusal = 'Zu viele gleichzeitige Fernzugriffe auf dem Gerät';
+            } else {
+                target = resolved;
             }
         } else {
             // only an instance of this kind on this host, whatever the server asks for
@@ -1598,7 +1636,7 @@ class BeeAdapter extends utils.Adapter {
         } else {
             this.tunnels.set(t.id, client);
             this.log.info(
-                `Remote access to ${ACCESS_LABEL[t.kind]}${target ? ` (${target.instance})` : ''}${knx ? ` (gateway ${gatewayText(knx.gateway)})` : ''}${lan ? ` ${lan.name} (${lan.host}, ports ${lan.ports.join(', ')})` : ''} ${resumed ? 'resumed' : 'opened'} by ${t.by} until ${new Date(t.expiresAt).toLocaleTimeString()}: ${t.purpose}`,
+                `Remote access to ${ACCESS_LABEL[t.kind]}${target ? ` (${target.instance}${t.kind === 'web' ? `, ${target.secure ? 'https://' : ''}${target.host}:${target.port}` : ''})` : ''}${knx ? ` (gateway ${gatewayText(knx.gateway)})` : ''}${lan ? ` ${lan.name} (${lan.host}, ports ${lan.ports.join(', ')})` : ''} ${resumed ? 'resumed' : 'opened'} by ${t.by} until ${new Date(t.expiresAt).toLocaleTimeString()}: ${t.purpose}`,
             );
         }
         client.start();
@@ -1705,6 +1743,7 @@ class BeeAdapter extends utils.Adapter {
         inv.accessTargets = {
             admin: describeTargets(await findTargets(this, 'admin')),
             vis: describeTargets(await findTargets(this, 'vis')),
+            web: describeWebDevices(webDevices(this.config.webDevices).devices),
         };
         // the remote access opens a project of vis-2 directly
         if (inv.accessTargets.vis?.length) {

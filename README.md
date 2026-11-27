@@ -44,7 +44,7 @@ If the owner installs adapters that are not part of the profile, the agent repor
 
 An asset can also run without profile (mode `free`, set in the fleet management for installations that are too different for a profile). The agent then gets no profile and changes nothing by itself; versions are installed with the command `adapter`. Every version of the agent handles this like an asset without profile.
 
-### Remote access to admin, vis-2, the console, KNX and devices in the network
+### Remote access to admin, vis-2, the console, KNX, devices and web interfaces in the network
 
 A technician of the fleet manager can open admin or vis-2 of the system from the fleet management, without ioBroker.pro and without open ports on the device:
 
@@ -59,6 +59,8 @@ The owner can switch off each kind in the tab *Remote access*; the agent then re
 **KNX for ETS.** Off until the owner allows it (*Allow ETS to reach the KNX gateway*). A technician can then program the KNX installation with ETS from afar: the program bee-knx (Windows, downloaded in the fleet management) offers a KNXnet/IP interface on 127.0.0.1:3671 of the technician's PC, the server carries it to the agent, and the agent connects to the KNX/IP gateway set in the tab, and to nothing else in this network. Without a gateway set, it takes the one of an instance of knx or openknx. The connection to the gateway is TCP or UDP (*Automatic*: TCP if the gateway answers within 2 seconds, otherwise UDP; for UDP the agent puts its own address into the frames, as the gateway must answer to it). At most 4 tunnels per session; when the session ends, the agent closes the tunnels to the gateway.
 
 **Devices in the network.** Off until the owner allows it (*Allow devices in the network to be reached*). A technician can then program a controller in this network with its own tool, e.g. a LOGO! with LOGO!Soft Comfort or an S7 with TIA Portal: the fleet management keeps a list of devices per installation, bee-knx on the technician's PC offers each one on an address of its own (`127.0.0.<n>`, same ports), and every connection of the tool reaches the agent as one stream naming its port. The agent connects only to private addresses in the *allowed networks* (empty: the own subnets of this system), never to this system itself, and only on the *allowed ports* (empty: any). Further KNX gateways from the list of the fleet management need *Allow ETS to reach the KNX gateway* and an address in the allowed networks. At most 16 connections at a time; when the session ends, they are closed.
+
+**Web interfaces in the network.** The owner lists devices of this network whose web interface the fleet management may open in the browser, in the table *Web interfaces in the network* (tab *Remote access*): a name and the address as `IP:port`, e.g. `Router | 192.168.0.1`, `Inverter | 192.168.0.20:8080`, `Camera | https://192.168.0.30`. Without port 80; `https://` or port 443 means HTTPS (the certificate of the device is not checked). A host name of the network works too. Only private addresses (10.x, 172.16-31.x, 192.168.x, 169.254.x) or this system itself (127.0.0.1, e.g. Node-RED on port 1880); a host name must resolve to one of them. At most 32 lines; a line is the consent, an empty table offers nothing, and lines that cannot be used are named in the log. The agent reports the names with address, port and HTTPS in the inventory; the technician opens a device by its name as admin, and the server names only the device, never an address: the agent connects to the address of its own table and nowhere else. The device asks for its own login.
 
 ### AI access (MCP)
 
@@ -98,6 +100,7 @@ From the asset detail a technician (permission `operate`) can start, stop and re
 | | allow the console | a shell on this system for the fleet manager (off by default, Linux only) |
 | | allow ETS to reach the KNX gateway, KNX/IP gateway, connection | KNX for ETS (off by default), see above; the gateway as IP or host with `:port`, empty: from the adapter knx or openknx |
 | | allow devices in the network to be reached, allowed networks, allowed ports | devices in the network (off by default), see above; networks as `192.168.0.0/24` or single addresses, ports as `102, 10005` |
+| | web interfaces in the network | table of name and `IP:port` (empty by default), see above, e.g. `Router`, `192.168.0.1` |
 | | allow the AI access, user, write states, change objects | the MCP server of ioBroker for an AI of the fleet manager (off by default; reading only unless allowed), see above |
 
 ## States
@@ -134,6 +137,10 @@ npm test          # unit tests of planner, preflight and diff
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+
+### **WORK IN PROGRESS**
+
+- Web interfaces in the network: a table of name and `IP:port` in the tab *Remote access*; the fleet management opens each device by its name in the browser, through the tunnel, and only the addresses of this table (private addresses or this system)
 
 ### 0.5.3 (2026-11-27)
 
