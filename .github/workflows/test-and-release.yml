@@ -48,50 +48,24 @@ jobs:
                   build: true
 
     deploy:
-        needs: [check-and-lint, adapter-tests]
-        if: github.event_name == 'push' && startsWith(github.ref, 'refs/tags/v')
-        runs-on: ubuntu-latest
+        needs: [ check-and-lint, adapter-tests ]
+
+        # Permissions are required to create GitHub releases and npm trusted publishing
         permissions:
-            # GitHub release
             contents: write
-            # npm trusted publishing (OIDC)
             id-token: write
+
+        # Trigger this step only when a commit on any branch is tagged with a version number
+        if: |
+            contains(github.event.head_commit.message, '[skip ci]') == false &&
+            github.event_name == 'push' &&
+            startsWith(github.ref, 'refs/tags/v')
+
+        runs-on: ubuntu-latest
+
         steps:
-            - uses: actions/checkout@v4
-            - uses: actions/setup-node@v4
+            - uses: ioBroker/testing-action-deploy@v1
               with:
-                  node-version: 24.x
-                  registry-url: https://registry.npmjs.org
-            # trusted publishing needs npm 11.5.1 or newer
-            - run: npm install -g npm@latest
-            - run: npm ci
-            - run: npm run build
-
-            - name: Tag, package.json and io-package.json name the same version
-              run: |
-                  TAG="${GITHUB_REF_NAME#v}"
-                  PKG=$(node -p "require('./package.json').version")
-                  IO=$(node -p "require('./io-package.json').common.version")
-                  if [ "$TAG" != "$PKG" ] || [ "$TAG" != "$IO" ]; then
-                      echo "Tag $TAG, package.json $PKG, io-package.json $IO"
-                      exit 1
-                  fi
-
-            - name: Publish on npm
-              # build/ comes from the step above; provenance is added by npm for a public repository
-              run: |
-                  if [[ "$GITHUB_REF_NAME" == *-* ]]; then
-                      npm publish --tag next
-                  else
-                      npm publish
-                  fi
-
-            - name: GitHub release with the changelog of this version
-              env:
-                  GH_TOKEN: ${{ github.token }}
-              run: |
-                  TAG="${GITHUB_REF_NAME#v}"
-                  awk -v v="### ${TAG}" 'index($0, v) == 1 { f = 1; next } /^##/ { if (f) exit } f' README.md > notes.md
-                  PRE=""
-                  if [[ "$TAG" == *-* ]]; then PRE="--prerelease"; fi
-                  gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file notes.md $PRE
+                  node-version: '24.x'
+                  build: true
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
