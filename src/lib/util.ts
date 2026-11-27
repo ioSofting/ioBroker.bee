@@ -94,6 +94,9 @@ export function inWindow(date: Date, start: string, end: string): boolean {
     return s < e ? now >= s && now < e : now >= s || now < e;
 }
 
-export function sleep(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
+/**
+ * Timers of the adapter: js-controller clears them when the adapter stops, so nothing fires into an
+ * adapter that is gone. While it stops, setTimeout and setInterval give undefined and start nothing.
+ * The modules get them from the adapter, the tests those of Node.js.
+ */
+export type Timers = Pick<ioBroker.Adapter, 'setTimeout' | 'clearTimeout' | 'setInterval' | 'clearInterval'>;

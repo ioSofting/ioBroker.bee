@@ -6,6 +6,7 @@ import WebSocket, { WebSocketServer } from 'ws';
 import type { TunnelRequest } from '../src/lib/protocol';
 import { chooseTarget, describeTargets, findTargets, trustedTunnelUrl, TunnelClient } from '../src/lib/remote';
 import { CLOSE, Mux, REFUSE_HEADER } from '../src/lib/tunnel';
+import { nodeTimers } from './timers';
 
 const silent = {
     debug() {},
@@ -101,6 +102,7 @@ describe('remote access tunnel of the agent', () => {
             refusal: null,
             ca: [],
             log: silent,
+            timers: nodeTimers,
             onEnd: (_c, reason) => ended.push(reason),
         });
         client.start();
@@ -129,6 +131,7 @@ describe('remote access tunnel of the agent', () => {
             refusal: 'Fernzugriff auf admin ist am Gerät abgeschaltet',
             ca: [],
             log: silent,
+            timers: nodeTimers,
             onEnd: (_c, reason) => ended.push(reason),
         });
         client.start();
@@ -149,6 +152,7 @@ describe('remote access tunnel of the agent', () => {
             refusal: null,
             ca: [],
             log: silent,
+            timers: nodeTimers,
             onEnd: (_c, reason) => ended.push(reason),
         }).start();
         await waitFor(() => ended[0]);

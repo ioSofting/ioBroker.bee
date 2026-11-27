@@ -12,7 +12,7 @@ import {
     type StateMessage,
     type Topic,
 } from './protocol';
-import { decodePayload, encodePayload } from './util';
+import { decodePayload, encodePayload, type Timers } from './util';
 
 /**
  * Control channel to the platform broker. MQTT over TLS with the device certificate.
@@ -45,12 +45,12 @@ export function trustedCas(platformCa: string): string[] {
 export class Transport extends EventEmitter<TransportEvents> {
     private client: MqttClient | null = null;
     private backoff = MIN_BACKOFF;
-    private timer: NodeJS.Timeout | null = null;
+    private timer: ioBroker.Timeout | undefined;
     private stopped = false;
 
     constructor(
         private readonly creds: EnrollResponse,
-        private readonly opts: { keepalive: number; log: ioBroker.Logger },
+        private readonly opts: { keepalive: number; log: ioBroker.Logger; timers: Timers },
     ) {
         super();
     }
@@ -66,10 +66,8 @@ export class Transport extends EventEmitter<TransportEvents> {
 
     async stop(): Promise<void> {
         this.stopped = true;
-        if (this.timer) {
-            clearTimeout(this.timer);
-            this.timer = null;
-        }
+        this.opts.timers.clearTimeout(this.timer);
+        this.timer = undefined;
         const client = this.client;
         this.client = null;
         if (client) {
@@ -98,8 +96,8 @@ export class Transport extends EventEmitter<TransportEvents> {
         const delay = Math.round(this.backoff * (0.8 + Math.random() * 0.4));
         this.opts.log.info(`Broker not reachable, next attempt in ${Math.round(delay / 1000)} s`);
         this.backoff = Math.min(this.backoff * 2, MAX_BACKOFF);
-        this.timer = setTimeout(() => {
-            this.timer = null;
+        this.timer = this.opts.timers.setTimeout(() => {
+            this.timer = undefined;
             this.connect();
         }, delay);
     }

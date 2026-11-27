@@ -2,6 +2,7 @@ import dgram from 'node:dgram';
 import { lookup } from 'node:dns/promises';
 import net from 'node:net';
 import type { Duplex } from 'node:stream';
+import type { Timers } from './util';
 
 /**
  * KNX for ETS from afar: the fleet management carries the connections of ETS (through the program bee-knx on
@@ -223,6 +224,7 @@ function disconnectRequest(channel: number, ip: string, port: number): Buffer {
 
 export interface KnxRelayOptions {
     log: ioBroker.Logger;
+    timers: Timers;
     /** Called once the relay is over */
     onEnd?: () => void;
 }
@@ -250,19 +252,19 @@ export class KnxConnector {
         stream.on('close', end);
         stream.on('error', () => {});
         if (this.chosen === 'udp') {
-            void relayUdp(stream, this.gateway, this.opts.log);
+            void relayUdp(stream, this.gateway, this.opts);
             return;
         }
         const socket = net.connect({ host: this.gateway.host, port: this.gateway.port });
         socket.setNoDelay(true);
         let connected = false;
         const probe =
-            this.chosen === null ? setTimeout(() => socket.destroy(new Error('timeout')), TCP_PROBE_MS) : null;
+            this.chosen === null
+                ? this.opts.timers.setTimeout(() => socket.destroy(new Error('timeout')), TCP_PROBE_MS)
+                : undefined;
         socket.once('connect', () => {
             connected = true;
-            if (probe) {
-                clearTimeout(probe);
-            }
+            this.opts.timers.clearTimeout(probe);
             if (this.chosen !== 'tcp') {
                 this.opts.log.debug(`KNX: gateway ${gatewayText(this.gateway)} speaks TCP`);
             }
@@ -271,13 +273,11 @@ export class KnxConnector {
             socket.pipe(stream);
         });
         socket.once('error', err => {
-            if (probe) {
-                clearTimeout(probe);
-            }
+            this.opts.timers.clearTimeout(probe);
             if (this.chosen === null && !connected) {
                 this.opts.log.debug(`KNX: no TCP at ${gatewayText(this.gateway)} (${err.message}), taking UDP`);
                 this.chosen = 'udp';
-                void relayUdp(stream, this.gateway, this.opts.log);
+                void relayUdp(stream, this.gateway, this.opts);
                 return;
             }
             this.opts.log.info(`KNX: gateway ${gatewayText(this.gateway)}: ${err.message}`);
@@ -307,7 +307,12 @@ async function localAddressTowards(ip: string, port: number): Promise<string> {
 }
 
 /** One stream to a gateway with UDP only */
-export async function relayUdp(stream: Duplex, gw: KnxGateway, log: ioBroker.Logger): Promise<void> {
+export async function relayUdp(
+    stream: Duplex,
+    gw: KnxGateway,
+    opts: Pick<KnxRelayOptions, 'log' | 'timers'>,
+): Promise<void> {
+    const log = opts.log;
     let gatewayIp: string;
     let localIp: string;
     try {
@@ -335,7 +340,10 @@ export async function relayUdp(stream: Duplex, gw: KnxGateway, log: ioBroker.Log
         for (const channel of channels.keys()) {
             socket.send(disconnectRequest(channel, localIp, localPort), control.port, control.address);
         }
-        setTimeout(() => socket.close(), 200).unref();
+        if (!opts.timers.setTimeout(() => socket.close(), 200)) {
+            // the adapter stops: no time left for the answers
+            socket.close();
+        }
         if (!stream.destroyed) {
             stream.destroy();
         }

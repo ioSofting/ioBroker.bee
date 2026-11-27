@@ -16,11 +16,15 @@ import { packageVersion } from '../src/lib/inventory';
 import type { HostInventory, JobStep } from '../src/lib/protocol';
 import { softwareRefusal, type SoftwareContext } from '../src/lib/softwareCommand';
 import { executeStep, type StepHost } from '../src/lib/steps';
+import { nodeTimers } from './timers';
 
 describe('CLI on another host (cmdExec)', () => {
     it('collects the output until cmdExit and ignores the repeated exit', async () => {
         const sent: { host: string; command: string; message: { id: string; data: string } }[] = [];
-        const exec = new HostExec((host, command, message) => sent.push({ host, command, message: message as never }));
+        const exec = new HostExec(
+            (host, command, message) => sent.push({ host, command, message: message as never }),
+            nodeTimers,
+        );
         const done = exec.run('frigate', ['upgrade', 'frigate@3.3.0', '--yes']);
         assert.equal(sent[0].host, 'system.host.frigate');
         assert.equal(sent[0].command, 'cmdExec');
@@ -38,12 +42,12 @@ describe('CLI on another host (cmdExec)', () => {
     });
 
     it('refuses arguments with spaces: js-controller splits at them', async () => {
-        const exec = new HostExec(() => assert.fail('nothing to send'));
+        const exec = new HostExec(() => assert.fail('nothing to send'), nodeTimers);
         assert.equal((await exec.run('frigate', ['url', 'a b'])).code, 1);
     });
 
     it('gives up after the timeout and when the agent stops', async () => {
-        const exec = new HostExec(() => {});
+        const exec = new HostExec(() => {}, nodeTimers);
         assert.equal((await exec.run('frigate', ['list'], undefined, 10)).code, 1);
         const pending = exec.run('frigate', ['list']);
         exec.stop();

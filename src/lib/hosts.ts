@@ -1,7 +1,7 @@
 import type { CallResult } from './steps';
 import type { AdapterInventory, AgentCommand, HostInventory, InstanceInventory, LogFile } from './protocol';
 import { controllerUpgradable } from './commands';
-import { compareVersions } from './util';
+import { compareVersions, type Timers } from './util';
 
 /**
  * The other hosts of a multihost system. The agent runs on one host and maintains the others through their
@@ -28,14 +28,18 @@ function isObject(value: unknown): value is Record<string, unknown> {
 export class HostExec {
     private readonly pending = new Map<
         string,
-        { out: string[]; resolve: (r: CallResult) => void; timer: NodeJS.Timeout }
+        { out: string[]; resolve: (r: CallResult) => void; timer: ioBroker.Timeout | undefined }
     >();
     private counter = 0;
 
     /**
      * @param send sends the host command, without waiting for an answer
+     * @param timers timers of the adapter
      */
-    public constructor(private readonly send: (host: string, command: string, message: unknown) => void) {}
+    public constructor(
+        private readonly send: (host: string, command: string, message: unknown) => void,
+        private readonly timers: Timers,
+    ) {}
 
     /**
      * Runs one call of the CLI on the host
@@ -56,7 +60,7 @@ export class HostExec {
         }
         const id = `bee-${Date.now()}-${++this.counter}`;
         return new Promise(resolve => {
-            const timer = setTimeout(() => {
+            const timer = this.timers.setTimeout(() => {
                 const p = this.pending.get(id);
                 this.pending.delete(id);
                 resolve({
@@ -87,7 +91,7 @@ export class HostExec {
             return typeof m?.id === 'string' && m.id.startsWith('bee-');
         }
         if (msg.command === 'cmdExit') {
-            clearTimeout(p.timer);
+            this.timers.clearTimeout(p.timer);
             this.pending.delete(m!.id as string);
             p.resolve({ code: typeof m!.data === 'number' ? m!.data : 1, output: `${p.out.join('\n')}\n` });
         } else if (typeof m!.data === 'string' || typeof m!.data === 'number') {
@@ -99,7 +103,7 @@ export class HostExec {
     /** Ends all waiting calls (the agent stops) */
     public stop(): void {
         for (const [id, p] of this.pending) {
-            clearTimeout(p.timer);
+            this.timers.clearTimeout(p.timer);
             p.resolve({ code: 1, output: `${p.out.join('\n')}\nDer Agent wurde beendet` });
             this.pending.delete(id);
         }

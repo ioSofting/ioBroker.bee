@@ -3,6 +3,7 @@ import tls from 'node:tls';
 import WebSocket from 'ws';
 import type { AccessInstance, AccessKind, TunnelRequest } from './protocol';
 import { CLOSE, Mux, REFUSE_HEADER, type TunnelStream } from './tunnel';
+import type { Timers } from './util';
 
 /**
  * Remote access to admin and vis-2 without ioBroker.pro and without open ports: on request of the server
@@ -138,6 +139,7 @@ export interface TunnelClientOptions {
     /** Trusted CAs for the server certificate */
     ca: string[];
     log: ioBroker.Logger;
+    timers: Timers;
     onEnd: (client: TunnelClient, reason: string) => void;
 }
 
@@ -153,9 +155,9 @@ export class TunnelClient {
     private mux: Mux | null = null;
     private stopped = false;
     private backoff = 2000;
-    private retryTimer: NodeJS.Timeout | null = null;
-    private readonly endTimer: NodeJS.Timeout;
-    private watchdog: NodeJS.Timeout | null = null;
+    private retryTimer: ioBroker.Timeout | undefined;
+    private readonly endTimer: ioBroker.Timeout | undefined;
+    private watchdog: ioBroker.Interval | undefined;
     private lastPing = 0;
 
     constructor(
@@ -163,7 +165,7 @@ export class TunnelClient {
         private readonly opts: TunnelClientOptions,
     ) {
         const lifetime = Math.max(0, Math.min(req.expiresAt - Date.now(), MAX_SESSION));
-        this.endTimer = setTimeout(() => this.stop('expired'), lifetime);
+        this.endTimer = opts.timers.setTimeout(() => this.stop('expired'), lifetime);
     }
 
     /** Payload bytes so far */
@@ -180,13 +182,9 @@ export class TunnelClient {
             return;
         }
         this.stopped = true;
-        clearTimeout(this.endTimer);
-        if (this.retryTimer) {
-            clearTimeout(this.retryTimer);
-        }
-        if (this.watchdog) {
-            clearInterval(this.watchdog);
-        }
+        this.opts.timers.clearTimeout(this.endTimer);
+        this.opts.timers.clearTimeout(this.retryTimer);
+        this.opts.timers.clearInterval(this.watchdog);
         this.mux?.close('Fernzugriff beendet');
         if (this.ws && this.ws.readyState === WebSocket.OPEN) {
             this.ws.close(1000, 'agent stop');
@@ -219,7 +217,7 @@ export class TunnelClient {
                 frame => ws.send(frame),
                 stream => this.onStream(stream),
             );
-            this.watchdog ??= setInterval(() => {
+            this.watchdog ??= this.opts.timers.setInterval(() => {
                 if (this.ws?.readyState === WebSocket.OPEN && Date.now() - this.lastPing > DEAD_AFTER) {
                     this.opts.log.info('Remote access: no sign of the server, reconnecting');
                     this.ws.terminate();
@@ -253,8 +251,8 @@ export class TunnelClient {
             const delay = this.backoff;
             this.backoff = Math.min(this.backoff * 2, MAX_BACKOFF);
             this.opts.log.info(`Remote access: connection lost, reconnecting in ${Math.round(delay / 1000)} s`);
-            this.retryTimer = setTimeout(() => {
-                this.retryTimer = null;
+            this.retryTimer = this.opts.timers.setTimeout(() => {
+                this.retryTimer = undefined;
                 this.connect();
             }, delay);
         });

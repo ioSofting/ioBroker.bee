@@ -1,5 +1,5 @@
 import { MAX_MCP_RESULT, type AiAccess, type McpReply, type McpRequest, type McpTool } from './protocol';
-import { compareVersions } from './util';
+import { compareVersions, type Timers } from './util';
 
 /**
  * AI access of the fleet management (command 'mcp'). An AI of the integrator works with the MCP server of ioBroker
@@ -104,7 +104,7 @@ export class AiAccessManager {
     private readonly sessions = new Map<string, AiSessionInfo>();
     private client: McpClient | null = null;
     private starting: Promise<McpClient> | null = null;
-    private readonly timer: NodeJS.Timeout;
+    private readonly timer: ioBroker.Interval | undefined;
     /** Why the MCP server could not be started the last time */
     loadError: string | undefined;
 
@@ -117,11 +117,11 @@ export class AiAccessManager {
             log: { info: (msg: string) => void; warn: (msg: string) => void; debug: (msg: string) => void };
             /** the open sessions changed (states for the owner) */
             onChange: () => void;
+            timers: Timers;
             now?: () => number;
         },
     ) {
-        this.timer = setInterval(() => void this.expire(), CHECK_MS);
-        this.timer.unref?.();
+        this.timer = opts.timers.setInterval(() => void this.expire(), CHECK_MS);
     }
 
     private now(): number {
@@ -253,7 +253,7 @@ export class AiAccessManager {
     }
 
     async stop(): Promise<void> {
-        clearInterval(this.timer);
+        this.opts.timers.clearInterval(this.timer);
         this.sessions.clear();
         await this.stopClient();
     }

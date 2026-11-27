@@ -3,6 +3,7 @@ import { tmpdir } from 'node:os';
 import { describe, it } from 'node:test';
 import { findScript, loginShell, parentOf, startShell } from '../src/lib/console';
 import { CONSOLE, ConsoleReader, consoleMessage, Mux, resizeMessage, type TunnelStream } from '../src/lib/tunnel';
+import { nodeTimers } from './timers';
 
 const silent = {
     debug() {},
@@ -32,7 +33,7 @@ function shellThroughTunnel(onEnd: (result: string) => void): {
     let server: Mux | null = null;
     const agent = new Mux(
         frame => setImmediate(() => server!.receive(frame)),
-        s => startShell(s, { cwd: tmpdir(), log: silent, by: 'test', onEnd }),
+        s => startShell(s, { cwd: tmpdir(), log: silent, by: 'test', timers: nodeTimers, onEnd }),
     );
     server = new Mux(
         frame => setImmediate(() => agent.receive(frame)),

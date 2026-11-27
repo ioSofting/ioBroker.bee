@@ -4,6 +4,7 @@ import { readFile, rm, stat } from 'node:fs/promises';
 import os from 'node:os';
 import { basename, join } from 'node:path';
 import type { Duplex } from 'node:stream';
+import { setTimeout as wait } from 'node:timers/promises';
 import {
     ACTION_DONE,
     chooseAdminInstance,
@@ -100,7 +101,7 @@ import {
 } from './lib/remote';
 import { Transport, trustedCas } from './lib/transport';
 import { CONSOLE, consoleMessage, metaPort, type TunnelStream } from './lib/tunnel';
-import { diffFlat, flatten, readJson, sleep, writeJsonAtomic } from './lib/util';
+import { diffFlat, flatten, readJson, writeJsonAtomic } from './lib/util';
 import {
     adapterCommandPaths,
     adapterCommandState,
@@ -189,14 +190,16 @@ class BeeAdapter extends utils.Adapter {
     private desired: DesiredMessage | null = null;
     private control: ControlMessage | null = null;
     private persisted: Persisted = { results: {}, lastResult: null, lastBackup: null, notified: {} };
-    private timers: NodeJS.Timeout[] = [];
-    private enrollTimer: NodeJS.Timeout | null = null;
+    /** Timers of the adapter that onUnload clears before it disconnects (js-controller clears them only afterwards) */
+    private intervals: (ioBroker.Interval | undefined)[] = [];
+    private timeouts: (ioBroker.Timeout | undefined)[] = [];
+    private enrollTimer: ioBroker.Timeout | undefined;
     private enrollBackoff = 30_000;
     private seq = 0;
     private lastFlat: Record<string, unknown> | null = null;
     /** Monitoring of states (lib/monitor); null without rules */
     private monitor: Monitor | null = null;
-    private monitorSendTimer: NodeJS.Timeout | null = null;
+    private monitorSendTimer: ioBroker.Timeout | undefined;
     private uuid = '';
     private errorLog: { ts: number; from: string; message: string }[] = [];
     private errorsSinceHeartbeat = 0;
@@ -222,8 +225,9 @@ class BeeAdapter extends utils.Adapter {
     /** The other hosts of the system as last collected, by name */
     private readonly knownHosts = new Map<string, HostInventory>();
     /** The CLI on the other hosts of the system */
-    private readonly hostExec = new HostExec((host, command, message) =>
-        this.sendToHost(host, command, message as ioBroker.MessagePayload),
+    private readonly hostExec = new HostExec(
+        (host, command, message) => this.sendToHost(host, command, message as ioBroker.MessagePayload),
+        this,
     );
 
     public constructor(options: Partial<utils.AdapterOptions> = {}) {
@@ -313,6 +317,7 @@ class BeeAdapter extends utils.Adapter {
             nodeVersion: process.versions.node,
             create: settings => this.startMcp(settings),
             log: this.log,
+            timers: this,
             onChange: () => void this.updateAccessStates(),
         });
 
@@ -334,10 +339,12 @@ class BeeAdapter extends utils.Adapter {
             await this.tryEnroll();
         }
 
-        this.timers.push(setInterval(() => void this.jobs?.poll(), 2000));
-        this.timers.push(setInterval(() => void this.heartbeat(), (this.config.heartbeatMinutes || 60) * 60_000));
-        this.timers.push(
-            setInterval(
+        this.intervals.push(this.setInterval(() => void this.jobs?.poll(), 2000));
+        this.intervals.push(
+            this.setInterval(() => void this.heartbeat(), (this.config.heartbeatMinutes || 60) * 60_000),
+        );
+        this.intervals.push(
+            this.setInterval(
                 () => {
                     void this.sendInventory(false);
                     void this.reconcile();
@@ -350,19 +357,21 @@ class BeeAdapter extends utils.Adapter {
     private async onUnload(callback: () => void): Promise<void> {
         this.unloading = true;
         try {
-            this.timers.forEach(t => clearInterval(t));
+            this.intervals.forEach(t => this.clearInterval(t));
+            this.timeouts.forEach(t => this.clearTimeout(t));
+            this.clearTimeout(this.enrollTimer);
+            this.clearTimeout(this.monitorSendTimer);
             this.hostExec.stop();
-            if (this.enrollTimer) {
-                clearTimeout(this.enrollTimer);
-            }
             // the sessions stay in tunnels.json and are resumed after the restart
             for (const client of [...this.tunnels.values()]) {
                 client.stop('agent stops');
             }
+            // While the adapter stops, its own timers start nothing (this.delay never resolves), so the
+            // longest waits here are timers of Node.js, which do not hold the process.
             // AI sessions come back with their next request
-            await Promise.race([this.ai?.stop(), new Promise(resolve => setTimeout(resolve, 500))]);
+            await Promise.race([this.ai?.stop(), wait(500, undefined, { ref: false })]);
             // js-controller kills slow adapters; the Last Will covers a disconnect that does not finish in time
-            await Promise.race([this.transport?.stop(), new Promise(resolve => setTimeout(resolve, 800))]);
+            await Promise.race([this.transport?.stop(), wait(800, undefined, { ref: false })]);
             await this.setState('info.connection', false, true);
         } finally {
             callback();
@@ -418,8 +427,8 @@ class BeeAdapter extends utils.Adapter {
                 `Anmeldung fehlgeschlagen, neuer Versuch in ${Math.round(delay / 60000)} min`,
                 true,
             );
-            this.enrollTimer = setTimeout(() => {
-                this.enrollTimer = null;
+            this.enrollTimer = this.setTimeout(() => {
+                this.enrollTimer = undefined;
                 void this.tryEnroll();
             }, delay);
         }
@@ -428,7 +437,11 @@ class BeeAdapter extends utils.Adapter {
     // ------------------------------------------------------------------ transport
 
     private startTransport(): void {
-        const transport = new Transport(this.creds!, { keepalive: this.config.keepaliveSeconds || 300, log: this.log });
+        const transport = new Transport(this.creds!, {
+            keepalive: this.config.keepaliveSeconds || 300,
+            log: this.log,
+            timers: this,
+        });
         this.transport = transport;
         transport.on('connected', () => void this.onConnected());
         transport.on('disconnected', () => {
@@ -608,9 +621,9 @@ class BeeAdapter extends utils.Adapter {
      */
     private sendHost(host: string, command: string, message: unknown, timeoutMs: number): Promise<unknown> {
         return new Promise(resolve => {
-            const timer = setTimeout(() => resolve(undefined), timeoutMs);
+            const timer = this.setTimeout(() => resolve(undefined), timeoutMs);
             this.sendToHost(`system.host.${host}`, command, message as ioBroker.MessagePayload, answer => {
-                clearTimeout(timer);
+                this.clearTimeout(timer);
                 resolve(answer);
             });
         });
@@ -844,7 +857,7 @@ class BeeAdapter extends utils.Adapter {
     /** Sends the inventory again a while after a command, when the instances show its effect */
     private inventorySoon(): void {
         for (const ms of [5_000, 30_000]) {
-            this.timers.push(setTimeout(() => void this.sendInventory(false), ms));
+            this.timeouts.push(this.setTimeout(() => void this.sendInventory(false), ms));
         }
     }
 
@@ -964,7 +977,7 @@ class BeeAdapter extends utils.Adapter {
         if (remote) {
             // the inventory of the other hosts shows the new version once it runs again
             for (const ms of [3, 6, 10, 15, 20].map(m => m * 60_000)) {
-                this.timers.push(setTimeout(() => void this.sendInventory(false), ms));
+                this.timeouts.push(this.setTimeout(() => void this.sendInventory(false), ms));
             }
         }
     }
@@ -1225,7 +1238,7 @@ class BeeAdapter extends utils.Adapter {
                     this.inventorySoon();
                     return;
                 }
-                await sleep(2000);
+                await this.delay(2000);
             }
         } finally {
             this.adapterWaiting = false;
@@ -1286,8 +1299,8 @@ class BeeAdapter extends utils.Adapter {
                 restart: !!req?.restart,
             }),
             new Promise(resolve => {
-                this.timers.push(
-                    setTimeout(
+                this.timeouts.push(
+                    this.setTimeout(
                         () => resolve({ error: 'Keine Antwort von js-controller nach 30 Minuten' }),
                         30 * 60_000,
                     ),
@@ -1361,7 +1374,7 @@ class BeeAdapter extends utils.Adapter {
         await this.sendHost(hostName, 'getRepository', { update: false }, 120_000);
         // it answers first and lists afterwards
         for (let i = 0; i < 15 && ((await this.getForeignStateAsync(id))?.ts ?? 0) <= before; i++) {
-            await sleep(2_000);
+            await this.delay(2_000);
         }
     }
 
@@ -1463,6 +1476,7 @@ class BeeAdapter extends utils.Adapter {
             cwd: join(utils.controllerDir, '..', '..'),
             log: this.log,
             by: t.by,
+            timers: this,
             onEnd: () => {
                 const n = (this.shells.get(t.id) ?? 1) - 1;
                 if (n > 0) {
@@ -1540,7 +1554,7 @@ class BeeAdapter extends utils.Adapter {
             } else if (this.tunnels.size >= 4) {
                 refusal = 'Zu viele gleichzeitige Fernzugriffe auf dem Gerät';
             } else {
-                knx = new KnxConnector(gateway, { log: this.log });
+                knx = new KnxConnector(gateway, { log: this.log, timers: this });
             }
         } else if (isConsole) {
             if (this.tunnels.size >= 4) {
@@ -1565,6 +1579,7 @@ class BeeAdapter extends utils.Adapter {
             refusal,
             ca: trustedCas(this.creds?.ca || ''),
             log: this.log,
+            timers: this,
             onEnd: (c, reason) => {
                 if (this.tunnels.get(t.id) === c) {
                     this.tunnels.delete(t.id);
@@ -1812,7 +1827,7 @@ class BeeAdapter extends utils.Adapter {
             `Monitoring ${rules.length} ${rules.length === 1 ? 'rule' : 'rules'} on ${monitor.stateIds().length} states`,
         );
         // the delays and "no update for n minutes" run out without any new value
-        this.timers.push(setInterval(() => this.checkMonitor(), 10_000));
+        this.intervals.push(this.setInterval(() => this.checkMonitor(), 10_000));
         this.checkMonitor();
     }
 
@@ -1829,11 +1844,10 @@ class BeeAdapter extends utils.Adapter {
         }
         if (changed.length && !this.monitorSendTimer) {
             // several rules on one state flip together: one inventory for all
-            this.monitorSendTimer = setTimeout(() => {
-                this.monitorSendTimer = null;
+            this.monitorSendTimer = this.setTimeout(() => {
+                this.monitorSendTimer = undefined;
                 void this.sendInventory(false);
             }, 2_000);
-            this.timers.push(this.monitorSendTimer);
         }
     }
 
@@ -2007,7 +2021,7 @@ class BeeAdapter extends utils.Adapter {
         await this.sendInventory(false);
         await this.updateInfoStates();
         // the desired state may have changed while the job was running
-        setTimeout(() => void this.reconcile(), 1000);
+        this.timeouts.push(this.setTimeout(() => void this.reconcile(), 1000));
     }
 
     /**

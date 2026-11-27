@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { aiAccess, AiAccessManager, aiUserId, cutResult, type AiSettings, type McpClient } from '../src/lib/ai';
 import { MAX_MCP_RESULT, type McpRequest } from '../src/lib/protocol';
+import { nodeTimers } from './timers';
 
 const SETTINGS: AiSettings = { allowAi: true, aiSetState: false, aiObjectChange: false, aiUser: 'admin' };
 
@@ -41,6 +42,7 @@ function manager(settings: Partial<AiSettings> = {}, nodeVersion = '22.20.0') {
         },
         log: { info: () => {}, warn: () => {}, debug: () => {} },
         onChange: () => void changes++,
+        timers: nodeTimers,
         now: () => now,
     });
     const req = (action: McpRequest['action'], extra: Partial<McpRequest> = {}): McpRequest => ({

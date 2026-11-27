@@ -66,10 +66,14 @@ function run(file: RunnerFile, args: string[]): Promise<{ code: number; output: 
     return new Promise(resolve => {
         const out: string[] = [];
         appendFileSync(file.logFile, `\n[${new Date().toISOString()}] iobroker ${args.join(' ')}\n`);
+        const started = Date.now();
+        // Node.js kills the CLI itself when it takes too long
         const child = spawn(process.execPath, [file.iobroker, ...args], {
             cwd: file.cwd,
             env: { ...process.env, NODE_ENV: 'production' },
             windowsHide: true,
+            timeout: STEP_TIMEOUT,
+            killSignal: 'SIGKILL',
         });
         const onData = (d: Buffer): void => {
             const text = d.toString();
@@ -78,18 +82,13 @@ function run(file: RunnerFile, args: string[]): Promise<{ code: number; output: 
         };
         child.stdout.on('data', onData);
         child.stderr.on('data', onData);
-        const timer = setTimeout(() => {
-            out.push('\nTimeout, process killed');
-            child.kill('SIGKILL');
-        }, STEP_TIMEOUT);
-        child.on('close', code => {
-            clearTimeout(timer);
+        child.on('close', (code, signal) => {
+            if (signal === 'SIGKILL' && Date.now() - started >= STEP_TIMEOUT) {
+                out.push('\nTimeout, process killed');
+            }
             resolve({ code: code ?? 1, output: out.join('') });
         });
-        child.on('error', err => {
-            clearTimeout(timer);
-            resolve({ code: 1, output: err.message });
-        });
+        child.on('error', err => resolve({ code: 1, output: err.message }));
     });
 }
 

@@ -5,40 +5,121 @@
         "news": {
             "0.5.1": {
                 "en": "Another enrollment token in the settings enrolls the device anew, e.g. to move it to an asset of another tenant; before, the agent kept connecting with the old certificate in iobroker-data/bee.0, also after the instance was deleted and added again",
-                "de": "Ein anderes Enrollment-Token in den Einstellungen meldet das Gerät neu an, etwa um es einer Anlage eines anderen Mandanten zuzuordnen; vorher verband sich der Agent weiter mit dem alten Zertifikat aus iobroker-data/bee.0, auch nach dem Löschen und Neuanlegen der Instanz"
+                "de": "Ein anderes Enrollment-Token in den Einstellungen meldet das Gerät neu an, etwa um es einer Anlage eines anderen Mandanten zuzuordnen; vorher verband sich der Agent weiter mit dem alten Zertifikat aus iobroker-data/bee.0, auch nach dem Löschen und Neuanlegen der Instanz",
+                "ru": "Другой токен регистрации в настройках регистрирует устройство заново, напр. чтобы перенести его в установку другого арендатора; раньше агент продолжал подключаться со старым сертификатом из iobroker-data/bee.0, даже после удаления и повторного добавления экземпляра",
+                "pt": "Outro token de registro nas configurações registra o dispositivo de novo, p. ex. para movê-lo para uma instalação de outro locatário; antes, o agente continuava se conectando com o certificado antigo em iobroker-data/bee.0, mesmo depois de a instância ser excluída e adicionada novamente",
+                "nl": "Een ander inschrijvingstoken in de instellingen schrijft het apparaat opnieuw in, bijv. om het naar een installatie van een andere tenant te verplaatsen; voorheen bleef de agent verbinding maken met het oude certificaat in iobroker-data/bee.0, ook nadat de instantie was verwijderd en opnieuw toegevoegd",
+                "fr": "Un autre token d'inscription dans les paramètres inscrit à nouveau l'appareil, p. ex. pour le déplacer vers une installation d'un autre locataire ; auparavant, l'agent continuait de se connecter avec l'ancien certificat de iobroker-data/bee.0, même après la suppression et le nouvel ajout de l'instance",
+                "it": "Un altro token di registrazione nelle impostazioni registra di nuovo il dispositivo, ad es. per spostarlo in un impianto di un altro tenant; prima l'agente continuava a connettersi con il vecchio certificato in iobroker-data/bee.0, anche dopo che l'istanza era stata eliminata e aggiunta di nuovo",
+                "es": "Otro token de inscripción en los ajustes inscribe el dispositivo de nuevo, p. ej. para moverlo a una instalación de otro inquilino; antes, el agente seguía conectándose con el certificado antiguo de iobroker-data/bee.0, incluso después de eliminar y volver a añadir la instancia",
+                "pl": "Inny token rejestracji w ustawieniach rejestruje urządzenie od nowa, np. aby przenieść je do instalacji innego najemcy; wcześniej agent nadal łączył się ze starym certyfikatem z iobroker-data/bee.0, także po usunięciu i ponownym dodaniu instancji",
+                "uk": "Інший токен реєстрації в налаштуваннях реєструє пристрій заново, напр. щоб перенести його до установки іншого орендаря; раніше агент і далі підключався зі старим сертифікатом з iobroker-data/bee.0, навіть після видалення та повторного додавання екземпляра",
+                "zh-cn": "在设置中填入另一个注册 token 会重新注册设备，例如将其转移到另一个租户的设施；此前，代理会继续使用 iobroker-data/bee.0 中的旧证书进行连接，即使删除并重新添加实例后也是如此"
             },
             "0.5.0": {
                 "en": "Devices in the network: a LOGO!, an S7 or another controller in this network can be programmed from afar through bee-knx, and further KNX gateways; off until allowed, only in the allowed networks and ports. Monitoring of states (tab \"Überwachung\"). js-controller upgrade from the fleet management. OS updates with apt-get update first. Only the last three own backups are kept",
-                "de": "Geräte im Netz: Eine LOGO!, eine S7 oder eine andere Steuerung in diesem Netz lässt sich über bee-knx aus der Ferne programmieren, dazu weitere KNX-Gateways; aus, bis es erlaubt wird, nur in den erlaubten Netzen und Ports. Überwachung von Datenpunkten (Tab „Überwachung“). js-controller-Update aus der Flottenverwaltung. OS-Updates mit vorherigem apt-get update. Nur die letzten drei eigenen Sicherungen bleiben"
+                "de": "Geräte im Netz: Eine LOGO!, eine S7 oder eine andere Steuerung in diesem Netz lässt sich über bee-knx aus der Ferne programmieren, dazu weitere KNX-Gateways; aus, bis es erlaubt wird, nur in den erlaubten Netzen und Ports. Überwachung von Datenpunkten (Tab „Überwachung“). js-controller-Update aus der Flottenverwaltung. OS-Updates mit vorherigem apt-get update. Nur die letzten drei eigenen Sicherungen bleiben",
+                "ru": "Устройства в сети: LOGO!, S7 или другой контроллер в этой сети можно удалённо программировать через bee-knx, а также использовать другие шлюзы KNX; отключено, пока не разрешено, и только в разрешённых сетях и портах. Мониторинг состояний (вкладка \"Überwachung\"). Обновление js-controller из системы управления парком. Обновления ОС с предварительным apt-get update. Хранятся только три последние собственные резервные копии",
+                "pt": "Dispositivos na rede: um LOGO!, um S7 ou outro controlador desta rede pode ser programado remotamente através do bee-knx, assim como outros gateways KNX; desativado até ser permitido, apenas nas redes e portas permitidas. Monitoramento de estados (aba \"Überwachung\"). Atualização do js-controller a partir da gestão de frota. Atualizações do SO com apt-get update antes. Apenas os três últimos backups próprios são mantidos",
+                "nl": "Apparaten in het netwerk: een LOGO!, een S7 of een andere besturing in dit netwerk kan via bee-knx op afstand worden geprogrammeerd, evenals verdere KNX-gateways; uitgeschakeld totdat het wordt toegestaan, alleen in de toegestane netwerken en poorten. Bewaking van datapunten (tabblad \"Überwachung\"). Upgrade van js-controller vanuit het vlootbeheer. OS-updates met eerst apt-get update. Alleen de laatste drie eigen back-ups blijven bewaard",
+                "fr": "Appareils du réseau : un LOGO!, un S7 ou un autre automate de ce réseau peut être programmé à distance via bee-knx, ainsi que d'autres passerelles KNX ; désactivé tant que ce n'est pas autorisé, uniquement dans les réseaux et ports autorisés. Surveillance des états (onglet \"Überwachung\"). Mise à niveau de js-controller depuis la gestion de flotte. Mises à jour de l'OS précédées d'un apt-get update. Seules les trois dernières sauvegardes propres sont conservées",
+                "it": "Dispositivi nella rete: un LOGO!, un S7 o un altro controllore in questa rete può essere programmato da remoto tramite bee-knx, così come ulteriori gateway KNX; disattivato finché non viene consentito, solo nelle reti e nelle porte consentite. Monitoraggio degli stati (scheda \"Überwachung\"). Aggiornamento di js-controller dalla gestione della flotta. Aggiornamenti del sistema operativo preceduti da apt-get update. Vengono conservati solo gli ultimi tre backup propri",
+                "es": "Dispositivos en la red: un LOGO!, un S7 u otro controlador de esta red se puede programar de forma remota a través de bee-knx, así como otros gateways KNX; desactivado hasta que se permita, solo en las redes y puertos permitidos. Supervisión de estados (pestaña \"Überwachung\"). Actualización de js-controller desde la gestión de flota. Actualizaciones del SO con apt-get update previo. Solo se conservan las tres últimas copias de seguridad propias",
+                "pl": "Urządzenia w sieci: LOGO!, S7 lub inny sterownik w tej sieci można zdalnie programować przez bee-knx, a także korzystać z kolejnych bramek KNX; wyłączone, dopóki nie zostanie zezwolone, i tylko w dozwolonych sieciach i portach. Monitorowanie stanów (karta \"Überwachung\"). Aktualizacja js-controller z systemu zarządzania flotą. Aktualizacje systemu operacyjnego z wcześniejszym apt-get update. Przechowywane są tylko trzy ostatnie własne kopie zapasowe",
+                "uk": "Пристрої в мережі: LOGO!, S7 або інший контролер у цій мережі можна віддалено програмувати через bee-knx, а також використовувати інші шлюзи KNX; вимкнено, доки не дозволено, і лише в дозволених мережах і портах. Моніторинг станів (вкладка \"Überwachung\"). Оновлення js-controller із системи керування парком. Оновлення ОС із попереднім apt-get update. Зберігаються лише три останні власні резервні копії",
+                "zh-cn": "网络中的设备：可通过 bee-knx 远程编程此网络中的 LOGO!、S7 或其他控制器，以及其他 KNX 网关；在允许之前处于关闭状态，且仅限于允许的网络和端口。数据点监控（选项卡 \"Überwachung\"）。可从设备群管理升级 js-controller。操作系统更新前先执行 apt-get update。仅保留最近三个自身备份"
             },
             "0.4.0": {
                 "en": "KNX for ETS: the fleet management can program the KNX installation with ETS from afar (program bee-knx on the PC); off until allowed, only to the configured gateway. Enrollment URL preset to https://beekeeper.one",
-                "de": "KNX für ETS: Die Flottenverwaltung kann die KNX-Anlage aus der Ferne mit ETS programmieren (Programm bee-knx auf dem PC); aus, bis es erlaubt wird, nur zum eingestellten Gateway. Enrollment-URL voreingestellt auf https://beekeeper.one"
+                "de": "KNX für ETS: Die Flottenverwaltung kann die KNX-Anlage aus der Ferne mit ETS programmieren (Programm bee-knx auf dem PC); aus, bis es erlaubt wird, nur zum eingestellten Gateway. Enrollment-URL voreingestellt auf https://beekeeper.one",
+                "ru": "KNX для ETS: система управления парком может удалённо программировать установку KNX с помощью ETS (программа bee-knx на ПК); отключено, пока не разрешено, и только к настроенному шлюзу. По умолчанию URL регистрации: https://beekeeper.one",
+                "pt": "KNX para ETS: a gestão de frota pode programar a instalação KNX com o ETS remotamente (programa bee-knx no PC); desativado até ser permitido, apenas para o gateway configurado. URL de registro predefinida como https://beekeeper.one",
+                "nl": "KNX voor ETS: het vlootbeheer kan de KNX-installatie met ETS op afstand programmeren (programma bee-knx op de pc); uitgeschakeld totdat het wordt toegestaan, alleen naar de ingestelde gateway. Inschrijvings-URL vooraf ingesteld op https://beekeeper.one",
+                "fr": "KNX pour ETS : la gestion de flotte peut programmer l'installation KNX avec ETS à distance (programme bee-knx sur le PC) ; désactivé tant que ce n'est pas autorisé, uniquement vers la passerelle configurée. URL d'inscription prédéfinie sur https://beekeeper.one",
+                "it": "KNX per ETS: la gestione della flotta può programmare l'impianto KNX con ETS da remoto (programma bee-knx sul PC); disattivato finché non viene consentito, solo verso il gateway configurato. URL di registrazione preimpostato su https://beekeeper.one",
+                "es": "KNX para ETS: la gestión de flota puede programar la instalación KNX con ETS de forma remota (programa bee-knx en el PC); desactivado hasta que se permita, solo hacia el gateway configurado. URL de inscripción preestablecida en https://beekeeper.one",
+                "pl": "KNX dla ETS: system zarządzania flotą może zdalnie programować instalację KNX za pomocą ETS (program bee-knx na komputerze); wyłączone, dopóki nie zostanie zezwolone, i tylko do skonfigurowanej bramki. Domyślny URL rejestracji: https://beekeeper.one",
+                "uk": "KNX для ETS: система керування парком може віддалено програмувати установку KNX за допомогою ETS (програма bee-knx на ПК); вимкнено, доки не дозволено, і лише до налаштованого шлюзу. За замовчуванням URL реєстрації: https://beekeeper.one",
+                "zh-cn": "用于 ETS 的 KNX：设备群管理可使用 ETS 远程对 KNX 系统进行编程（PC 上的 bee-knx 程序）；在允许之前处于关闭状态，且仅限于已配置的网关。注册 URL 预设为 https://beekeeper.one"
             },
             "0.3.2": {
                 "en": "Reports the projects of vis-2, also live on request: the fleet management opens a project directly in the runtime or the editor",
-                "de": "Meldet die Projekte von vis-2, auf Anfrage auch live: die Flottenverwaltung öffnet ein Projekt direkt in der Runtime oder im Editor"
+                "de": "Meldet die Projekte von vis-2, auf Anfrage auch live: die Flottenverwaltung öffnet ein Projekt direkt in der Runtime oder im Editor",
+                "ru": "Передаёт проекты vis-2, по запросу также в реальном времени: система управления парком открывает проект прямо в среде выполнения или в редакторе",
+                "pt": "Reporta os projetos do vis-2, também ao vivo mediante solicitação: a gestão de frota abre um projeto diretamente no runtime ou no editor",
+                "nl": "Meldt de projecten van vis-2, op verzoek ook live: het vlootbeheer opent een project direct in de runtime of de editor",
+                "fr": "Signale les projets de vis-2, également en direct sur demande : la gestion de flotte ouvre un projet directement dans le runtime ou dans l'éditeur",
+                "it": "Comunica i progetti di vis-2, su richiesta anche in tempo reale: la gestione della flotta apre un progetto direttamente nel runtime o nell'editor",
+                "es": "Informa de los proyectos de vis-2, también en directo a petición: la gestión de flota abre un proyecto directamente en el runtime o en el editor",
+                "pl": "Przekazuje projekty vis-2, na żądanie także na żywo: system zarządzania flotą otwiera projekt bezpośrednio w środowisku uruchomieniowym lub w edytorze",
+                "uk": "Передає проєкти vis-2, за запитом також у реальному часі: система керування парком відкриває проєкт безпосередньо в середовищі виконання або в редакторі",
+                "zh-cn": "报告 vis-2 的项目，并可按需实时报告：设备群管理可直接在运行时或编辑器中打开项目"
             },
             "0.3.1": {
                 "en": "The fleet management can load the adapter repositories of the system again, as admin does with \"update adapter list\"",
-                "de": "Die Flottenverwaltung kann die Adapter-Repositories des Systems neu laden, wie \"Adapterliste aktualisieren\" in admin"
+                "de": "Die Flottenverwaltung kann die Adapter-Repositories des Systems neu laden, wie \"Adapterliste aktualisieren\" in admin",
+                "ru": "Система управления парком может заново загрузить репозитории адаптеров системы, как это делает admin с помощью \"обновить список адаптеров\"",
+                "pt": "A gestão de frota pode recarregar os repositórios de adaptadores do sistema, como faz o admin com \"atualizar lista de adaptadores\"",
+                "nl": "Het vlootbeheer kan de adapter-repositories van het systeem opnieuw laden, zoals admin dat doet met \"adapterlijst bijwerken\"",
+                "fr": "La gestion de flotte peut recharger les dépôts d'adaptateurs du système, comme le fait admin avec \"mettre à jour la liste des adaptateurs\"",
+                "it": "La gestione della flotta può ricaricare i repository degli adattatori del sistema, come fa admin con \"aggiorna l'elenco degli adattatori\"",
+                "es": "La gestión de flota puede volver a cargar los repositorios de adaptadores del sistema, como hace admin con \"actualizar lista de adaptadores\"",
+                "pl": "System zarządzania flotą może ponownie załadować repozytoria adapterów systemu, tak jak admin robi to przez \"aktualizuj listę adapterów\"",
+                "uk": "Система керування парком може повторно завантажити репозиторії адаптерів системи, як це робить admin за допомогою \"оновити список адаптерів\"",
+                "zh-cn": "设备群管理可以重新加载系统的适配器存储库，就像 admin 中的 \"更新适配器列表\" 一样"
             },
             "0.3.0": {
                 "en": "Multihost: one instance of bee maintains every host of the system (adapters, instances, restart, OS updates, log files) through their js-controller. Adapters of another host are no longer reported as installed here, their update failed with \"is not installed\". BackItUp is found on any host. Answers of js-controller arrive, the OS update waited 30 minutes without them",
-                "de": "Multihost: eine Instanz von bee wartet alle Hosts des Systems (Adapter, Instanzen, Neustart, OS-Updates, Log-Dateien) über deren js-controller. Adapter eines anderen Hosts gelten hier nicht mehr als installiert, ihr Update scheiterte mit \"is not installed\". BackItUp wird auf jedem Host gefunden. Antworten von js-controller kommen an, das OS-Update wartete ohne sie 30 Minuten"
+                "de": "Multihost: eine Instanz von bee wartet alle Hosts des Systems (Adapter, Instanzen, Neustart, OS-Updates, Log-Dateien) über deren js-controller. Adapter eines anderen Hosts gelten hier nicht mehr als installiert, ihr Update scheiterte mit \"is not installed\". BackItUp wird auf jedem Host gefunden. Antworten von js-controller kommen an, das OS-Update wartete ohne sie 30 Minuten",
+                "ru": "Мультихост: один экземпляр bee обслуживает все хосты системы (адаптеры, экземпляры, перезапуск, обновления ОС, файлы журналов) через их js-controller. Адаптеры другого хоста больше не считаются установленными здесь, их обновление завершалось ошибкой \"is not installed\". BackItUp обнаруживается на любом хосте. Ответы js-controller доходят, без них обновление ОС ждало 30 минут",
+                "pt": "Multihost: uma instância do bee mantém todos os hosts do sistema (adaptadores, instâncias, reinício, atualizações do SO, arquivos de log) através do respectivo js-controller. Os adaptadores de outro host já não são reportados aqui como instalados, a sua atualização falhava com \"is not installed\". O BackItUp é encontrado em qualquer host. As respostas do js-controller chegam, a atualização do SO esperava 30 minutos sem elas",
+                "nl": "Multihost: één instantie van bee onderhoudt elke host van het systeem (adapters, instanties, herstart, OS-updates, logbestanden) via de js-controller ervan. Adapters van een andere host worden hier niet langer als geïnstalleerd gemeld; hun update mislukte met \"is not installed\". BackItUp wordt op elke host gevonden. Antwoorden van js-controller komen aan; de OS-update wachtte zonder deze 30 minuten",
+                "fr": "Multihost : une instance de bee gère tous les hôtes du système (adaptateurs, instances, redémarrage, mises à jour de l'OS, fichiers journaux) via leur js-controller. Les adaptateurs d'un autre hôte ne sont plus signalés ici comme installés, leur mise à jour échouait avec \"is not installed\". BackItUp est trouvé sur n'importe quel hôte. Les réponses de js-controller arrivent, la mise à jour de l'OS attendait 30 minutes sans elles",
+                "it": "Multihost: un'istanza di bee gestisce ogni host del sistema (adattatori, istanze, riavvio, aggiornamenti del sistema operativo, file di log) tramite il rispettivo js-controller. Gli adattatori di un altro host non vengono più segnalati qui come installati; il loro aggiornamento falliva con \"is not installed\". BackItUp viene trovato su qualsiasi host. Le risposte di js-controller arrivano; senza di esse l'aggiornamento del sistema operativo attendeva 30 minuti",
+                "es": "Multihost: una instancia de bee mantiene todos los hosts del sistema (adaptadores, instancias, reinicio, actualizaciones del SO, archivos de registro) a través de su js-controller. Los adaptadores de otro host ya no se indican aquí como instalados, su actualización fallaba con \"is not installed\". BackItUp se encuentra en cualquier host. Las respuestas de js-controller llegan, la actualización del SO esperaba 30 minutos sin ellas",
+                "pl": "Multihost: jedna instancja bee obsługuje wszystkie hosty systemu (adaptery, instancje, restart, aktualizacje systemu operacyjnego, pliki logów) przez ich js-controller. Adaptery innego hosta nie są już tutaj zgłaszane jako zainstalowane, ich aktualizacja kończyła się błędem \"is not installed\". BackItUp jest wykrywany na każdym hoście. Odpowiedzi js-controller docierają, bez nich aktualizacja systemu operacyjnego czekała 30 minut",
+                "uk": "Мультихост: один екземпляр bee обслуговує всі хости системи (адаптери, екземпляри, перезапуск, оновлення ОС, файли журналів) через їхній js-controller. Адаптери іншого хоста більше не вважаються встановленими тут, їхнє оновлення завершувалося помилкою \"is not installed\". BackItUp виявляється на будь-якому хості. Відповіді js-controller надходять, без них оновлення ОС чекало 30 хвилин",
+                "zh-cn": "多主机：一个 bee 实例通过各主机的 js-controller 维护系统的所有主机（适配器、实例、重启、操作系统更新、日志文件）。其他主机的适配器不再在此处报告为已安装，此前其更新会因 \"is not installed\" 而失败。可在任意主机上找到 BackItUp。js-controller 的应答能够送达，此前操作系统更新会因收不到应答而等待 30 分钟"
             },
             "0.2.11": {
                 "en": "Reports the backup by BackItUp (automatic backup on, interval, targets outside the device, last run, last good backup and last one outside the device); the fleet management warns when there is none, when it failed or when it is overdue. The update of Node.js needs a recent backup outside the device",
-                "de": "Meldet die Sicherung durch BackItUp (automatische Sicherung an, Abstand, Ziele außerhalb des Geräts, letzter Lauf, letzte erfolgreiche und letzte externe Sicherung); die Flottenverwaltung warnt, wenn es keine gibt, sie fehlgeschlagen oder überfällig ist. Das Update von Node.js braucht eine aktuelle Sicherung außerhalb des Geräts"
+                "de": "Meldet die Sicherung durch BackItUp (automatische Sicherung an, Abstand, Ziele außerhalb des Geräts, letzter Lauf, letzte erfolgreiche und letzte externe Sicherung); die Flottenverwaltung warnt, wenn es keine gibt, sie fehlgeschlagen oder überfällig ist. Das Update von Node.js braucht eine aktuelle Sicherung außerhalb des Geräts",
+                "ru": "Передаёт сведения о резервном копировании через BackItUp (включено ли автоматическое резервное копирование, интервал, хранилища вне устройства, последний запуск, последняя успешная резервная копия и последняя вне устройства); система управления парком предупреждает, если резервной копии нет, если она не удалась или просрочена. Для обновления Node.js нужна свежая резервная копия вне устройства",
+                "pt": "Reporta o backup do BackItUp (backup automático ativo, intervalo, destinos fora do dispositivo, última execução, último backup bem-sucedido e último fora do dispositivo); a gestão de frota avisa quando não há nenhum, quando falhou ou quando está atrasado. A atualização do Node.js requer um backup recente fora do dispositivo",
+                "nl": "Meldt de back-up door BackItUp (automatische back-up aan, interval, doelen buiten het apparaat, laatste uitvoering, laatste geslaagde back-up en laatste buiten het apparaat); het vlootbeheer waarschuwt als er geen is, als deze is mislukt of als deze achterstallig is. De update van Node.js vereist een recente back-up buiten het apparaat",
+                "fr": "Signale la sauvegarde par BackItUp (sauvegarde automatique activée, intervalle, destinations hors de l'appareil, dernière exécution, dernière sauvegarde réussie et dernière hors de l'appareil) ; la gestion de flotte avertit lorsqu'il n'y en a aucune, lorsqu'elle a échoué ou lorsqu'elle est en retard. La mise à jour de Node.js nécessite une sauvegarde récente hors de l'appareil",
+                "it": "Comunica il backup di BackItUp (backup automatico attivo, intervallo, destinazioni esterne al dispositivo, ultima esecuzione, ultimo backup riuscito e ultimo esterno al dispositivo); la gestione della flotta avvisa quando non ce n'è nessuno, quando è fallito o quando è in ritardo. L'aggiornamento di Node.js richiede un backup recente esterno al dispositivo",
+                "es": "Informa de la copia de seguridad de BackItUp (copia automática activada, intervalo, destinos fuera del dispositivo, última ejecución, última copia correcta y última fuera del dispositivo); la gestión de flota avisa cuando no hay ninguna, cuando ha fallado o cuando está atrasada. La actualización de Node.js requiere una copia de seguridad reciente fuera del dispositivo",
+                "pl": "Przekazuje informacje o kopii zapasowej z BackItUp (czy automatyczna kopia jest włączona, interwał, miejsca docelowe poza urządzeniem, ostatnie uruchomienie, ostatnia udana kopia i ostatnia poza urządzeniem); system zarządzania flotą ostrzega, gdy kopii nie ma, gdy się nie powiodła lub gdy jest zaległa. Aktualizacja Node.js wymaga aktualnej kopii zapasowej poza urządzeniem",
+                "uk": "Передає відомості про резервне копіювання через BackItUp (чи ввімкнено автоматичне резервне копіювання, інтервал, сховища поза пристроєм, останній запуск, остання успішна резервна копія та остання поза пристроєм); система керування парком попереджає, якщо резервної копії немає, якщо вона не вдалася або прострочена. Для оновлення Node.js потрібна свіжа резервна копія поза пристроєм",
+                "zh-cn": "报告 BackItUp 的备份情况（自动备份是否开启、间隔、设备外的目标、上次运行、上次成功的备份以及上次设备外的备份）；当没有备份、备份失败或备份逾期时，设备群管理会发出警告。更新 Node.js 需要一份近期的设备外备份"
             }
         },
         "titleLang": {
             "en": "Fleet agent (beekeeper)",
-            "de": "Flotten-Agent (beekeeper)"
+            "de": "Flotten-Agent (beekeeper)",
+            "ru": "Агент управления парком (beekeeper)",
+            "pt": "Agente de frota (beekeeper)",
+            "nl": "Vlootagent (beekeeper)",
+            "fr": "Agent de flotte (beekeeper)",
+            "it": "Agente della flotta (beekeeper)",
+            "es": "Agente de flota (beekeeper)",
+            "pl": "Agent zarządzania flotą (beekeeper)",
+            "uk": "Агент керування парком (beekeeper)",
+            "zh-cn": "设备群代理 (beekeeper)"
         },
         "desc": {
             "en": "Reports the inventory of this system to a beekeeper fleet server and converges it to the assigned version profile",
-            "de": "Meldet das Inventar dieses Systems an einen beekeeper-Flottenserver und gleicht es auf das zugewiesene Versionsprofil ab"
+            "de": "Meldet das Inventar dieses Systems an einen beekeeper-Flottenserver und gleicht es auf das zugewiesene Versionsprofil ab",
+            "ru": "Передаёт инвентарные данные этой системы на сервер управления парком beekeeper и приводит её в соответствие с назначенным профилем версий",
+            "pt": "Reporta o inventário deste sistema a um servidor de frota beekeeper e o alinha com o perfil de versões atribuído",
+            "nl": "Meldt de inventaris van dit systeem aan een beekeeper-vlootserver en brengt het in overeenstemming met het toegewezen versieprofiel",
+            "fr": "Signale l'inventaire de ce système à un serveur de flotte beekeeper et l'aligne sur le profil de versions attribué",
+            "it": "Comunica l'inventario di questo sistema a un server della flotta beekeeper e lo allinea al profilo di versione assegnato",
+            "es": "Informa del inventario de este sistema a un servidor de flota beekeeper y lo ajusta al perfil de versiones asignado",
+            "pl": "Przekazuje inwentarz tego systemu do serwera zarządzania flotą beekeeper i dostosowuje go do przypisanego profilu wersji",
+            "uk": "Передає інвентарні дані цієї системи на сервер керування парком beekeeper і приводить її у відповідність до призначеного профілю версій",
+            "zh-cn": "向 beekeeper 设备群服务器报告此系统的清单，并使其与分配的版本配置文件保持一致"
         },
         "authors": [
             "ioSofting GmbH <iosofting@gmail.com>"
@@ -65,6 +146,7 @@
         "logTransporter": true,
         "singletonHost": true,
         "enabled": true,
+        "nogit": true,
         "adminUI": {
             "config": "json"
         },
@@ -77,6 +159,11 @@
             {
                 "js-controller": ">=6.0.11"
             }
+        ],
+        "globalDependencies": [
+            {
+                "admin": ">=7.6.20"
+            }
         ]
     },
     "notifications": [
@@ -84,23 +171,59 @@
             "scope": "bee",
             "name": {
                 "en": "Fleet management",
-                "de": "Flottenverwaltung"
+                "de": "Flottenverwaltung",
+                "ru": "Управление парком",
+                "pt": "Gestão de frota",
+                "nl": "Vlootbeheer",
+                "fr": "Gestion de flotte",
+                "it": "Gestione della flotta",
+                "es": "Gestión de flota",
+                "pl": "Zarządzanie flotą",
+                "uk": "Керування парком",
+                "zh-cn": "设备群管理"
             },
             "description": {
                 "en": "Messages of the fleet agent for the owner of the system",
-                "de": "Meldungen des Flotten-Agenten für den Endkunden der Anlage"
+                "de": "Meldungen des Flotten-Agenten für den Endkunden der Anlage",
+                "ru": "Сообщения агента управления парком для владельца установки",
+                "pt": "Mensagens do agente de frota para o proprietário da instalação",
+                "nl": "Meldingen van de vlootagent voor de eigenaar van de installatie",
+                "fr": "Messages de l'agent de flotte pour le propriétaire de l'installation",
+                "it": "Messaggi dell'agente della flotta per il proprietario dell'impianto",
+                "es": "Mensajes del agente de flota para el propietario de la instalación",
+                "pl": "Komunikaty agenta zarządzania flotą dla właściciela instalacji",
+                "uk": "Повідомлення агента керування парком для власника установки",
+                "zh-cn": "设备群代理发给设施所有者的消息"
             },
             "categories": [
                 {
                     "category": "modeChanged",
                     "name": {
                         "en": "Own installation detected",
-                        "de": "Eigeninstallation erkannt"
+                        "de": "Eigeninstallation erkannt",
+                        "ru": "Обнаружена самостоятельная установка ПО",
+                        "pt": "Instalação própria detectada",
+                        "nl": "Zelfinstallatie gedetecteerd",
+                        "fr": "Installation personnelle détectée",
+                        "it": "Rilevata installazione autonoma",
+                        "es": "Instalación propia detectada",
+                        "pl": "Wykryto samodzielną instalację oprogramowania",
+                        "uk": "Виявлено самостійне встановлення ПЗ",
+                        "zh-cn": "检测到自行安装"
                     },
                     "severity": "notify",
                     "description": {
                         "en": "Adapters were installed that are not part of the version profile. The system receives no automatic updates any more.",
-                        "de": "Es wurden Adapter installiert, die nicht zum Versionsprofil gehören. Die Anlage erhält keine automatischen Updates mehr."
+                        "de": "Es wurden Adapter installiert, die nicht zum Versionsprofil gehören. Die Anlage erhält keine automatischen Updates mehr.",
+                        "ru": "Установлены адаптеры, которые не входят в профиль версий. Установка больше не получает автоматических обновлений.",
+                        "pt": "Foram instalados adaptadores que não fazem parte do perfil de versões. O sistema não recebe mais atualizações automáticas.",
+                        "nl": "Er zijn adapters geïnstalleerd die niet tot het versieprofiel behoren. De installatie ontvangt geen automatische updates meer.",
+                        "fr": "Des adaptateurs ne faisant pas partie du profil de versions ont été installés. Le système ne reçoit plus de mises à jour automatiques.",
+                        "it": "Sono stati installati adattatori che non fanno parte del profilo di versione. L'impianto non riceve più aggiornamenti automatici.",
+                        "es": "Se han instalado adaptadores que no forman parte del perfil de versiones. El sistema ya no recibe actualizaciones automáticas.",
+                        "pl": "Zainstalowano adaptery, które nie należą do profilu wersji. Instalacja nie otrzymuje już automatycznych aktualizacji.",
+                        "uk": "Встановлено адаптери, які не входять до профілю версій. Установка більше не отримує автоматичних оновлень.",
+                        "zh-cn": "已安装不属于版本配置文件的适配器。该设施将不再接收自动更新。"
                     },
                     "regex": [],
                     "limit": 5
@@ -109,12 +232,30 @@
                     "category": "updateAvailable",
                     "name": {
                         "en": "New software state available",
-                        "de": "Neuer Softwarestand verfügbar"
+                        "de": "Neuer Softwarestand verfügbar",
+                        "ru": "Доступна новая версия ПО",
+                        "pt": "Nova versão de software disponível",
+                        "nl": "Nieuwe softwareversie beschikbaar",
+                        "fr": "Nouvelle version logicielle disponible",
+                        "it": "Nuova versione del software disponibile",
+                        "es": "Nueva versión de software disponible",
+                        "pl": "Dostępna nowa wersja oprogramowania",
+                        "uk": "Доступна нова версія ПЗ",
+                        "zh-cn": "有新的软件版本可用"
                     },
                     "severity": "info",
                     "description": {
                         "en": "The fleet management provides a new state. Self-managed systems are not updated automatically.",
-                        "de": "Die Flottenverwaltung stellt einen neuen Stand bereit. Eigenverantwortliche Anlagen werden nicht automatisch aktualisiert."
+                        "de": "Die Flottenverwaltung stellt einen neuen Stand bereit. Eigenverantwortliche Anlagen werden nicht automatisch aktualisiert.",
+                        "ru": "Система управления парком предоставляет новую версию. Самостоятельно управляемые установки не обновляются автоматически.",
+                        "pt": "A gestão de frota disponibiliza uma nova versão. Sistemas autogeridos não são atualizados automaticamente.",
+                        "nl": "Het vlootbeheer stelt een nieuwe versie beschikbaar. Zelfbeheerde installaties worden niet automatisch bijgewerkt.",
+                        "fr": "La gestion de flotte met à disposition une nouvelle version. Les systèmes autogérés ne sont pas mis à jour automatiquement.",
+                        "it": "La gestione della flotta mette a disposizione una nuova versione. Gli impianti gestiti autonomamente non vengono aggiornati automaticamente.",
+                        "es": "La gestión de flota ofrece una nueva versión. Los sistemas autogestionados no se actualizan automáticamente.",
+                        "pl": "System zarządzania flotą udostępnia nową wersję. Instalacje zarządzane samodzielnie nie są aktualizowane automatycznie.",
+                        "uk": "Система керування парком надає нову версію. Установки із самостійним керуванням не оновлюються автоматично.",
+                        "zh-cn": "设备群管理提供了新版本。自行管理的设施不会自动更新。"
                     },
                     "regex": [],
                     "limit": 5
@@ -123,12 +264,30 @@
                     "category": "updated",
                     "name": {
                         "en": "System updated",
-                        "de": "Anlage aktualisiert"
+                        "de": "Anlage aktualisiert",
+                        "ru": "Установка обновлена",
+                        "pt": "Sistema atualizado",
+                        "nl": "Installatie bijgewerkt",
+                        "fr": "Système mis à jour",
+                        "it": "Impianto aggiornato",
+                        "es": "Sistema actualizado",
+                        "pl": "Instalacja zaktualizowana",
+                        "uk": "Установку оновлено",
+                        "zh-cn": "设施已更新"
                     },
                     "severity": "info",
                     "description": {
                         "en": "The fleet management updated this system",
-                        "de": "Die Flottenverwaltung hat diese Anlage aktualisiert"
+                        "de": "Die Flottenverwaltung hat diese Anlage aktualisiert",
+                        "ru": "Система управления парком обновила эту установку",
+                        "pt": "A gestão de frota atualizou este sistema",
+                        "nl": "Het vlootbeheer heeft deze installatie bijgewerkt",
+                        "fr": "La gestion de flotte a mis à jour ce système",
+                        "it": "La gestione della flotta ha aggiornato questo impianto",
+                        "es": "La gestión de flota ha actualizado este sistema",
+                        "pl": "System zarządzania flotą zaktualizował tę instalację",
+                        "uk": "Система керування парком оновила цю установку",
+                        "zh-cn": "设备群管理已更新此设施"
                     },
                     "regex": [],
                     "limit": 10
@@ -137,12 +296,30 @@
                     "category": "rejected",
                     "name": {
                         "en": "Rejected by fleet server",
-                        "de": "Vom Flottenserver abgewiesen"
+                        "de": "Vom Flottenserver abgewiesen",
+                        "ru": "Отклонено сервером управления парком",
+                        "pt": "Rejeitado pelo servidor de frota",
+                        "nl": "Geweigerd door vlootserver",
+                        "fr": "Rejeté par le serveur de flotte",
+                        "it": "Rifiutato dal server della flotta",
+                        "es": "Rechazado por el servidor de flota",
+                        "pl": "Odrzucone przez serwer zarządzania flotą",
+                        "uk": "Відхилено сервером керування парком",
+                        "zh-cn": "被设备群服务器拒绝"
                     },
                     "severity": "alert",
                     "description": {
                         "en": "The fleet server does not know this device. The agent stopped itself.",
-                        "de": "Der Flottenserver kennt dieses Gerät nicht. Der Agent hat sich beendet."
+                        "de": "Der Flottenserver kennt dieses Gerät nicht. Der Agent hat sich beendet.",
+                        "ru": "Сервер управления парком не знает этого устройства. Агент завершил работу.",
+                        "pt": "O servidor de frota não conhece este dispositivo. O agente se encerrou.",
+                        "nl": "De vlootserver kent dit apparaat niet. De agent heeft zichzelf gestopt.",
+                        "fr": "Le serveur de flotte ne connaît pas cet appareil. L'agent s'est arrêté.",
+                        "it": "Il server della flotta non conosce questo dispositivo. L'agente si è arrestato.",
+                        "es": "El servidor de flota no conoce este dispositivo. El agente se ha detenido.",
+                        "pl": "Serwer zarządzania flotą nie zna tego urządzenia. Agent zakończył działanie.",
+                        "uk": "Сервер керування парком не знає цього пристрою. Агент завершив роботу.",
+                        "zh-cn": "设备群服务器无法识别此设备。代理已自行停止。"
                     },
                     "regex": [],
                     "limit": 1

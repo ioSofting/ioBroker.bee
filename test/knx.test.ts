@@ -4,6 +4,7 @@ import net, { type AddressInfo } from 'node:net';
 import { describe, it } from 'node:test';
 import { FrameReader, KnxConnector, parseGateway, SERVICE } from '../src/lib/knx';
 import { Mux, type TunnelStream } from '../src/lib/tunnel';
+import { nodeTimers } from './timers';
 
 const silent = {
     debug() {},
@@ -85,7 +86,7 @@ describe('KNX for ETS', () => {
         const data = dgram.createSocket('udp4');
         const controlPort = await bound(control);
         const dataPort = await bound(data);
-        const connector = new KnxConnector({ host: '127.0.0.1', port: controlPort, transport: 'udp' }, { log: silent });
+        const connector = new KnxConnector({ host: '127.0.0.1', port: controlPort, transport: 'udp' }, { log: silent, timers: nodeTimers });
         const ets = tunnelPair(s => connector.relay(s));
 
         // CONNECT_REQUEST: the HPAIs of ETS (TCP, 0.0.0.0:0) become the address of the agent
@@ -136,7 +137,7 @@ describe('KNX for ETS', () => {
         });
         await new Promise<void>(resolve => gateway.listen(0, '127.0.0.1', resolve));
         const port = (gateway.address() as AddressInfo).port;
-        const connector = new KnxConnector({ host: '127.0.0.1', port, transport: 'auto' }, { log: silent });
+        const connector = new KnxConnector({ host: '127.0.0.1', port, transport: 'auto' }, { log: silent, timers: nodeTimers });
         const ets = tunnelPair(s => connector.relay(s));
         const request = frame(SERVICE.CONNECT_REQUEST, [...TCP_ZERO, ...TCP_ZERO, ...CRI]);
         const response = nextFrame(ets);
@@ -152,7 +153,7 @@ describe('KNX for ETS', () => {
         const control = dgram.createSocket('udp4');
         const port = await bound(control);
         // nothing listens on TCP at this port: refused right away
-        const connector = new KnxConnector({ host: '127.0.0.1', port, transport: 'auto' }, { log: silent });
+        const connector = new KnxConnector({ host: '127.0.0.1', port, transport: 'auto' }, { log: silent, timers: nodeTimers });
         const ets = tunnelPair(s => connector.relay(s));
         const got = nextMessage(control);
         ets.write(frame(SERVICE.DESCRIPTION_REQUEST, TCP_ZERO));

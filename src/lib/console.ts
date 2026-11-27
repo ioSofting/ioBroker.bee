@@ -3,6 +3,7 @@ import { existsSync, readdirSync, readFileSync, readlinkSync } from 'node:fs';
 import os from 'node:os';
 import type { Duplex } from 'node:stream';
 import { CONSOLE, ConsoleReader, consoleMessage } from './tunnel';
+import type { Timers } from './util';
 
 /**
  * Console of the remote access: a shell on this system for one terminal in the browser of the technician.
@@ -84,6 +85,7 @@ export interface ShellOptions {
     log: ioBroker.Logger;
     /** Who opened it, for the log */
     by: string;
+    timers: Timers;
     onEnd?: (result: string) => void;
 }
 
@@ -128,7 +130,7 @@ export function startShell(stream: Duplex, opts: ShellOptions): void {
     let terminal: { pid: number; tty: string } | null = null;
     let size: { cols: number; rows: number } | null = null;
     let ended = false;
-    let killTimer: NodeJS.Timeout | null = null;
+    let killTimer: ioBroker.Timeout | undefined;
 
     const applySize = (): void => {
         if (terminal && size) {
@@ -142,14 +144,14 @@ export function startShell(stream: Duplex, opts: ShellOptions): void {
     };
     // the shell needs a moment until it runs on its terminal
     let tries = 0;
-    const lookup = setInterval(() => {
+    const lookup = opts.timers.setInterval(() => {
         if (ended || terminal || ++tries > 60 || !child.pid) {
-            clearInterval(lookup);
+            opts.timers.clearInterval(lookup);
             return;
         }
         terminal = findTerminal(child.pid);
         if (terminal) {
-            clearInterval(lookup);
+            opts.timers.clearInterval(lookup);
             applySize();
         }
     }, 50);
@@ -164,7 +166,7 @@ export function startShell(stream: Duplex, opts: ShellOptions): void {
         // hang up: the shell and what runs in its foreground get SIGHUP, as when an SSH connection drops
         signalGroup(terminal?.pid, 'SIGHUP');
         signalGroup(child.pid, 'SIGHUP');
-        killTimer = setTimeout(() => {
+        killTimer = opts.timers.setTimeout(() => {
             signalGroup(terminal?.pid, 'SIGKILL');
             signalGroup(child.pid, 'SIGKILL');
         }, 3000);
@@ -213,10 +215,8 @@ export function startShell(stream: Duplex, opts: ShellOptions): void {
     });
     child.on('close', (code, signal) => {
         ended = true;
-        clearInterval(lookup);
-        if (killTimer) {
-            clearTimeout(killTimer);
-        }
+        opts.timers.clearInterval(lookup);
+        opts.timers.clearTimeout(killTimer);
         const result = signal ? signal : String(code ?? '');
         if (!stream.destroyed && stream.writable) {
             stream.end(consoleMessage(CONSOLE.EXIT, Buffer.from(result)));

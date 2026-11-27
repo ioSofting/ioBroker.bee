@@ -135,6 +135,12 @@ npm test          # unit tests of planner, preflight and diff
     ### **WORK IN PROGRESS**
 -->
 
+### **WORK IN PROGRESS**
+
+- Settings and notifications in all languages of ioBroker
+- Timers of the adapter instead of those of Node.js, so that js-controller clears them when the instance stops
+- Requires admin 7.6.20 or newer; no installation from GitHub (the build is not in the repository)
+
 ### 0.5.1 (2026-11-26)
 
 - Another enrollment token in the settings now leads to a new enrollment, e.g. to move the installation to an asset of another tenant. Before, the agent kept connecting with the certificate in `iobroker-data/bee.0/device.json`, also after the instance was deleted and added again (js-controller keeps that folder). The desired state, the emergency stop and the remote sessions of the old asset are dropped
@@ -231,7 +237,7 @@ npm test          # unit tests of planner, preflight and diff
 
 ## License
 
-Copyright (c) 2026 ioSofting GmbH
+Copyright (c) 2026 ioSofting GmbH <iosofting@gmail.com>
 
 Licensed under [CC BY-NC-ND 4.0](LICENSE) (Creative Commons Attribution-NonCommercial-NoDerivatives 4.0
 International). Commercial use, in particular with the fleet management [Beekeeper](https://beekeeper.one), needs a contract

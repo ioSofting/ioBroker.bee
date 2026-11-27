@@ -4,13 +4,34 @@
     "items": {
         "connection": {
             "type": "panel",
-            "label": { "en": "Enrollment", "de": "Anmeldung" },
+            "label": {
+                "en": "Enrollment",
+                "de": "Anmeldung",
+                "ru": "Регистрация",
+                "pt": "Registro",
+                "nl": "Inschrijving",
+                "fr": "Inscription",
+                "it": "Registrazione",
+                "es": "Inscripción",
+                "pl": "Rejestracja",
+                "uk": "Реєстрація",
+                "zh-cn": "注册"
+            },
             "items": {
                 "hdr1": {
                     "type": "staticText",
                     "text": {
                         "en": "Enrollment URL and one-time token come with the factory image or from the fleet manager. After the first successful contact the device holds its own certificate; the token is used up.",
-                        "de": "Enrollment-URL und Einmal-Token kommen mit dem Werksimage oder vom Flottenverwalter. Nach dem ersten erfolgreichen Kontakt hat das Gerät ein eigenes Zertifikat; das Token ist verbraucht."
+                        "de": "Enrollment-URL und Einmal-Token kommen mit dem Werksimage oder vom Flottenverwalter. Nach dem ersten erfolgreichen Kontakt hat das Gerät ein eigenes Zertifikat; das Token ist verbraucht.",
+                        "ru": "URL регистрации и одноразовый токен поставляются вместе с заводским образом или выдаются администратором парка. После первого успешного подключения у устройства есть собственный сертификат; токен считается использованным.",
+                        "pt": "A URL de registro e o token de uso único vêm com a imagem de fábrica ou do gestor da frota. Após o primeiro contato bem-sucedido, o dispositivo possui o seu próprio certificado; o token é consumido.",
+                        "nl": "De inschrijvings-URL en het eenmalige token worden geleverd met het fabrieksimage of door de vlootbeheerder. Na het eerste geslaagde contact heeft het apparaat een eigen certificaat; het token is dan verbruikt.",
+                        "fr": "L'URL d'inscription et le token à usage unique sont fournis avec l'image d'usine ou par le gestionnaire de la flotte. Après le premier contact réussi, l'appareil possède son propre certificat ; le token est consommé.",
+                        "it": "L'URL di registrazione e il token monouso sono forniti con l'immagine di fabbrica o dal gestore della flotta. Dopo il primo contatto riuscito il dispositivo dispone di un proprio certificato; il token è ormai consumato.",
+                        "es": "La URL de inscripción y el token de un solo uso vienen con la imagen de fábrica o del gestor de la flota. Tras el primer contacto correcto, el dispositivo tiene su propio certificado; el token queda consumido.",
+                        "pl": "URL rejestracji i jednorazowy token są dostarczane z obrazem fabrycznym lub przez administratora floty. Po pierwszym udanym połączeniu urządzenie ma własny certyfikat; token zostaje zużyty.",
+                        "uk": "URL реєстрації та одноразовий токен постачаються разом із заводським образом або надаються адміністратором парку. Після першого успішного підключення пристрій має власний сертифікат; токен вважається використаним.",
+                        "zh-cn": "注册 URL 和一次性 token 随出厂镜像提供，或由设备群管理员提供。首次成功连接后，设备将拥有自己的证书；该 token 随即失效。"
                     },
                     "xs": 12,
                     "sm": 12,
@@ -20,7 +41,19 @@
                 },
                 "enrollUrl": {
                     "type": "text",
-                    "label": { "en": "Enrollment URL", "de": "Enrollment-URL" },
+                    "label": {
+                        "en": "Enrollment URL",
+                        "de": "Enrollment-URL",
+                        "ru": "URL регистрации",
+                        "pt": "URL de registro",
+                        "nl": "Inschrijvings-URL",
+                        "fr": "URL d'inscription",
+                        "it": "URL di registrazione",
+                        "es": "URL de inscripción",
+                        "pl": "URL rejestracji",
+                        "uk": "URL реєстрації",
+                        "zh-cn": "注册 URL"
+                    },
                     "placeholder": "https://beekeeper.one",
                     "xs": 12,
                     "sm": 12,
@@ -31,7 +64,19 @@
                 },
                 "enrollToken": {
                     "type": "password",
-                    "label": { "en": "Enrollment token", "de": "Enrollment-Token" },
+                    "label": {
+                        "en": "Enrollment token",
+                        "de": "Enrollment-Token",
+                        "ru": "Токен регистрации",
+                        "pt": "Token de registro",
+                        "nl": "Inschrijvingstoken",
+                        "fr": "Token d'inscription",
+                        "it": "Token di registrazione",
+                        "es": "Token de inscripción",
+                        "pl": "Token rejestracji",
+                        "uk": "Токен реєстрації",
+                        "zh-cn": "注册 token"
+                    },
                     "xs": 12,
                     "sm": 12,
                     "md": 6,
@@ -40,10 +85,31 @@
                 },
                 "comment": {
                     "type": "text",
-                    "label": { "en": "Comment", "de": "Kommentar" },
+                    "label": {
+                        "en": "Comment",
+                        "de": "Kommentar",
+                        "ru": "Комментарий",
+                        "pt": "Comentário",
+                        "nl": "Opmerking",
+                        "fr": "Commentaire",
+                        "it": "Commento",
+                        "es": "Comentario",
+                        "pl": "Komentarz",
+                        "uk": "Коментар",
+                        "zh-cn": "备注"
+                    },
                     "help": {
                         "en": "Shown in the fleet management next to this installation, e.g. \"Womo Mercedes KA-1525\" (max. 200 characters)",
-                        "de": "Erscheint in der Flottenverwaltung bei dieser Anlage, z. B. \"Womo Mercedes KA-1525\" (höchstens 200 Zeichen)"
+                        "de": "Erscheint in der Flottenverwaltung bei dieser Anlage, z. B. \"Womo Mercedes KA-1525\" (höchstens 200 Zeichen)",
+                        "ru": "Отображается в системе управления парком рядом с этой установкой, напр. \"Womo Mercedes KA-1525\" (не более 200 символов)",
+                        "pt": "Exibido na gestão de frota junto a esta instalação, p. ex. \"Womo Mercedes KA-1525\" (máx. 200 caracteres)",
+                        "nl": "Wordt in het vlootbeheer bij deze installatie getoond, bijv. \"Womo Mercedes KA-1525\" (max. 200 tekens)",
+                        "fr": "Affiché dans la gestion de flotte à côté de cette installation, p. ex. \"Womo Mercedes KA-1525\" (200 caractères max.)",
+                        "it": "Mostrato nella gestione della flotta accanto a questo impianto, ad es. \"Womo Mercedes KA-1525\" (max. 200 caratteri)",
+                        "es": "Se muestra en la gestión de flota junto a esta instalación, p. ej. \"Womo Mercedes KA-1525\" (máx. 200 caracteres)",
+                        "pl": "Wyświetlany w systemie zarządzania flotą przy tej instalacji, np. \"Womo Mercedes KA-1525\" (maks. 200 znaków)",
+                        "uk": "Відображається в системі керування парком поруч із цією установкою, напр. \"Womo Mercedes KA-1525\" (не більше 200 символів)",
+                        "zh-cn": "显示在设备群管理中此设施的旁边，例如 \"Womo Mercedes KA-1525\"（最多 200 个字符）"
                     },
                     "maxLength": 200,
                     "newLine": true,
@@ -56,9 +122,45 @@
                 "_connection": {
                     "type": "state",
                     "oid": "info.connection",
-                    "label": { "en": "Fleet management", "de": "Flottenverwaltung" },
-                    "trueText": { "en": "connected", "de": "verbunden" },
-                    "falseText": { "en": "not connected", "de": "nicht verbunden" },
+                    "label": {
+                        "en": "Fleet management",
+                        "de": "Flottenverwaltung",
+                        "ru": "Управление парком",
+                        "pt": "Gestão de frota",
+                        "nl": "Vlootbeheer",
+                        "fr": "Gestion de flotte",
+                        "it": "Gestione della flotta",
+                        "es": "Gestión de flota",
+                        "pl": "Zarządzanie flotą",
+                        "uk": "Керування парком",
+                        "zh-cn": "设备群管理"
+                    },
+                    "trueText": {
+                        "en": "connected",
+                        "de": "verbunden",
+                        "ru": "подключено",
+                        "pt": "conectado",
+                        "nl": "verbonden",
+                        "fr": "connecté",
+                        "it": "connesso",
+                        "es": "conectado",
+                        "pl": "połączono",
+                        "uk": "підключено",
+                        "zh-cn": "已连接"
+                    },
+                    "falseText": {
+                        "en": "not connected",
+                        "de": "nicht verbunden",
+                        "ru": "не подключено",
+                        "pt": "não conectado",
+                        "nl": "niet verbonden",
+                        "fr": "non connecté",
+                        "it": "non connesso",
+                        "es": "no conectado",
+                        "pl": "nie połączono",
+                        "uk": "не підключено",
+                        "zh-cn": "未连接"
+                    },
                     "trueTextStyle": { "color": "#4caf50", "fontWeight": "bold" },
                     "falseTextStyle": { "color": "#f44336", "fontWeight": "bold" },
                     "narrow": true,
@@ -66,19 +168,31 @@
                     "newLine": true,
                     "xs": 12,
                     "sm": 12,
-                    "md": 4,
+                    "md": 3,
                     "lg": 3,
                     "xl": 3
                 },
                 "_status": {
                     "type": "state",
                     "oid": "info.status",
-                    "label": { "en": "Status", "de": "Status" },
+                    "label": {
+                        "en": "Status",
+                        "de": "Status",
+                        "ru": "Статус",
+                        "pt": "Status",
+                        "nl": "Status",
+                        "fr": "Statut",
+                        "it": "Stato",
+                        "es": "Estado",
+                        "pl": "Status",
+                        "uk": "Статус",
+                        "zh-cn": "状态"
+                    },
                     "narrow": true,
                     "addColon": true,
                     "xs": 12,
                     "sm": 12,
-                    "md": 8,
+                    "md": 9,
                     "lg": 9,
                     "xl": 9
                 }
@@ -86,13 +200,34 @@
         },
         "remote": {
             "type": "panel",
-            "label": { "en": "Remote access", "de": "Fernzugriff" },
+            "label": {
+                "en": "Remote access",
+                "de": "Fernzugriff",
+                "ru": "Удалённый доступ",
+                "pt": "Acesso remoto",
+                "nl": "Toegang op afstand",
+                "fr": "Accès à distance",
+                "it": "Accesso remoto",
+                "es": "Acceso remoto",
+                "pl": "Zdalny dostęp",
+                "uk": "Віддалений доступ",
+                "zh-cn": "远程访问"
+            },
             "items": {
                 "hdr3": {
                     "type": "staticText",
                     "text": {
                         "en": "Service staff of the fleet management can open admin or vis-2 of this system from afar, without ioBroker.pro and without open ports: on request, this adapter connects to the fleet server for the duration of the access. Every access is logged with person and purpose, and is shown below while it lasts. Changing these settings ends running accesses. The console is off until you allow it here.",
-                        "de": "Servicepersonal der Flottenverwaltung kann admin oder vis-2 dieses Systems aus der Ferne öffnen, ohne ioBroker.pro und ohne offene Ports: auf Anforderung verbindet sich dieser Adapter für die Dauer des Zugriffs mit dem Flottenserver. Jeder Zugriff wird mit Person und Zweck protokolliert und unten angezeigt, solange er läuft. Eine Änderung dieser Einstellungen beendet laufende Zugriffe. Die Konsole ist aus, bis Sie sie hier erlauben."
+                        "de": "Servicepersonal der Flottenverwaltung kann admin oder vis-2 dieses Systems aus der Ferne öffnen, ohne ioBroker.pro und ohne offene Ports: auf Anforderung verbindet sich dieser Adapter für die Dauer des Zugriffs mit dem Flottenserver. Jeder Zugriff wird mit Person und Zweck protokolliert und unten angezeigt, solange er läuft. Eine Änderung dieser Einstellungen beendet laufende Zugriffe. Die Konsole ist aus, bis Sie sie hier erlauben.",
+                        "ru": "Сервисный персонал системы управления парком может удалённо открыть admin или vis-2 этой системы без ioBroker.pro и без открытых портов: по запросу этот адаптер подключается к серверу управления парком на время доступа. Каждый доступ протоколируется с указанием лица и цели и отображается ниже, пока он длится. Изменение этих настроек завершает текущие сеансы доступа. Консоль отключена, пока вы не разрешите её здесь.",
+                        "pt": "A equipe de serviço da gestão de frota pode abrir o admin ou o vis-2 deste sistema remotamente, sem ioBroker.pro e sem portas abertas: mediante solicitação, este adaptador se conecta ao servidor de frota durante o acesso. Cada acesso é registrado com a pessoa e a finalidade, e é mostrado abaixo enquanto durar. Alterar estas configurações encerra os acessos em curso. O console fica desativado até que você o permita aqui.",
+                        "nl": "Servicemedewerkers van het vlootbeheer kunnen admin of vis-2 van dit systeem op afstand openen, zonder ioBroker.pro en zonder open poorten: op verzoek maakt deze adapter voor de duur van de toegang verbinding met de vlootserver. Elke toegang wordt met persoon en doel gelogd en hieronder getoond zolang deze duurt. Een wijziging van deze instellingen beëindigt lopende toegangen. De console is uitgeschakeld totdat u deze hier toestaat.",
+                        "fr": "Le personnel de service de la gestion de flotte peut ouvrir admin ou vis-2 de ce système à distance, sans ioBroker.pro et sans ports ouverts : sur demande, cet adaptateur se connecte au serveur de flotte pendant la durée de l'accès. Chaque accès est journalisé avec la personne et le motif, et affiché ci-dessous tant qu'il dure. Modifier ces paramètres met fin aux accès en cours. La console reste désactivée tant que vous ne l'autorisez pas ici.",
+                        "it": "Il personale di assistenza della gestione della flotta può aprire admin o vis-2 di questo sistema da remoto, senza ioBroker.pro e senza porte aperte: su richiesta, questo adattatore si connette al server della flotta per la durata dell'accesso. Ogni accesso viene registrato con persona e scopo e viene mostrato qui sotto finché dura. Una modifica di queste impostazioni termina gli accessi in corso. La console è disattivata finché non viene consentita qui.",
+                        "es": "El personal de servicio de la gestión de flota puede abrir admin o vis-2 de este sistema de forma remota, sin ioBroker.pro y sin puertos abiertos: a petición, este adaptador se conecta al servidor de flota mientras dura el acceso. Cada acceso se registra con la persona y el propósito, y se muestra abajo mientras dura. Cambiar estos ajustes termina los accesos en curso. La consola está desactivada hasta que usted la permita aquí.",
+                        "pl": "Personel serwisowy systemu zarządzania flotą może zdalnie otworzyć admin lub vis-2 tego systemu, bez ioBroker.pro i bez otwartych portów: na żądanie ten adapter łączy się z serwerem zarządzania flotą na czas trwania dostępu. Każdy dostęp jest rejestrowany wraz z osobą i celem oraz wyświetlany poniżej, dopóki trwa. Zmiana tych ustawień kończy trwające sesje dostępu. Konsola jest wyłączona, dopóki nie zezwolisz na nią tutaj.",
+                        "uk": "Сервісний персонал системи керування парком може віддалено відкрити admin або vis-2 цієї системи без ioBroker.pro і без відкритих портів: на запит цей адаптер підключається до сервера керування парком на час доступу. Кожен доступ протоколюється із зазначенням особи та мети й відображається нижче, поки він триває. Зміна цих налаштувань завершує поточні сеанси доступу. Консоль вимкнена, доки ви не дозволите її тут.",
+                        "zh-cn": "设备群管理的服务人员可以远程打开此系统的 admin 或 vis-2，无需 ioBroker.pro，也无需开放端口：应请求，此适配器会在访问期间连接到设备群服务器。每次访问都会记录人员和目的，并在访问持续期间显示在下方。更改这些设置会终止正在进行的访问。在此处允许之前，控制台处于关闭状态。"
                     },
                     "xs": 12,
                     "sm": 12,
@@ -102,10 +237,31 @@
                 },
                 "allowAdmin": {
                     "type": "checkbox",
-                    "label": { "en": "Allow remote access to admin", "de": "Fernzugriff auf admin erlauben" },
+                    "label": {
+                        "en": "Allow remote access to admin",
+                        "de": "Fernzugriff auf admin erlauben",
+                        "ru": "Разрешить удалённый доступ к admin",
+                        "pt": "Permitir acesso remoto ao admin",
+                        "nl": "Toegang op afstand tot admin toestaan",
+                        "fr": "Autoriser l'accès à distance à admin",
+                        "it": "Consenti l'accesso remoto ad admin",
+                        "es": "Permitir acceso remoto a admin",
+                        "pl": "Zezwól na zdalny dostęp do admin",
+                        "uk": "Дозволити віддалений доступ до admin",
+                        "zh-cn": "允许远程访问 admin"
+                    },
                     "help": {
                         "en": "admin means full access to the system",
-                        "de": "admin bedeutet vollen Zugriff auf das System"
+                        "de": "admin bedeutet vollen Zugriff auf das System",
+                        "ru": "admin означает полный доступ к системе",
+                        "pt": "admin significa acesso total ao sistema",
+                        "nl": "admin betekent volledige toegang tot het systeem",
+                        "fr": "admin signifie un accès complet au système",
+                        "it": "admin significa accesso completo al sistema",
+                        "es": "admin significa acceso total al sistema",
+                        "pl": "admin oznacza pełny dostęp do systemu",
+                        "uk": "admin означає повний доступ до системи",
+                        "zh-cn": "admin 意味着对系统的完全访问权限"
                     },
                     "newLine": true,
                     "xs": 12,
@@ -116,10 +272,31 @@
                 },
                 "allowVis": {
                     "type": "checkbox",
-                    "label": { "en": "Allow remote access to vis-2 (web)", "de": "Fernzugriff auf vis-2 (web) erlauben" },
+                    "label": {
+                        "en": "Allow remote access to vis-2 (web)",
+                        "de": "Fernzugriff auf vis-2 (web) erlauben",
+                        "ru": "Разрешить удалённый доступ к vis-2 (web)",
+                        "pt": "Permitir acesso remoto ao vis-2 (web)",
+                        "nl": "Toegang op afstand tot vis-2 (web) toestaan",
+                        "fr": "Autoriser l'accès à distance à vis-2 (web)",
+                        "it": "Consenti l'accesso remoto a vis-2 (web)",
+                        "es": "Permitir acceso remoto a vis-2 (web)",
+                        "pl": "Zezwól na zdalny dostęp do vis-2 (web)",
+                        "uk": "Дозволити віддалений доступ до vis-2 (web)",
+                        "zh-cn": "允许远程访问 vis-2 (web)"
+                    },
                     "help": {
                         "en": "vis-2 shows the values of this system, e.g. consumption",
-                        "de": "vis-2 zeigt die Werte dieses Systems, z. B. Verbräuche"
+                        "de": "vis-2 zeigt die Werte dieses Systems, z. B. Verbräuche",
+                        "ru": "vis-2 показывает значения этой системы, напр. потребление",
+                        "pt": "vis-2 mostra os valores deste sistema, p. ex. os consumos",
+                        "nl": "vis-2 toont de waarden van dit systeem, bijv. verbruik",
+                        "fr": "vis-2 affiche les valeurs de ce système, p. ex. les consommations",
+                        "it": "vis-2 mostra i valori di questo sistema, ad es. i consumi",
+                        "es": "vis-2 muestra los valores de este sistema, p. ej. los consumos",
+                        "pl": "vis-2 pokazuje wartości tego systemu, np. zużycie",
+                        "uk": "vis-2 показує значення цієї системи, напр. споживання",
+                        "zh-cn": "vis-2 显示此系统的数值，例如消耗量"
                     },
                     "xs": 12,
                     "sm": 12,
@@ -129,10 +306,31 @@
                 },
                 "allowConsole": {
                     "type": "checkbox",
-                    "label": { "en": "Allow the console (a shell on this system)", "de": "Konsole erlauben (Shell auf diesem System)" },
+                    "label": {
+                        "en": "Allow the console (a shell on this system)",
+                        "de": "Konsole erlauben (Shell auf diesem System)",
+                        "ru": "Разрешить консоль (командная оболочка в этой системе)",
+                        "pt": "Permitir o console (um shell neste sistema)",
+                        "nl": "Console toestaan (een shell op dit systeem)",
+                        "fr": "Autoriser la console (un shell sur ce système)",
+                        "it": "Consenti la console (una shell su questo sistema)",
+                        "es": "Permitir la consola (un shell en este sistema)",
+                        "pl": "Zezwól na konsolę (powłoka w tym systemie)",
+                        "uk": "Дозволити консоль (командна оболонка в цій системі)",
+                        "zh-cn": "允许控制台（此系统上的 shell）"
+                    },
                     "help": {
                         "en": "Only Linux. The shell runs as the user of ioBroker: full access to ioBroker, its data and, depending on the setup, to the system",
-                        "de": "Nur Linux. Die Shell läuft als Nutzer von ioBroker: voller Zugriff auf ioBroker, seine Daten und, je nach Einrichtung, auf das System"
+                        "de": "Nur Linux. Die Shell läuft als Nutzer von ioBroker: voller Zugriff auf ioBroker, seine Daten und, je nach Einrichtung, auf das System",
+                        "ru": "Только Linux. Оболочка работает от имени пользователя ioBroker: полный доступ к ioBroker, его данным и, в зависимости от настройки, к системе",
+                        "pt": "Só Linux. O shell é executado como o usuário do ioBroker: acesso total ao ioBroker, aos seus dados e, dependendo da configuração, ao sistema",
+                        "nl": "Alleen Linux. De shell draait als de gebruiker van ioBroker: volledige toegang tot ioBroker, de gegevens ervan en, afhankelijk van de inrichting, tot het systeem",
+                        "fr": "Linux uniquement. Le shell s'exécute en tant qu'utilisateur d'ioBroker : accès complet à ioBroker, à ses données et, selon la configuration, au système",
+                        "it": "Solo Linux. La shell viene eseguita come utente di ioBroker: accesso completo a ioBroker, ai suoi dati e, a seconda della configurazione, al sistema",
+                        "es": "Solo Linux. El shell se ejecuta como el usuario de ioBroker: acceso total a ioBroker, a sus datos y, según la configuración, al sistema",
+                        "pl": "Tylko Linux. Powłoka działa jako użytkownik ioBroker: pełny dostęp do ioBroker, jego danych oraz, zależnie od konfiguracji, do systemu",
+                        "uk": "Лише Linux. Оболонка працює від імені користувача ioBroker: повний доступ до ioBroker, його даних і, залежно від налаштування, до системи",
+                        "zh-cn": "仅限 Linux。shell 以 ioBroker 用户身份运行：可完全访问 ioBroker 及其数据，并视配置而定访问系统"
                     },
                     "newLine": true,
                     "xs": 12,
@@ -143,7 +341,19 @@
                 },
                 "_knxHeader": {
                     "type": "header",
-                    "text": { "en": "KNX for ETS", "de": "KNX für ETS" },
+                    "text": {
+                        "en": "KNX for ETS",
+                        "de": "KNX für ETS",
+                        "ru": "KNX для ETS",
+                        "pt": "KNX para ETS",
+                        "nl": "KNX voor ETS",
+                        "fr": "KNX pour ETS",
+                        "it": "KNX per ETS",
+                        "es": "KNX para ETS",
+                        "pl": "KNX dla ETS",
+                        "uk": "KNX для ETS",
+                        "zh-cn": "用于 ETS 的 KNX"
+                    },
                     "size": 5,
                     "newLine": true,
                     "xs": 12,
@@ -154,10 +364,31 @@
                 },
                 "allowKnx": {
                     "type": "checkbox",
-                    "label": { "en": "Allow ETS to reach the KNX gateway", "de": "ETS den Zugang zum KNX-Gateway erlauben" },
+                    "label": {
+                        "en": "Allow ETS to reach the KNX gateway",
+                        "de": "ETS den Zugang zum KNX-Gateway erlauben",
+                        "ru": "Разрешить ETS доступ к шлюзу KNX",
+                        "pt": "Permitir que o ETS acesse o gateway KNX",
+                        "nl": "ETS toegang tot de KNX-gateway geven",
+                        "fr": "Autoriser ETS à atteindre la passerelle KNX",
+                        "it": "Consenti a ETS di raggiungere il gateway KNX",
+                        "es": "Permitir que ETS acceda al gateway KNX",
+                        "pl": "Zezwól ETS na dostęp do bramki KNX",
+                        "uk": "Дозволити ETS доступ до шлюзу KNX",
+                        "zh-cn": "允许 ETS 访问 KNX 网关"
+                    },
                     "help": {
                         "en": "Service staff can program the KNX installation with ETS from afar, through the program bee-knx on their PC. To the gateway below, and to further gateways named in the fleet management if they are in the allowed network (see devices in the network below).",
-                        "de": "Servicepersonal kann die KNX-Anlage mit ETS aus der Ferne programmieren, über das Programm bee-knx auf seinem PC. Zum Gateway unten, und zu weiteren Gateways aus der Flottenverwaltung, wenn sie im erlaubten Netz liegen (siehe Geräte im Netz unten)."
+                        "de": "Servicepersonal kann die KNX-Anlage mit ETS aus der Ferne programmieren, über das Programm bee-knx auf seinem PC. Zum Gateway unten, und zu weiteren Gateways aus der Flottenverwaltung, wenn sie im erlaubten Netz liegen (siehe Geräte im Netz unten).",
+                        "ru": "Сервисный персонал может удалённо программировать установку KNX с помощью ETS через программу bee-knx на своём ПК. Доступ возможен к шлюзу, указанному ниже, и к другим шлюзам из системы управления парком, если они находятся в разрешённой сети (см. устройства в сети ниже).",
+                        "pt": "A equipe de serviço pode programar a instalação KNX com o ETS remotamente, através do programa bee-knx no seu PC. Para o gateway abaixo e para outros gateways indicados na gestão de frota, se estiverem na rede permitida (ver dispositivos na rede abaixo).",
+                        "nl": "Servicemedewerkers kunnen de KNX-installatie met ETS op afstand programmeren, via het programma bee-knx op hun pc. Naar de gateway hieronder, en naar verdere gateways uit het vlootbeheer als die in het toegestane netwerk liggen (zie apparaten in het netwerk hieronder).",
+                        "fr": "Le personnel de service peut programmer l'installation KNX avec ETS à distance, via le programme bee-knx sur son PC. Vers la passerelle ci-dessous, et vers d'autres passerelles indiquées dans la gestion de flotte si elles se trouvent dans le réseau autorisé (voir appareils du réseau ci-dessous).",
+                        "it": "Il personale di assistenza può programmare l'impianto KNX con ETS da remoto, tramite il programma bee-knx sul proprio PC. Verso il gateway indicato qui sotto e verso ulteriori gateway indicati nella gestione della flotta, se si trovano nella rete consentita (vedi dispositivi nella rete qui sotto).",
+                        "es": "El personal de servicio puede programar la instalación KNX con ETS de forma remota, a través del programa bee-knx en su PC. Hacia el gateway de abajo y hacia otros gateways indicados en la gestión de flota, si están en la red permitida (ver dispositivos en la red más abajo).",
+                        "pl": "Personel serwisowy może zdalnie programować instalację KNX za pomocą ETS przez program bee-knx na swoim komputerze. Dostęp jest możliwy do bramki poniżej oraz do kolejnych bramek wskazanych w systemie zarządzania flotą, jeśli znajdują się w dozwolonej sieci (zob. urządzenia w sieci poniżej).",
+                        "uk": "Сервісний персонал може віддалено програмувати установку KNX за допомогою ETS через програму bee-knx на своєму ПК. Доступ можливий до шлюзу, зазначеного нижче, і до інших шлюзів із системи керування парком, якщо вони перебувають у дозволеній мережі (див. пристрої в мережі нижче).",
+                        "zh-cn": "服务人员可以通过其 PC 上的 bee-knx 程序，使用 ETS 远程对 KNX 系统进行编程。可连接到下方的网关，以及设备群管理中指定的其他网关（前提是它们位于允许的网络中，参见下方的网络中的设备）。"
                     },
                     "newLine": true,
                     "xs": 12,
@@ -168,11 +399,32 @@
                 },
                 "knxGateway": {
                     "type": "text",
-                    "label": { "en": "KNX/IP gateway", "de": "KNX/IP-Gateway" },
+                    "label": {
+                        "en": "KNX/IP gateway",
+                        "de": "KNX/IP-Gateway",
+                        "ru": "Шлюз KNX/IP",
+                        "pt": "Gateway KNX/IP",
+                        "nl": "KNX/IP-gateway",
+                        "fr": "Passerelle KNX/IP",
+                        "it": "Gateway KNX/IP",
+                        "es": "Gateway KNX/IP",
+                        "pl": "Bramka KNX/IP",
+                        "uk": "Шлюз KNX/IP",
+                        "zh-cn": "KNX/IP 网关"
+                    },
                     "placeholder": "192.168.1.20",
                     "help": {
                         "en": "IP address or host name, with :port if not 3671. Empty: as set in the adapter knx or openknx",
-                        "de": "IP-Adresse oder Hostname, mit :Port falls nicht 3671. Leer: wie im Adapter knx oder openknx eingestellt"
+                        "de": "IP-Adresse oder Hostname, mit :Port falls nicht 3671. Leer: wie im Adapter knx oder openknx eingestellt",
+                        "ru": "IP-адрес или имя хоста, с :порт, если порт не 3671. Пусто: как настроено в адаптере knx или openknx",
+                        "pt": "Endereço IP ou nome do host, com :porta se não for 3671. Vazio: conforme configurado no adaptador knx ou openknx",
+                        "nl": "IP-adres of hostnaam, met :poort als deze niet 3671 is. Leeg: zoals ingesteld in de adapter knx of openknx",
+                        "fr": "Adresse IP ou nom d'hôte, avec :port si ce n'est pas 3671. Vide : comme configuré dans l'adaptateur knx ou openknx",
+                        "it": "Indirizzo IP o nome host, con :porta se diversa da 3671. Vuoto: come impostato nell'adattatore knx o openknx",
+                        "es": "Dirección IP o nombre de host, con :puerto si no es 3671. Vacío: según lo configurado en el adaptador knx u openknx",
+                        "pl": "Adres IP lub nazwa hosta, z :port, jeśli port jest inny niż 3671. Puste: jak ustawiono w adapterze knx lub openknx",
+                        "uk": "IP-адреса або ім'я хоста, з :порт, якщо порт не 3671. Порожньо: як налаштовано в адаптері knx або openknx",
+                        "zh-cn": "IP 地址或主机名，若端口不是 3671 则附加 :端口。留空：使用 knx 或 openknx 适配器中的设置"
                     },
                     "hidden": "!data.allowKnx",
                     "newLine": true,
@@ -184,11 +436,59 @@
                 },
                 "knxTransport": {
                     "type": "select",
-                    "label": { "en": "Connection to the gateway", "de": "Verbindung zum Gateway" },
+                    "label": {
+                        "en": "Connection to the gateway",
+                        "de": "Verbindung zum Gateway",
+                        "ru": "Подключение к шлюзу",
+                        "pt": "Conexão ao gateway",
+                        "nl": "Verbinding met de gateway",
+                        "fr": "Connexion à la passerelle",
+                        "it": "Connessione al gateway",
+                        "es": "Conexión al gateway",
+                        "pl": "Połączenie z bramką",
+                        "uk": "Підключення до шлюзу",
+                        "zh-cn": "与网关的连接"
+                    },
                     "options": [
-                        { "value": "auto", "label": { "en": "Automatic (TCP if possible, otherwise UDP)", "de": "Automatisch (TCP wenn möglich, sonst UDP)" } },
-                        { "value": "tcp", "label": { "en": "TCP", "de": "TCP" } },
-                        { "value": "udp", "label": { "en": "UDP", "de": "UDP" } }
+                        { "value": "auto", "label": {
+                            "en": "Automatic (TCP if possible, otherwise UDP)",
+                            "de": "Automatisch (TCP wenn möglich, sonst UDP)",
+                            "ru": "Автоматически (TCP, если возможно, иначе UDP)",
+                            "pt": "Automática (TCP se possível, senão UDP)",
+                            "nl": "Automatisch (TCP indien mogelijk, anders UDP)",
+                            "fr": "Automatique (TCP si possible, sinon UDP)",
+                            "it": "Automatica (TCP se possibile, altrimenti UDP)",
+                            "es": "Automática (TCP si es posible, si no UDP)",
+                            "pl": "Automatycznie (TCP, jeśli to możliwe, w przeciwnym razie UDP)",
+                            "uk": "Автоматично (TCP, якщо можливо, інакше UDP)",
+                            "zh-cn": "自动（尽可能使用 TCP，否则使用 UDP）"
+                        } },
+                        { "value": "tcp", "label": {
+                            "en": "TCP",
+                            "de": "TCP",
+                            "ru": "TCP",
+                            "pt": "TCP",
+                            "nl": "TCP",
+                            "fr": "TCP",
+                            "it": "TCP",
+                            "es": "TCP",
+                            "pl": "TCP",
+                            "uk": "TCP",
+                            "zh-cn": "TCP"
+                        } },
+                        { "value": "udp", "label": {
+                            "en": "UDP",
+                            "de": "UDP",
+                            "ru": "UDP",
+                            "pt": "UDP",
+                            "nl": "UDP",
+                            "fr": "UDP",
+                            "it": "UDP",
+                            "es": "UDP",
+                            "pl": "UDP",
+                            "uk": "UDP",
+                            "zh-cn": "UDP"
+                        } }
                     ],
                     "hidden": "!data.allowKnx",
                     "xs": 12,
@@ -199,10 +499,31 @@
                 },
                 "allowLan": {
                     "type": "checkbox",
-                    "label": { "en": "Allow devices in the network to be reached", "de": "Geräte im Netz erreichbar machen" },
+                    "label": {
+                        "en": "Allow devices in the network to be reached",
+                        "de": "Geräte im Netz erreichbar machen",
+                        "ru": "Разрешить доступ к устройствам в сети",
+                        "pt": "Permitir o acesso a dispositivos na rede",
+                        "nl": "Apparaten in het netwerk bereikbaar maken",
+                        "fr": "Autoriser l'accès aux appareils du réseau",
+                        "it": "Consenti di raggiungere i dispositivi nella rete",
+                        "es": "Permitir el acceso a dispositivos de la red",
+                        "pl": "Zezwól na dostęp do urządzeń w sieci",
+                        "uk": "Дозволити доступ до пристроїв у мережі",
+                        "zh-cn": "允许访问网络中的设备"
+                    },
                     "help": {
                         "en": "Service staff can program a device in this network with its own tool from afar, e.g. a LOGO! with LOGO!Soft Comfort or an S7 with TIA Portal, through the program bee-knx on their PC. Which devices, the fleet management says; only inside the networks and ports below, never this device itself.",
-                        "de": "Servicepersonal kann ein Gerät in diesem Netz mit seinem eigenen Werkzeug aus der Ferne programmieren, etwa eine LOGO! mit LOGO!Soft Comfort oder eine S7 mit TIA Portal, über das Programm bee-knx auf seinem PC. Welche Geräte, sagt die Flottenverwaltung; nur in den Netzen und Ports unten, nie dieses Gerät selbst."
+                        "de": "Servicepersonal kann ein Gerät in diesem Netz mit seinem eigenen Werkzeug aus der Ferne programmieren, etwa eine LOGO! mit LOGO!Soft Comfort oder eine S7 mit TIA Portal, über das Programm bee-knx auf seinem PC. Welche Geräte, sagt die Flottenverwaltung; nur in den Netzen und Ports unten, nie dieses Gerät selbst.",
+                        "ru": "Сервисный персонал может удалённо программировать устройство в этой сети его собственным инструментом, напр. LOGO! с помощью LOGO!Soft Comfort или S7 с помощью TIA Portal, через программу bee-knx на своём ПК. Какие именно устройства, определяет система управления парком; только в пределах сетей и портов, указанных ниже, и никогда само это устройство.",
+                        "pt": "A equipe de serviço pode programar remotamente um dispositivo desta rede com a respectiva ferramenta, p. ex. um LOGO! com o LOGO!Soft Comfort ou um S7 com o TIA Portal, através do programa bee-knx no seu PC. Quais dispositivos, quem define é a gestão de frota; apenas dentro das redes e portas abaixo, nunca este próprio dispositivo.",
+                        "nl": "Servicemedewerkers kunnen een apparaat in dit netwerk met de bijbehorende tool op afstand programmeren, bijv. een LOGO! met LOGO!Soft Comfort of een S7 met TIA Portal, via het programma bee-knx op hun pc. Welke apparaten, bepaalt het vlootbeheer; alleen binnen de netwerken en poorten hieronder, nooit dit apparaat zelf.",
+                        "fr": "Le personnel de service peut programmer à distance un appareil de ce réseau avec son propre outil, p. ex. un LOGO! avec LOGO!Soft Comfort ou un S7 avec TIA Portal, via le programme bee-knx sur son PC. La gestion de flotte indique quels appareils ; uniquement dans les réseaux et ports ci-dessous, jamais cet appareil lui-même.",
+                        "it": "Il personale di assistenza può programmare da remoto un dispositivo in questa rete con il relativo strumento, ad es. un LOGO! con LOGO!Soft Comfort o un S7 con TIA Portal, tramite il programma bee-knx sul proprio PC. Quali dispositivi, lo stabilisce la gestione della flotta; solo all'interno delle reti e delle porte indicate qui sotto, mai questo dispositivo stesso.",
+                        "es": "El personal de servicio puede programar de forma remota un dispositivo de esta red con su propia herramienta, p. ej. un LOGO! con LOGO!Soft Comfort o un S7 con TIA Portal, a través del programa bee-knx en su PC. Qué dispositivos, lo indica la gestión de flota; solo dentro de las redes y puertos de abajo, nunca este propio dispositivo.",
+                        "pl": "Personel serwisowy może zdalnie programować urządzenie w tej sieci jego własnym narzędziem, np. LOGO! za pomocą LOGO!Soft Comfort lub S7 za pomocą TIA Portal, przez program bee-knx na swoim komputerze. O tym, które urządzenia, decyduje system zarządzania flotą; tylko w obrębie sieci i portów poniżej, nigdy samo to urządzenie.",
+                        "uk": "Сервісний персонал може віддалено програмувати пристрій у цій мережі його власним інструментом, напр. LOGO! за допомогою LOGO!Soft Comfort або S7 за допомогою TIA Portal, через програму bee-knx на своєму ПК. Які саме пристрої, визначає система керування парком; лише в межах мереж і портів, зазначених нижче, і ніколи сам цей пристрій.",
+                        "zh-cn": "服务人员可以通过其 PC 上的 bee-knx 程序，使用设备自身的工具远程对此网络中的设备进行编程，例如使用 LOGO!Soft Comfort 编程 LOGO!，或使用 TIA Portal 编程 S7。具体哪些设备由设备群管理决定；仅限下方的网络和端口，绝不包括本设备自身。"
                     },
                     "newLine": true,
                     "xs": 12,
@@ -213,11 +534,32 @@
                 },
                 "lanNetworks": {
                     "type": "text",
-                    "label": { "en": "Allowed networks", "de": "Erlaubte Netze" },
+                    "label": {
+                        "en": "Allowed networks",
+                        "de": "Erlaubte Netze",
+                        "ru": "Разрешённые сети",
+                        "pt": "Redes permitidas",
+                        "nl": "Toegestane netwerken",
+                        "fr": "Réseaux autorisés",
+                        "it": "Reti consentite",
+                        "es": "Redes permitidas",
+                        "pl": "Dozwolone sieci",
+                        "uk": "Дозволені мережі",
+                        "zh-cn": "允许的网络"
+                    },
                     "placeholder": "192.168.0.0/24, 192.168.0.3",
                     "help": {
                         "en": "Networks or single addresses, separated by commas; only private ones (10.x, 172.16-31.x, 192.168.x). Empty: the own subnets of this device. Also applies to further KNX gateways.",
-                        "de": "Netze oder einzelne Adressen, mit Komma getrennt; nur private (10.x, 172.16–31.x, 192.168.x). Leer: die eigenen Subnetze dieses Geräts. Gilt auch für weitere KNX-Gateways."
+                        "de": "Netze oder einzelne Adressen, mit Komma getrennt; nur private (10.x, 172.16–31.x, 192.168.x). Leer: die eigenen Subnetze dieses Geräts. Gilt auch für weitere KNX-Gateways.",
+                        "ru": "Сети или отдельные адреса через запятую; только частные (10.x, 172.16-31.x, 192.168.x). Пусто: собственные подсети этого устройства. Также относится к другим шлюзам KNX.",
+                        "pt": "Redes ou endereços individuais, separados por vírgulas; apenas privados (10.x, 172.16-31.x, 192.168.x). Vazio: as sub-redes do próprio dispositivo. Aplica-se também a outros gateways KNX.",
+                        "nl": "Netwerken of afzonderlijke adressen, gescheiden door komma's; alleen privé-adressen (10.x, 172.16-31.x, 192.168.x). Leeg: de eigen subnetten van dit apparaat. Geldt ook voor verdere KNX-gateways.",
+                        "fr": "Réseaux ou adresses individuelles, séparés par des virgules ; uniquement privés (10.x, 172.16-31.x, 192.168.x). Vide : les sous-réseaux propres à cet appareil. S'applique aussi aux autres passerelles KNX.",
+                        "it": "Reti o singoli indirizzi, separati da virgole; solo privati (10.x, 172.16-31.x, 192.168.x). Vuoto: le sottoreti proprie di questo dispositivo. Vale anche per ulteriori gateway KNX.",
+                        "es": "Redes o direcciones individuales, separadas por comas; solo privadas (10.x, 172.16-31.x, 192.168.x). Vacío: las subredes propias de este dispositivo. También se aplica a otros gateways KNX.",
+                        "pl": "Sieci lub pojedyncze adresy, rozdzielone przecinkami; tylko prywatne (10.x, 172.16-31.x, 192.168.x). Puste: własne podsieci tego urządzenia. Dotyczy również kolejnych bramek KNX.",
+                        "uk": "Мережі або окремі адреси через кому; лише приватні (10.x, 172.16-31.x, 192.168.x). Порожньо: власні підмережі цього пристрою. Також стосується інших шлюзів KNX.",
+                        "zh-cn": "网络或单个地址，以逗号分隔；仅限私有地址（10.x、172.16-31.x、192.168.x）。留空：本设备自身的子网。同样适用于其他 KNX 网关。"
                     },
                     "hidden": "!data.allowLan && !data.allowKnx",
                     "newLine": true,
@@ -229,11 +571,32 @@
                 },
                 "lanPorts": {
                     "type": "text",
-                    "label": { "en": "Allowed ports", "de": "Erlaubte Ports" },
+                    "label": {
+                        "en": "Allowed ports",
+                        "de": "Erlaubte Ports",
+                        "ru": "Разрешённые порты",
+                        "pt": "Portas permitidas",
+                        "nl": "Toegestane poorten",
+                        "fr": "Ports autorisés",
+                        "it": "Porte consentite",
+                        "es": "Puertos permitidos",
+                        "pl": "Dozwolone porty",
+                        "uk": "Дозволені порти",
+                        "zh-cn": "允许的端口"
+                    },
                     "placeholder": "102, 10005",
                     "help": {
                         "en": "Separated by commas. Empty: any port. LOGO! 8: 102 and 10005, S7: 102",
-                        "de": "Mit Komma getrennt. Leer: jeder Port. LOGO! 8: 102 und 10005, S7: 102"
+                        "de": "Mit Komma getrennt. Leer: jeder Port. LOGO! 8: 102 und 10005, S7: 102",
+                        "ru": "Через запятую. Пусто: любой порт. LOGO! 8: 102 и 10005, S7: 102",
+                        "pt": "Separadas por vírgulas. Vazio: qualquer porta. LOGO! 8: 102 e 10005, S7: 102",
+                        "nl": "Gescheiden door komma's. Leeg: elke poort. LOGO! 8: 102 en 10005, S7: 102",
+                        "fr": "Séparés par des virgules. Vide : n'importe quel port. LOGO! 8 : 102 et 10005, S7 : 102",
+                        "it": "Separate da virgole. Vuoto: qualsiasi porta. LOGO! 8: 102 e 10005, S7: 102",
+                        "es": "Separados por comas. Vacío: cualquier puerto. LOGO! 8: 102 y 10005, S7: 102",
+                        "pl": "Rozdzielone przecinkami. Puste: dowolny port. LOGO! 8: 102 i 10005, S7: 102",
+                        "uk": "Через кому. Порожньо: будь-який порт. LOGO! 8: 102 і 10005, S7: 102",
+                        "zh-cn": "以逗号分隔。留空：任意端口。LOGO! 8: 102 和 10005，S7: 102"
                     },
                     "hidden": "!data.allowLan",
                     "xs": 12,
@@ -244,7 +607,19 @@
                 },
                 "_aiHeader": {
                     "type": "header",
-                    "text": { "en": "AI access (MCP)", "de": "KI-Zugang (MCP)" },
+                    "text": {
+                        "en": "AI access (MCP)",
+                        "de": "KI-Zugang (MCP)",
+                        "ru": "Доступ ИИ (MCP)",
+                        "pt": "Acesso de IA (MCP)",
+                        "nl": "AI-toegang (MCP)",
+                        "fr": "Accès IA (MCP)",
+                        "it": "Accesso IA (MCP)",
+                        "es": "Acceso de IA (MCP)",
+                        "pl": "Dostęp AI (MCP)",
+                        "uk": "Доступ ШІ (MCP)",
+                        "zh-cn": "AI 访问 (MCP)"
+                    },
                     "size": 5,
                     "newLine": true,
                     "xs": 12,
@@ -255,10 +630,31 @@
                 },
                 "allowAi": {
                     "type": "checkbox",
-                    "label": { "en": "Allow the AI access", "de": "KI-Zugang erlauben" },
+                    "label": {
+                        "en": "Allow the AI access",
+                        "de": "KI-Zugang erlauben",
+                        "ru": "Разрешить доступ ИИ",
+                        "pt": "Permitir o acesso de IA",
+                        "nl": "AI-toegang toestaan",
+                        "fr": "Autoriser l'accès IA",
+                        "it": "Consenti l'accesso IA",
+                        "es": "Permitir el acceso de IA",
+                        "pl": "Zezwól na dostęp AI",
+                        "uk": "Дозволити доступ ШІ",
+                        "zh-cn": "允许 AI 访问"
+                    },
                     "help": {
                         "en": "An AI of the fleet management works with the MCP server of ioBroker on this system, only while someone opened it there with purpose and duration. Needs Node.js 22.19",
-                        "de": "Eine KI der Flottenverwaltung arbeitet mit dem MCP-Server von ioBroker auf diesem System, nur solange jemand sie dort mit Zweck und Dauer geöffnet hat. Braucht Node.js 22.19"
+                        "de": "Eine KI der Flottenverwaltung arbeitet mit dem MCP-Server von ioBroker auf diesem System, nur solange jemand sie dort mit Zweck und Dauer geöffnet hat. Braucht Node.js 22.19",
+                        "ru": "ИИ системы управления парком работает с MCP-сервером ioBroker в этой системе только в течение сеанса, открытого там кем-либо с указанием цели и длительности. Требуется Node.js 22.19",
+                        "pt": "Uma IA da gestão de frota trabalha com o servidor MCP do ioBroker neste sistema, apenas enquanto alguém a tiver aberto lá com finalidade e duração. Requer Node.js 22.19",
+                        "nl": "Een AI van het vlootbeheer werkt met de MCP-server van ioBroker op dit systeem, alleen zolang iemand de toegang daar met doel en duur heeft geopend. Vereist Node.js 22.19",
+                        "fr": "Une IA de la gestion de flotte travaille avec le serveur MCP d'ioBroker sur ce système, uniquement tant que quelqu'un l'y a ouverte avec un motif et une durée. Nécessite Node.js 22.19",
+                        "it": "Un'IA della gestione della flotta lavora con il server MCP di ioBroker su questo sistema, solo finché qualcuno vi ha aperto l'accesso indicando scopo e durata. Richiede Node.js 22.19",
+                        "es": "Una IA de la gestión de flota trabaja con el servidor MCP de ioBroker en este sistema, solo mientras alguien la haya abierto allí con propósito y duración. Requiere Node.js 22.19",
+                        "pl": "AI systemu zarządzania flotą pracuje z serwerem MCP ioBroker w tym systemie tylko w trakcie sesji otwartej tam przez kogoś z podaniem celu i czasu trwania. Wymaga Node.js 22.19",
+                        "uk": "ШІ системи керування парком працює з MCP-сервером ioBroker у цій системі лише протягом сеансу, відкритого там кимось із зазначенням мети й тривалості. Потрібен Node.js 22.19",
+                        "zh-cn": "设备群管理的 AI 通过此系统上 ioBroker 的 MCP 服务器工作，仅限于有人在设备群管理中以指定的目的和时长开启访问的期间。需要 Node.js 22.19"
                     },
                     "newLine": true,
                     "xs": 12,
@@ -270,8 +666,32 @@
                 "aiUser": {
                     "type": "user",
                     "short": true,
-                    "label": { "en": "Runs as ioBroker user", "de": "Läuft als ioBroker-Nutzer" },
-                    "help": { "en": "The AI has the rights of this user", "de": "Die KI hat die Rechte dieses Nutzers" },
+                    "label": {
+                        "en": "Runs as ioBroker user",
+                        "de": "Läuft als ioBroker-Nutzer",
+                        "ru": "Работает от имени пользователя ioBroker",
+                        "pt": "Executa como usuário do ioBroker",
+                        "nl": "Draait als ioBroker-gebruiker",
+                        "fr": "S'exécute en tant qu'utilisateur ioBroker",
+                        "it": "Eseguito come utente ioBroker",
+                        "es": "Se ejecuta como usuario de ioBroker",
+                        "pl": "Działa jako użytkownik ioBroker",
+                        "uk": "Працює від імені користувача ioBroker",
+                        "zh-cn": "以 ioBroker 用户身份运行"
+                    },
+                    "help": {
+                        "en": "The AI has the rights of this user",
+                        "de": "Die KI hat die Rechte dieses Nutzers",
+                        "ru": "ИИ имеет права этого пользователя",
+                        "pt": "A IA tem os direitos deste usuário",
+                        "nl": "De AI heeft de rechten van deze gebruiker",
+                        "fr": "L'IA dispose des droits de cet utilisateur",
+                        "it": "L'IA ha i diritti di questo utente",
+                        "es": "La IA tiene los permisos de este usuario",
+                        "pl": "AI ma uprawnienia tego użytkownika",
+                        "uk": "ШІ має права цього користувача",
+                        "zh-cn": "AI 拥有该用户的权限"
+                    },
                     "hidden": "!data.allowAi",
                     "xs": 12,
                     "sm": 12,
@@ -281,8 +701,32 @@
                 },
                 "aiSetState": {
                     "type": "checkbox",
-                    "label": { "en": "Also write states", "de": "Auch Werte schreiben" },
-                    "help": { "en": "Otherwise the AI only reads", "de": "Sonst liest die KI nur" },
+                    "label": {
+                        "en": "Also write states",
+                        "de": "Auch Werte schreiben",
+                        "ru": "Также записывать состояния",
+                        "pt": "Também escrever estados",
+                        "nl": "Ook datapunten schrijven",
+                        "fr": "Écrire aussi des états",
+                        "it": "Consenti anche la scrittura degli stati",
+                        "es": "También escribir estados",
+                        "pl": "Również zapisywać stany",
+                        "uk": "Також записувати стани",
+                        "zh-cn": "也允许写入数据点"
+                    },
+                    "help": {
+                        "en": "Otherwise the AI only reads",
+                        "de": "Sonst liest die KI nur",
+                        "ru": "Иначе ИИ только читает",
+                        "pt": "Caso contrário, a IA apenas lê",
+                        "nl": "Anders leest de AI alleen",
+                        "fr": "Sinon, l'IA ne fait que lire",
+                        "it": "Altrimenti l'IA legge soltanto",
+                        "es": "De lo contrario, la IA solo lee",
+                        "pl": "W przeciwnym razie AI tylko odczytuje",
+                        "uk": "Інакше ШІ лише читає",
+                        "zh-cn": "否则 AI 只能读取"
+                    },
                     "hidden": "!data.allowAi",
                     "newLine": true,
                     "xs": 12,
@@ -293,7 +737,19 @@
                 },
                 "aiObjectChange": {
                     "type": "checkbox",
-                    "label": { "en": "Also change objects and files", "de": "Auch Objekte und Dateien ändern" },
+                    "label": {
+                        "en": "Also change objects and files",
+                        "de": "Auch Objekte und Dateien ändern",
+                        "ru": "Также изменять объекты и файлы",
+                        "pt": "Também alterar objetos e arquivos",
+                        "nl": "Ook objecten en bestanden wijzigen",
+                        "fr": "Modifier aussi les objets et fichiers",
+                        "it": "Consenti anche la modifica di oggetti e file",
+                        "es": "También modificar objetos y archivos",
+                        "pl": "Również zmieniać obiekty i pliki",
+                        "uk": "Також змінювати об'єкти та файли",
+                        "zh-cn": "也允许修改对象和文件"
+                    },
                     "hidden": "!data.allowAi",
                     "xs": 12,
                     "sm": 12,
@@ -304,7 +760,19 @@
                 "_remoteAccessBy": {
                     "type": "state",
                     "oid": "info.remoteAccessBy",
-                    "label": { "en": "Remote access in progress", "de": "Laufender Fernzugriff" },
+                    "label": {
+                        "en": "Remote access in progress",
+                        "de": "Laufender Fernzugriff",
+                        "ru": "Активный удалённый доступ",
+                        "pt": "Acesso remoto em curso",
+                        "nl": "Lopende toegang op afstand",
+                        "fr": "Accès à distance en cours",
+                        "it": "Accesso remoto in corso",
+                        "es": "Acceso remoto en curso",
+                        "pl": "Trwający zdalny dostęp",
+                        "uk": "Активний віддалений доступ",
+                        "zh-cn": "正在进行的远程访问"
+                    },
                     "newLine": true,
                     "xs": 12,
                     "sm": 12,
@@ -316,13 +784,34 @@
         },
         "maintenance": {
             "type": "panel",
-            "label": { "en": "Maintenance window", "de": "Wartungsfenster" },
+            "label": {
+                "en": "Maintenance window",
+                "de": "Wartungsfenster",
+                "ru": "Окно обслуживания",
+                "pt": "Janela de manutenção",
+                "nl": "Onderhoudsvenster",
+                "fr": "Fenêtre de maintenance",
+                "it": "Finestra di manutenzione",
+                "es": "Ventana de mantenimiento",
+                "pl": "Okno serwisowe",
+                "uk": "Вікно обслуговування",
+                "zh-cn": "维护时段"
+            },
             "items": {
                 "hdr2": {
                     "type": "staticText",
                     "text": {
                         "en": "Updates only run inside the maintenance window and when all conditions are met (e.g. installation not in use, battery charged, no roaming, vehicle standing).",
-                        "de": "Updates laufen nur im Wartungsfenster und wenn alle Bedingungen erfüllt sind (z. B. Anlage nicht in Benutzung, Batterie geladen, kein Roaming, Fahrzeug steht)."
+                        "de": "Updates laufen nur im Wartungsfenster und wenn alle Bedingungen erfüllt sind (z. B. Anlage nicht in Benutzung, Batterie geladen, kein Roaming, Fahrzeug steht).",
+                        "ru": "Обновления выполняются только в окне обслуживания и при соблюдении всех условий (напр. установка не используется, аккумулятор заряжен, нет роуминга, транспортное средство стоит).",
+                        "pt": "As atualizações só são executadas dentro da janela de manutenção e quando todas as condições são atendidas (p. ex. instalação fora de uso, bateria carregada, sem roaming, veículo parado).",
+                        "nl": "Updates worden alleen binnen het onderhoudsvenster uitgevoerd en wanneer aan alle voorwaarden is voldaan (bijv. installatie niet in gebruik, accu geladen, geen roaming, voertuig staat stil).",
+                        "fr": "Les mises à jour ne s'exécutent que dans la fenêtre de maintenance et lorsque toutes les conditions sont remplies (p. ex. installation non utilisée, batterie chargée, pas d'itinérance, véhicule à l'arrêt).",
+                        "it": "Gli aggiornamenti vengono eseguiti solo all'interno della finestra di manutenzione e quando tutte le condizioni sono soddisfatte (ad es. impianto non in uso, batteria carica, nessun roaming, veicolo fermo).",
+                        "es": "Las actualizaciones solo se ejecutan dentro de la ventana de mantenimiento y cuando se cumplen todas las condiciones (p. ej. instalación sin uso, batería cargada, sin roaming, vehículo parado).",
+                        "pl": "Aktualizacje są wykonywane tylko w oknie serwisowym i gdy spełnione są wszystkie warunki (np. instalacja nie jest używana, akumulator naładowany, brak roamingu, pojazd stoi).",
+                        "uk": "Оновлення виконуються лише у вікні обслуговування та за дотримання всіх умов (напр. установка не використовується, акумулятор заряджений, немає роумінгу, транспортний засіб стоїть).",
+                        "zh-cn": "更新仅在维护时段内且满足所有条件时执行（例如设施未在使用、电池已充电、未漫游、车辆处于静止状态）。"
                     },
                     "xs": 12,
                     "sm": 12,
@@ -332,7 +821,19 @@
                 },
                 "windowStart": {
                     "type": "text",
-                    "label": { "en": "Window start (HH:MM)", "de": "Fenster Beginn (HH:MM)" },
+                    "label": {
+                        "en": "Window start (HH:MM)",
+                        "de": "Fenster Beginn (HH:MM)",
+                        "ru": "Начало окна (HH:MM)",
+                        "pt": "Início da janela (HH:MM)",
+                        "nl": "Begin venster (HH:MM)",
+                        "fr": "Début de la fenêtre (HH:MM)",
+                        "it": "Inizio finestra (HH:MM)",
+                        "es": "Inicio de la ventana (HH:MM)",
+                        "pl": "Początek okna (HH:MM)",
+                        "uk": "Початок вікна (HH:MM)",
+                        "zh-cn": "时段开始 (HH:MM)"
+                    },
                     "xs": 6,
                     "sm": 6,
                     "md": 3,
@@ -342,7 +843,19 @@
                 },
                 "windowEnd": {
                     "type": "text",
-                    "label": { "en": "Window end (HH:MM)", "de": "Fenster Ende (HH:MM)" },
+                    "label": {
+                        "en": "Window end (HH:MM)",
+                        "de": "Fenster Ende (HH:MM)",
+                        "ru": "Конец окна (HH:MM)",
+                        "pt": "Fim da janela (HH:MM)",
+                        "nl": "Einde venster (HH:MM)",
+                        "fr": "Fin de la fenêtre (HH:MM)",
+                        "it": "Fine finestra (HH:MM)",
+                        "es": "Fin de la ventana (HH:MM)",
+                        "pl": "Koniec okna (HH:MM)",
+                        "uk": "Кінець вікна (HH:MM)",
+                        "zh-cn": "时段结束 (HH:MM)"
+                    },
                     "xs": 6,
                     "sm": 6,
                     "md": 3,
@@ -351,7 +864,19 @@
                 },
                 "ignoreWindow": {
                     "type": "checkbox",
-                    "label": { "en": "Ignore window (testing only)", "de": "Fenster ignorieren (nur für Tests)" },
+                    "label": {
+                        "en": "Ignore window (testing only)",
+                        "de": "Fenster ignorieren (nur für Tests)",
+                        "ru": "Игнорировать окно (только для тестов)",
+                        "pt": "Ignorar janela (apenas para testes)",
+                        "nl": "Venster negeren (alleen voor tests)",
+                        "fr": "Ignorer la fenêtre (tests uniquement)",
+                        "it": "Ignora finestra (solo per test)",
+                        "es": "Ignorar ventana (solo para pruebas)",
+                        "pl": "Ignoruj okno (tylko do testów)",
+                        "uk": "Ігнорувати вікно (лише для тестів)",
+                        "zh-cn": "忽略时段（仅用于测试）"
+                    },
                     "xs": 12,
                     "sm": 12,
                     "md": 6,
@@ -361,7 +886,19 @@
                 "minFreeMb": {
                     "type": "number",
                     "min": 100,
-                    "label": { "en": "Minimum free space (MB)", "de": "Mindestens freier Speicher (MB)" },
+                    "label": {
+                        "en": "Minimum free space (MB)",
+                        "de": "Mindestens freier Speicher (MB)",
+                        "ru": "Минимум свободного места (MB)",
+                        "pt": "Espaço livre mínimo (MB)",
+                        "nl": "Minimale vrije ruimte (MB)",
+                        "fr": "Espace libre minimum (MB)",
+                        "it": "Spazio libero minimo (MB)",
+                        "es": "Espacio libre mínimo (MB)",
+                        "pl": "Minimalna ilość wolnego miejsca (MB)",
+                        "uk": "Мінімум вільного місця (MB)",
+                        "zh-cn": "最小可用空间 (MB)"
+                    },
                     "xs": 12,
                     "sm": 6,
                     "md": 3,
@@ -371,7 +908,19 @@
                 },
                 "conditions": {
                     "type": "table",
-                    "label": { "en": "Conditions for updates", "de": "Bedingungen für Updates" },
+                    "label": {
+                        "en": "Conditions for updates",
+                        "de": "Bedingungen für Updates",
+                        "ru": "Условия для обновлений",
+                        "pt": "Condições para atualizações",
+                        "nl": "Voorwaarden voor updates",
+                        "fr": "Conditions des mises à jour",
+                        "it": "Condizioni per gli aggiornamenti",
+                        "es": "Condiciones para actualizaciones",
+                        "pl": "Warunki aktualizacji",
+                        "uk": "Умови для оновлень",
+                        "zh-cn": "更新条件"
+                    },
                     "newLine": true,
                     "xs": 12,
                     "sm": 12,
@@ -382,19 +931,55 @@
                         {
                             "type": "text",
                             "attr": "label",
-                            "title": { "en": "Label", "de": "Bezeichnung" },
+                            "title": {
+                                "en": "Label",
+                                "de": "Bezeichnung",
+                                "ru": "Название",
+                                "pt": "Rótulo",
+                                "nl": "Omschrijving",
+                                "fr": "Libellé",
+                                "it": "Etichetta",
+                                "es": "Etiqueta",
+                                "pl": "Nazwa",
+                                "uk": "Назва",
+                                "zh-cn": "名称"
+                            },
                             "width": "25%"
                         },
                         {
                             "type": "objectId",
                             "attr": "stateId",
-                            "title": { "en": "State", "de": "Datenpunkt" },
+                            "title": {
+                                "en": "State",
+                                "de": "Datenpunkt",
+                                "ru": "Состояние",
+                                "pt": "Estado",
+                                "nl": "Datapunt",
+                                "fr": "État",
+                                "it": "Stato",
+                                "es": "Estado",
+                                "pl": "Stan",
+                                "uk": "Стан",
+                                "zh-cn": "数据点"
+                            },
                             "width": "40%"
                         },
                         {
                             "type": "select",
                             "attr": "op",
-                            "title": { "en": "Operator", "de": "Vergleich" },
+                            "title": {
+                                "en": "Operator",
+                                "de": "Vergleich",
+                                "ru": "Оператор",
+                                "pt": "Operador",
+                                "nl": "Operator",
+                                "fr": "Opérateur",
+                                "it": "Operatore",
+                                "es": "Operador",
+                                "pl": "Operator",
+                                "uk": "Оператор",
+                                "zh-cn": "运算符"
+                            },
                             "options": [
                                 { "label": "==", "value": "==" },
                                 { "label": "!=", "value": "!=" },
@@ -409,7 +994,19 @@
                         {
                             "type": "text",
                             "attr": "value",
-                            "title": { "en": "Value", "de": "Wert" },
+                            "title": {
+                                "en": "Value",
+                                "de": "Wert",
+                                "ru": "Значение",
+                                "pt": "Valor",
+                                "nl": "Waarde",
+                                "fr": "Valeur",
+                                "it": "Valore",
+                                "es": "Valor",
+                                "pl": "Wartość",
+                                "uk": "Значення",
+                                "zh-cn": "值"
+                            },
                             "width": "20%"
                         }
                     ]
@@ -418,13 +1015,34 @@
         },
         "monitoring": {
             "type": "panel",
-            "label": { "en": "Monitoring", "de": "Überwachung" },
+            "label": {
+                "en": "Monitoring",
+                "de": "Überwachung",
+                "ru": "Мониторинг",
+                "pt": "Monitoramento",
+                "nl": "Bewaking",
+                "fr": "Surveillance",
+                "it": "Monitoraggio",
+                "es": "Supervisión",
+                "pl": "Monitorowanie",
+                "uk": "Моніторинг",
+                "zh-cn": "监控"
+            },
             "items": {
                 "_monitorText": {
                     "type": "staticText",
                     "text": {
                         "en": "Each line watches a state. Once its condition holds for longer than the delay, the fleet management shows a deviation with this severity and notifies by mail or Telegram as set there; once the condition is gone for as long, the deviation ends. Example: victron.0.voltage, \"<\", 11.5, Warning. \"No update for (min)\" reports a state that stopped changing, e.g. because its adapter hangs.",
-                        "de": "Jede Zeile überwacht einen Datenpunkt. Gilt die Bedingung länger als die Verzögerung, zeigt die Flottenverwaltung eine Abweichung mit diesem Schweregrad und benachrichtigt per Mail oder Telegram, wie dort eingestellt; ist sie ebenso lange vorbei, endet die Abweichung. Beispiel: victron.0.voltage, \"<\", 11,5, Warnung. \"Keine Aktualisierung seit (min)\" meldet einen Datenpunkt, der sich nicht mehr ändert, etwa weil sein Adapter hängt."
+                        "de": "Jede Zeile überwacht einen Datenpunkt. Gilt die Bedingung länger als die Verzögerung, zeigt die Flottenverwaltung eine Abweichung mit diesem Schweregrad und benachrichtigt per Mail oder Telegram, wie dort eingestellt; ist sie ebenso lange vorbei, endet die Abweichung. Beispiel: victron.0.voltage, \"<\", 11,5, Warnung. \"Keine Aktualisierung seit (min)\" meldet einen Datenpunkt, der sich nicht mehr ändert, etwa weil sein Adapter hängt.",
+                        "ru": "Каждая строка отслеживает состояние. Если условие выполняется дольше заданной задержки, система управления парком показывает отклонение с этим уровнем серьёзности и уведомляет по почте или в Telegram, как там настроено; когда условие не выполняется столько же времени, отклонение завершается. Пример: victron.0.voltage, \"<\", 11.5, Предупреждение. \"Нет обновления в течение (min)\" сообщает о состоянии, которое перестало изменяться, напр. потому что его адаптер завис.",
+                        "pt": "Cada linha monitora um estado. Quando a sua condição se mantém por mais tempo do que o atraso, a gestão de frota mostra um desvio com esta gravidade e notifica por e-mail ou Telegram, conforme configurado lá; quando a condição deixa de se verificar pelo mesmo tempo, o desvio termina. Exemplo: victron.0.voltage, \"<\", 11.5, Aviso. \"Sem atualização há (min)\" reporta um estado que deixou de mudar, p. ex. porque o seu adaptador travou.",
+                        "nl": "Elke regel bewaakt een datapunt. Zodra de voorwaarde langer dan de vertraging geldt, toont het vlootbeheer een afwijking met deze ernst en stuurt het een melding per e-mail of Telegram, zoals daar ingesteld; zodra de voorwaarde even lang niet meer geldt, eindigt de afwijking. Voorbeeld: victron.0.voltage, \"<\", 11.5, Waarschuwing. \"Geen update gedurende (min)\" meldt een datapunt dat niet meer verandert, bijv. omdat de adapter ervan vastloopt.",
+                        "fr": "Chaque ligne surveille un état. Dès que sa condition est remplie plus longtemps que le délai, la gestion de flotte affiche un écart avec cette gravité et notifie par e-mail ou Telegram selon ce qui y est configuré ; dès que la condition a disparu pendant la même durée, l'écart prend fin. Exemple : victron.0.voltage, \"<\", 11.5, Avertissement. \"Pas de mise à jour depuis (min)\" signale un état qui a cessé de changer, p. ex. parce que son adaptateur est bloqué.",
+                        "it": "Ogni riga sorveglia uno stato. Quando la sua condizione persiste più a lungo del ritardo, la gestione della flotta mostra uno scostamento con questa gravità e invia una notifica via e-mail o Telegram, come impostato lì; quando la condizione cessa per altrettanto tempo, lo scostamento termina. Esempio: victron.0.voltage, \"<\", 11.5, Avviso. \"Nessun aggiornamento da (min)\" segnala uno stato che ha smesso di cambiare, ad es. perché il suo adattatore è bloccato.",
+                        "es": "Cada línea vigila un estado. Cuando su condición se cumple durante más tiempo que el retardo, la gestión de flota muestra una desviación con esta gravedad y avisa por correo o Telegram según se haya configurado allí; cuando la condición desaparece durante el mismo tiempo, la desviación termina. Ejemplo: victron.0.voltage, \"<\", 11.5, Advertencia. \"Sin actualización desde hace (min)\" informa de un estado que ha dejado de cambiar, p. ej. porque su adaptador se ha colgado.",
+                        "pl": "Każdy wiersz monitoruje stan. Gdy warunek jest spełniony dłużej niż opóźnienie, system zarządzania flotą pokazuje odchylenie z tym poziomem ważności i powiadamia e-mailem lub przez Telegram, zgodnie z ustawieniami tam; gdy warunek przestanie być spełniony przez taki sam czas, odchylenie się kończy. Przykład: victron.0.voltage, \"<\", 11.5, Ostrzeżenie. \"Brak aktualizacji przez (min)\" zgłasza stan, który przestał się zmieniać, np. ponieważ jego adapter się zawiesił.",
+                        "uk": "Кожен рядок відстежує стан. Якщо умова виконується довше за затримку, система керування парком показує відхилення з цим рівнем серйозності й сповіщає поштою або в Telegram, як там налаштовано; коли умова не виконується так само довго, відхилення завершується. Приклад: victron.0.voltage, \"<\", 11.5, Попередження. \"Немає оновлення протягом (min)\" повідомляє про стан, який перестав змінюватися, напр. тому що його адаптер завис.",
+                        "zh-cn": "每一行监视一个数据点。当其条件持续时间超过延迟时，设备群管理会显示一个具有该严重程度的偏差，并按照那里的设置通过邮件或 Telegram 发送通知；当条件消失同样长的时间后，偏差结束。示例：victron.0.voltage, \"<\", 11.5, 警告。\"未更新时长 (min)\" 用于报告不再变化的数据点，例如因其适配器卡住。"
                     },
                     "newLine": true,
                     "xs": 12,
@@ -435,7 +1053,19 @@
                 },
                 "monitors": {
                     "type": "table",
-                    "label": { "en": "Rules", "de": "Regeln" },
+                    "label": {
+                        "en": "Rules",
+                        "de": "Regeln",
+                        "ru": "Правила",
+                        "pt": "Regras",
+                        "nl": "Regels",
+                        "fr": "Règles",
+                        "it": "Regole",
+                        "es": "Reglas",
+                        "pl": "Reguły",
+                        "uk": "Правила",
+                        "zh-cn": "规则"
+                    },
                     "newLine": true,
                     "xs": 12,
                     "sm": 12,
@@ -443,12 +1073,48 @@
                     "lg": 12,
                     "xl": 12,
                     "items": [
-                        { "type": "text", "attr": "label", "title": { "en": "Label", "de": "Bezeichnung" }, "width": "18%" },
-                        { "type": "objectId", "attr": "stateId", "title": { "en": "State", "de": "Datenpunkt" }, "width": "30%" },
+                        { "type": "text", "attr": "label", "title": {
+                            "en": "Label",
+                            "de": "Bezeichnung",
+                            "ru": "Название",
+                            "pt": "Rótulo",
+                            "nl": "Omschrijving",
+                            "fr": "Libellé",
+                            "it": "Etichetta",
+                            "es": "Etiqueta",
+                            "pl": "Nazwa",
+                            "uk": "Назва",
+                            "zh-cn": "名称"
+                        }, "width": "18%" },
+                        { "type": "objectId", "attr": "stateId", "title": {
+                            "en": "State",
+                            "de": "Datenpunkt",
+                            "ru": "Состояние",
+                            "pt": "Estado",
+                            "nl": "Datapunt",
+                            "fr": "État",
+                            "it": "Stato",
+                            "es": "Estado",
+                            "pl": "Stan",
+                            "uk": "Стан",
+                            "zh-cn": "数据点"
+                        }, "width": "30%" },
                         {
                             "type": "select",
                             "attr": "op",
-                            "title": { "en": "Reports when", "de": "Meldet, wenn" },
+                            "title": {
+                                "en": "Reports when",
+                                "de": "Meldet, wenn",
+                                "ru": "Сообщает, когда",
+                                "pt": "Reporta quando",
+                                "nl": "Meldt wanneer",
+                                "fr": "Signale quand",
+                                "it": "Segnala quando",
+                                "es": "Informa cuando",
+                                "pl": "Zgłasza, gdy",
+                                "uk": "Повідомляє, коли",
+                                "zh-cn": "报告条件"
+                            },
                             "options": [
                                 { "label": "<", "value": "<" },
                                 { "label": "<=", "value": "<=" },
@@ -456,38 +1122,158 @@
                                 { "label": ">=", "value": ">=" },
                                 { "label": "==", "value": "==" },
                                 { "label": "!=", "value": "!=" },
-                                { "label": { "en": "no update for (min)", "de": "keine Aktualisierung seit (min)" }, "value": "stale" }
+                                { "label": {
+                                    "en": "no update for (min)",
+                                    "de": "keine Aktualisierung seit (min)",
+                                    "ru": "нет обновления в течение (min)",
+                                    "pt": "sem atualização há (min)",
+                                    "nl": "geen update gedurende (min)",
+                                    "fr": "pas de mise à jour depuis (min)",
+                                    "it": "nessun aggiornamento da (min)",
+                                    "es": "sin actualización desde hace (min)",
+                                    "pl": "brak aktualizacji przez (min)",
+                                    "uk": "немає оновлення протягом (min)",
+                                    "zh-cn": "未更新时长 (min)"
+                                }, "value": "stale" }
                             ],
                             "default": "<",
                             "width": "14%"
                         },
-                        { "type": "text", "attr": "value", "title": { "en": "Value", "de": "Wert" }, "width": "10%" },
+                        { "type": "text", "attr": "value", "title": {
+                            "en": "Value",
+                            "de": "Wert",
+                            "ru": "Значение",
+                            "pt": "Valor",
+                            "nl": "Waarde",
+                            "fr": "Valeur",
+                            "it": "Valore",
+                            "es": "Valor",
+                            "pl": "Wartość",
+                            "uk": "Значення",
+                            "zh-cn": "值"
+                        }, "width": "10%" },
                         {
                             "type": "select",
                             "attr": "severity",
-                            "title": { "en": "Severity", "de": "Schweregrad" },
+                            "title": {
+                                "en": "Severity",
+                                "de": "Schweregrad",
+                                "ru": "Серьёзность",
+                                "pt": "Gravidade",
+                                "nl": "Ernst",
+                                "fr": "Gravité",
+                                "it": "Gravità",
+                                "es": "Gravedad",
+                                "pl": "Ważność",
+                                "uk": "Серйозність",
+                                "zh-cn": "严重程度"
+                            },
                             "options": [
-                                { "label": { "en": "Info", "de": "Hinweis" }, "value": "info" },
-                                { "label": { "en": "Warning", "de": "Warnung" }, "value": "warning" },
-                                { "label": { "en": "Error", "de": "Fehler" }, "value": "error" },
-                                { "label": { "en": "Critical", "de": "Kritisch" }, "value": "critical" }
+                                { "label": {
+                                    "en": "Info",
+                                    "de": "Hinweis",
+                                    "ru": "Информация",
+                                    "pt": "Informação",
+                                    "nl": "Info",
+                                    "fr": "Information",
+                                    "it": "Info",
+                                    "es": "Información",
+                                    "pl": "Informacja",
+                                    "uk": "Інформація",
+                                    "zh-cn": "提示"
+                                }, "value": "info" },
+                                { "label": {
+                                    "en": "Warning",
+                                    "de": "Warnung",
+                                    "ru": "Предупреждение",
+                                    "pt": "Aviso",
+                                    "nl": "Waarschuwing",
+                                    "fr": "Avertissement",
+                                    "it": "Avviso",
+                                    "es": "Advertencia",
+                                    "pl": "Ostrzeżenie",
+                                    "uk": "Попередження",
+                                    "zh-cn": "警告"
+                                }, "value": "warning" },
+                                { "label": {
+                                    "en": "Error",
+                                    "de": "Fehler",
+                                    "ru": "Ошибка",
+                                    "pt": "Erro",
+                                    "nl": "Fout",
+                                    "fr": "Erreur",
+                                    "it": "Errore",
+                                    "es": "Error",
+                                    "pl": "Błąd",
+                                    "uk": "Помилка",
+                                    "zh-cn": "错误"
+                                }, "value": "error" },
+                                { "label": {
+                                    "en": "Critical",
+                                    "de": "Kritisch",
+                                    "ru": "Критический",
+                                    "pt": "Crítico",
+                                    "nl": "Kritiek",
+                                    "fr": "Critique",
+                                    "it": "Critico",
+                                    "es": "Crítico",
+                                    "pl": "Krytyczny",
+                                    "uk": "Критичний",
+                                    "zh-cn": "严重"
+                                }, "value": "critical" }
                             ],
                             "default": "warning",
                             "width": "14%"
                         },
-                        { "type": "number", "attr": "delay", "title": { "en": "Delay (s)", "de": "Verzögerung (s)" }, "min": 0, "default": 60, "width": "14%" }
+                        { "type": "number", "attr": "delay", "title": {
+                            "en": "Delay (s)",
+                            "de": "Verzögerung (s)",
+                            "ru": "Задержка (s)",
+                            "pt": "Atraso (s)",
+                            "nl": "Vertraging (s)",
+                            "fr": "Délai (s)",
+                            "it": "Ritardo (s)",
+                            "es": "Retardo (s)",
+                            "pl": "Opóźnienie (s)",
+                            "uk": "Затримка (s)",
+                            "zh-cn": "延迟 (s)"
+                        }, "min": 0, "default": 60, "width": "14%" }
                     ]
                 }
             }
         },
         "advanced": {
             "type": "panel",
-            "label": { "en": "Advanced", "de": "Erweitert" },
+            "label": {
+                "en": "Advanced",
+                "de": "Erweitert",
+                "ru": "Дополнительно",
+                "pt": "Avançado",
+                "nl": "Geavanceerd",
+                "fr": "Avancé",
+                "it": "Avanzate",
+                "es": "Avanzado",
+                "pl": "Zaawansowane",
+                "uk": "Додатково",
+                "zh-cn": "高级"
+            },
             "items": {
                 "heartbeatMinutes": {
                     "type": "number",
                     "min": 5,
-                    "label": { "en": "Heartbeat interval (min)", "de": "Heartbeat-Intervall (min)" },
+                    "label": {
+                        "en": "Heartbeat interval (min)",
+                        "de": "Heartbeat-Intervall (min)",
+                        "ru": "Интервал heartbeat (min)",
+                        "pt": "Intervalo de heartbeat (min)",
+                        "nl": "Heartbeat-interval (min)",
+                        "fr": "Intervalle de heartbeat (min)",
+                        "it": "Intervallo heartbeat (min)",
+                        "es": "Intervalo de heartbeat (min)",
+                        "pl": "Interwał heartbeat (min)",
+                        "uk": "Інтервал heartbeat (min)",
+                        "zh-cn": "心跳间隔 (min)"
+                    },
                     "xs": 12,
                     "sm": 6,
                     "md": 3,
@@ -497,7 +1283,19 @@
                 "checkMinutes": {
                     "type": "number",
                     "min": 1,
-                    "label": { "en": "Check interval (min)", "de": "Prüfintervall (min)" },
+                    "label": {
+                        "en": "Check interval (min)",
+                        "de": "Prüfintervall (min)",
+                        "ru": "Интервал проверки (min)",
+                        "pt": "Intervalo de verificação (min)",
+                        "nl": "Controle-interval (min)",
+                        "fr": "Intervalle de vérification (min)",
+                        "it": "Intervallo di controllo (min)",
+                        "es": "Intervalo de comprobación (min)",
+                        "pl": "Interwał sprawdzania (min)",
+                        "uk": "Інтервал перевірки (min)",
+                        "zh-cn": "检查间隔 (min)"
+                    },
                     "xs": 12,
                     "sm": 6,
                     "md": 3,
@@ -507,8 +1305,32 @@
                 "keepaliveSeconds": {
                     "type": "number",
                     "min": 30,
-                    "label": { "en": "MQTT keepalive (s)", "de": "MQTT-Keepalive (s)" },
-                    "help": { "en": "Longer saves mobile data", "de": "Länger spart Mobilfunkvolumen" },
+                    "label": {
+                        "en": "MQTT keepalive (s)",
+                        "de": "MQTT-Keepalive (s)",
+                        "ru": "MQTT keepalive (s)",
+                        "pt": "Keepalive MQTT (s)",
+                        "nl": "MQTT-keepalive (s)",
+                        "fr": "Keepalive MQTT (s)",
+                        "it": "Keepalive MQTT (s)",
+                        "es": "Keepalive MQTT (s)",
+                        "pl": "MQTT keepalive (s)",
+                        "uk": "MQTT keepalive (s)",
+                        "zh-cn": "MQTT keepalive (s)"
+                    },
+                    "help": {
+                        "en": "Longer saves mobile data",
+                        "de": "Länger spart Mobilfunkvolumen",
+                        "ru": "Большее значение экономит мобильный трафик",
+                        "pt": "Um valor maior economiza dados móveis",
+                        "nl": "Langer bespaart mobiele data",
+                        "fr": "Une valeur plus longue économise les données mobiles",
+                        "it": "Un valore più lungo risparmia dati mobili",
+                        "es": "Un valor mayor ahorra datos móviles",
+                        "pl": "Dłuższy czas oszczędza dane mobilne",
+                        "uk": "Більше значення заощаджує мобільний трафік",
+                        "zh-cn": "时间越长越节省移动数据流量"
+                    },
                     "xs": 12,
                     "sm": 6,
                     "md": 3,
@@ -517,7 +1339,19 @@
                 },
                 "signalStateId": {
                     "type": "objectId",
-                    "label": { "en": "State with signal quality (optional)", "de": "Datenpunkt mit Signalqualität (optional)" },
+                    "label": {
+                        "en": "State with signal quality (optional)",
+                        "de": "Datenpunkt mit Signalqualität (optional)",
+                        "ru": "Состояние с качеством сигнала (необязательно)",
+                        "pt": "Estado com a qualidade do sinal (opcional)",
+                        "nl": "Datapunt met signaalkwaliteit (optioneel)",
+                        "fr": "État avec la qualité du signal (facultatif)",
+                        "it": "Stato con la qualità del segnale (opzionale)",
+                        "es": "Estado con la calidad de la señal (opcional)",
+                        "pl": "Stan z jakością sygnału (opcjonalnie)",
+                        "uk": "Стан з якістю сигналу (необов'язково)",
+                        "zh-cn": "包含信号质量的数据点（可选）"
+                    },
                     "xs": 12,
                     "sm": 12,
                     "md": 6,
@@ -528,8 +1362,32 @@
                 "verifySeconds": {
                     "type": "number",
                     "min": 10,
-                    "label": { "en": "Observation after update (s)", "de": "Beobachtung nach Update (s)" },
-                    "help": { "en": "No new errors in the log during this time", "de": "In dieser Zeit keine neuen Fehler im Log" },
+                    "label": {
+                        "en": "Observation after update (s)",
+                        "de": "Beobachtung nach Update (s)",
+                        "ru": "Наблюдение после обновления (s)",
+                        "pt": "Observação após a atualização (s)",
+                        "nl": "Observatie na update (s)",
+                        "fr": "Observation après la mise à jour (s)",
+                        "it": "Osservazione dopo l'aggiornamento (s)",
+                        "es": "Observación tras la actualización (s)",
+                        "pl": "Obserwacja po aktualizacji (s)",
+                        "uk": "Спостереження після оновлення (s)",
+                        "zh-cn": "更新后观察时间 (s)"
+                    },
+                    "help": {
+                        "en": "No new errors in the log during this time",
+                        "de": "In dieser Zeit keine neuen Fehler im Log",
+                        "ru": "Без новых ошибок в журнале в течение этого времени",
+                        "pt": "Nenhum erro novo no log durante este tempo",
+                        "nl": "Geen nieuwe fouten in het log gedurende deze tijd",
+                        "fr": "Aucune nouvelle erreur dans le journal pendant cette durée",
+                        "it": "Nessun nuovo errore nel log durante questo periodo",
+                        "es": "Ningún error nuevo en el registro durante este tiempo",
+                        "pl": "Bez nowych błędów w logu w tym czasie",
+                        "uk": "Без нових помилок у журналі протягом цього часу",
+                        "zh-cn": "在此期间日志中不得出现新错误"
+                    },
                     "xs": 12,
                     "sm": 6,
                     "md": 3,
@@ -540,7 +1398,19 @@
                 "startTimeoutSeconds": {
                     "type": "number",
                     "min": 30,
-                    "label": { "en": "Start timeout of instances (s)", "de": "Startfrist der Instanzen (s)" },
+                    "label": {
+                        "en": "Start timeout of instances (s)",
+                        "de": "Startfrist der Instanzen (s)",
+                        "ru": "Тайм-аут запуска экземпляров (s)",
+                        "pt": "Tempo limite de inicialização das instâncias (s)",
+                        "nl": "Starttime-out van instanties (s)",
+                        "fr": "Délai de démarrage des instances (s)",
+                        "it": "Timeout di avvio delle istanze (s)",
+                        "es": "Tiempo límite de inicio de las instancias (s)",
+                        "pl": "Limit czasu uruchamiania instancji (s)",
+                        "uk": "Тайм-аут запуску екземплярів (s)",
+                        "zh-cn": "实例启动超时 (s)"
+                    },
                     "xs": 12,
                     "sm": 6,
                     "md": 3,
@@ -549,8 +1419,32 @@
                 },
                 "backupBeforeUpdate": {
                     "type": "checkbox",
-                    "label": { "en": "Backup before every update", "de": "Sicherung vor jedem Update" },
-                    "help": { "en": "Disable for tests only", "de": "Nur für Tests abschalten" },
+                    "label": {
+                        "en": "Backup before every update",
+                        "de": "Sicherung vor jedem Update",
+                        "ru": "Резервная копия перед каждым обновлением",
+                        "pt": "Backup antes de cada atualização",
+                        "nl": "Back-up vóór elke update",
+                        "fr": "Sauvegarde avant chaque mise à jour",
+                        "it": "Backup prima di ogni aggiornamento",
+                        "es": "Copia de seguridad antes de cada actualización",
+                        "pl": "Kopia zapasowa przed każdą aktualizacją",
+                        "uk": "Резервна копія перед кожним оновленням",
+                        "zh-cn": "每次更新前备份"
+                    },
+                    "help": {
+                        "en": "Disable for tests only",
+                        "de": "Nur für Tests abschalten",
+                        "ru": "Отключать только для тестов",
+                        "pt": "Desativar apenas para testes",
+                        "nl": "Alleen voor tests uitschakelen",
+                        "fr": "Désactiver uniquement pour des tests",
+                        "it": "Disattivare solo per i test",
+                        "es": "Desactivar solo para pruebas",
+                        "pl": "Wyłączaj tylko do testów",
+                        "uk": "Вимикати лише для тестів",
+                        "zh-cn": "仅在测试时禁用"
+                    },
                     "xs": 12,
                     "sm": 12,
                     "md": 6,
