@@ -1,8 +1,21 @@
 {
     "common": {
         "name": "bee",
-        "version": "0.5.2",
+        "version": "0.5.3",
         "news": {
+            "0.5.3": {
+                "en": "Requires Node.js 22.19 or newer, as the MCP server of ioBroker does. Maintenance window: start and end on a line of their own on narrow screens",
+                "de": "Benötigt Node.js 22.19 oder neuer, wie der MCP-Server von ioBroker. Wartungsfenster: Beginn und Ende auf schmalen Bildschirmen in eigener Zeile",
+                "ru": "Требуется Node.js 22.19 или новее, как и для MCP-сервера ioBroker. Окно обслуживания: начало и конец на узких экранах в отдельной строке",
+                "pt": "Requer Node.js 22.19 ou mais recente, assim como o servidor MCP do ioBroker. Janela de manutenção: início e fim em linha própria em telas estreitas",
+                "nl": "Vereist Node.js 22.19 of nieuwer, net als de MCP-server van ioBroker. Onderhoudsvenster: begin en einde op smalle schermen elk op een eigen regel",
+                "fr": "Nécessite Node.js 22.19 ou plus récent, comme le serveur MCP d'ioBroker. Fenêtre de maintenance : début et fin sur une ligne à part sur les écrans étroits",
+                "it": "Richiede Node.js 22.19 o successivo, come il server MCP di ioBroker. Finestra di manutenzione: inizio e fine su una riga propria sugli schermi stretti",
+                "es": "Requiere Node.js 22.19 o posterior, como el servidor MCP de ioBroker. Ventana de mantenimiento: inicio y fin en una línea propia en pantallas estrechas",
+                "pl": "Wymaga Node.js 22.19 lub nowszego, tak jak serwer MCP ioBroker. Okno serwisowe: początek i koniec w osobnych wierszach na wąskich ekranach",
+                "uk": "Потрібен Node.js 22.19 або новіший, як і для MCP-сервера ioBroker. Вікно обслуговування: початок і кінець на вузьких екранах в окремому рядку",
+                "zh-cn": "需要 Node.js 22.19 或更高版本，与 ioBroker 的 MCP 服务器一致。维护时段：在窄屏上开始和结束各占一行"
+            },
             "0.5.2": {
                 "en": "Settings and notifications in all languages of ioBroker. Timers of the adapter, so that js-controller clears them when the instance stops. Requires admin 7.6.20 or newer; no installation from GitHub",
                 "de": "Einstellungen und Meldungen in allen Sprachen von ioBroker. Timer des Adapters, die js-controller beim Stoppen der Instanz aufräumt. Benötigt admin 7.6.20 oder neuer; keine Installation von GitHub",
@@ -80,19 +93,6 @@
                 "pl": "System zarządzania flotą może ponownie załadować repozytoria adapterów systemu, tak jak admin robi to przez \"aktualizuj listę adapterów\"",
                 "uk": "Система керування парком може повторно завантажити репозиторії адаптерів системи, як це робить admin за допомогою \"оновити список адаптерів\"",
                 "zh-cn": "设备群管理可以重新加载系统的适配器存储库，就像 admin 中的 \"更新适配器列表\" 一样"
-            },
-            "0.3.0": {
-                "en": "Multihost: one instance of bee maintains every host of the system (adapters, instances, restart, OS updates, log files) through their js-controller. Adapters of another host are no longer reported as installed here, their update failed with \"is not installed\". BackItUp is found on any host. Answers of js-controller arrive, the OS update waited 30 minutes without them",
-                "de": "Multihost: eine Instanz von bee wartet alle Hosts des Systems (Adapter, Instanzen, Neustart, OS-Updates, Log-Dateien) über deren js-controller. Adapter eines anderen Hosts gelten hier nicht mehr als installiert, ihr Update scheiterte mit \"is not installed\". BackItUp wird auf jedem Host gefunden. Antworten von js-controller kommen an, das OS-Update wartete ohne sie 30 Minuten",
-                "ru": "Мультихост: один экземпляр bee обслуживает все хосты системы (адаптеры, экземпляры, перезапуск, обновления ОС, файлы журналов) через их js-controller. Адаптеры другого хоста больше не считаются установленными здесь, их обновление завершалось ошибкой \"is not installed\". BackItUp обнаруживается на любом хосте. Ответы js-controller доходят, без них обновление ОС ждало 30 минут",
-                "pt": "Multihost: uma instância do bee mantém todos os hosts do sistema (adaptadores, instâncias, reinício, atualizações do SO, arquivos de log) através do respectivo js-controller. Os adaptadores de outro host já não são reportados aqui como instalados, a sua atualização falhava com \"is not installed\". O BackItUp é encontrado em qualquer host. As respostas do js-controller chegam, a atualização do SO esperava 30 minutos sem elas",
-                "nl": "Multihost: één instantie van bee onderhoudt elke host van het systeem (adapters, instanties, herstart, OS-updates, logbestanden) via de js-controller ervan. Adapters van een andere host worden hier niet langer als geïnstalleerd gemeld; hun update mislukte met \"is not installed\". BackItUp wordt op elke host gevonden. Antwoorden van js-controller komen aan; de OS-update wachtte zonder deze 30 minuten",
-                "fr": "Multihost : une instance de bee gère tous les hôtes du système (adaptateurs, instances, redémarrage, mises à jour de l'OS, fichiers journaux) via leur js-controller. Les adaptateurs d'un autre hôte ne sont plus signalés ici comme installés, leur mise à jour échouait avec \"is not installed\". BackItUp est trouvé sur n'importe quel hôte. Les réponses de js-controller arrivent, la mise à jour de l'OS attendait 30 minutes sans elles",
-                "it": "Multihost: un'istanza di bee gestisce ogni host del sistema (adattatori, istanze, riavvio, aggiornamenti del sistema operativo, file di log) tramite il rispettivo js-controller. Gli adattatori di un altro host non vengono più segnalati qui come installati; il loro aggiornamento falliva con \"is not installed\". BackItUp viene trovato su qualsiasi host. Le risposte di js-controller arrivano; senza di esse l'aggiornamento del sistema operativo attendeva 30 minuti",
-                "es": "Multihost: una instancia de bee mantiene todos los hosts del sistema (adaptadores, instancias, reinicio, actualizaciones del SO, archivos de registro) a través de su js-controller. Los adaptadores de otro host ya no se indican aquí como instalados, su actualización fallaba con \"is not installed\". BackItUp se encuentra en cualquier host. Las respuestas de js-controller llegan, la actualización del SO esperaba 30 minutos sin ellas",
-                "pl": "Multihost: jedna instancja bee obsługuje wszystkie hosty systemu (adaptery, instancje, restart, aktualizacje systemu operacyjnego, pliki logów) przez ich js-controller. Adaptery innego hosta nie są już tutaj zgłaszane jako zainstalowane, ich aktualizacja kończyła się błędem \"is not installed\". BackItUp jest wykrywany na każdym hoście. Odpowiedzi js-controller docierają, bez nich aktualizacja systemu operacyjnego czekała 30 minut",
-                "uk": "Мультихост: один екземпляр bee обслуговує всі хости системи (адаптери, екземпляри, перезапуск, оновлення ОС, файли журналів) через їхній js-controller. Адаптери іншого хоста більше не вважаються встановленими тут, їхнє оновлення завершувалося помилкою \"is not installed\". BackItUp виявляється на будь-якому хості. Відповіді js-controller надходять, без них оновлення ОС чекало 30 хвилин",
-                "zh-cn": "多主机：一个 bee 实例通过各主机的 js-controller 维护系统的所有主机（适配器、实例、重启、操作系统更新、日志文件）。其他主机的适配器不再在此处报告为已安装，此前其更新会因 \"is not installed\" 而失败。可在任意主机上找到 BackItUp。js-controller 的应答能够送达，此前操作系统更新会因收不到应答而等待 30 分钟"
             }
         },
         "titleLang": {
