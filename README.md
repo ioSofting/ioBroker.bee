@@ -135,6 +135,11 @@ npm test          # unit tests of planner, preflight and diff
     ### **WORK IN PROGRESS**
 -->
 
+### **WORK IN PROGRESS**
+
+- Requires Node.js 22.19 or newer, as the MCP server of ioBroker does
+- Maintenance window: start and end on a line of their own on narrow screens
+
 ### 0.5.2 (2026-11-27)
 
 - Settings and notifications in all languages of ioBroker

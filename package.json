@@ -17,7 +17,7 @@
   ],
   "license": "CC-BY-NC-ND-4.0",
   "engines": {
-    "node": ">=22"
+    "node": ">=22.19"
   },
   "repository": {
     "type": "git",
@@ -39,8 +39,7 @@
     "test:unit": "tsx --test test/*.test.ts",
     "test:package": "mocha test/package --exit",
     "test:integration": "mocha test/integration --exit",
-    "lint": "eslint -c eslint.config.mjs",
-    "prepublishOnly": "npm run build"
+    "lint": "eslint -c eslint.config.mjs"
   },
   "dependencies": {
     "@iobroker/adapter-core": "^3.4.3",
