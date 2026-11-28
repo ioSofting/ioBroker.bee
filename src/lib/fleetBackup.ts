@@ -18,7 +18,7 @@ import { BACKUP_MAGIC, type BackupRequest } from './protocol';
 const VOLATILE_OBJECTS = new Set(['system.repositories', 'system.licenses']);
 
 /** Sorted keys, so that the same object gives the same text */
-function stable(value: unknown): string {
+export function stable(value: unknown): string {
     if (value === null || typeof value !== 'object') {
         return JSON.stringify(value) ?? 'null';
     }
@@ -63,7 +63,7 @@ export function objectForHash(line: string): string | null {
 }
 
 /** What a file in the archive adds to the hash */
-type Sink = { add(data: Buffer): void; end(): string };
+export type Sink = { add(data: Buffer): void; end(): string };
 
 function fileSink(): Sink {
     const h = createHash('sha256');
@@ -141,10 +141,14 @@ function octal(block: Buffer, start: number, length: number): number {
 }
 
 /**
- * Reads a tar archive and hashes the entries that count (sinkFor), with their names; long names of GNU tar and of pax
- * as node-tar writes them are understood
+ * Reads a tar archive and hashes the entries that count (sinkFor, or another choice), with their names; long names
+ * of GNU tar and of pax as node-tar writes them are understood
  */
 class TarHash extends Writable {
+    constructor(private readonly select: (name: string) => Sink | null = sinkFor) {
+        super();
+    }
+
     private buf: Buffer = Buffer.alloc(0);
     private entry: {
         name: string;
@@ -191,7 +195,7 @@ class TarHash extends Writable {
                     remaining: size,
                     pad: (512 - (size % 512)) % 512,
                     // regular files only (0, and \0 of old tars, 7 contiguous)
-                    sink: !meta && (type === '0' || type === '7') ? sinkFor(name) : null,
+                    sink: !meta && (type === '0' || type === '7') ? this.select(name) : null,
                     meta: meta ? [] : null,
                     type,
                 };
@@ -242,15 +246,28 @@ class TarHash extends Writable {
 }
 
 /**
+ * Goes through a .tar.gz: what the sinks of the chosen entries returned, by name
+ *
+ * @param archive the .tar.gz
+ * @param select the sink of an entry, null to skip it
+ */
+export async function readArchive(
+    archive: string,
+    select?: (name: string) => Sink | null,
+): Promise<Map<string, string>> {
+    const tar = new TarHash(select);
+    await pipeline(createReadStream(archive), createGunzip(), tar);
+    return tar.entries;
+}
+
+/**
  * Hash of the configuration in an archive of `iobroker backup`: the same as long as objects, files and iobroker.json
  * are the same, whatever the states and the time of the backup
  *
  * @param archive the .tar.gz
  */
 export async function configHash(archive: string): Promise<string> {
-    const tar = new TarHash();
-    await pipeline(createReadStream(archive), createGunzip(), tar);
-    const all = [...tar.entries.entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
+    const all = [...(await readArchive(archive)).entries()].sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
     return createHash('sha256')
         .update(all.map(([name, hash]) => `${name}\0${hash}`).join('\n'))
         .digest('hex');

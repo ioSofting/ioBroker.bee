@@ -592,7 +592,8 @@ export type AgentCommand =
     | 'diagnose'
     | 'unit'
     | 'controller'
-    | 'backup';
+    | 'backup'
+    | 'restore';
 
 /**
  * Command 'software' (since agent 0.2.7): removeAdapter removes an adapter with all its instances (not the agent,
@@ -729,9 +730,12 @@ export interface JobMessage {
         | 'diagnose'
         | 'unit'
         | 'controller'
-        | 'backup';
+        | 'backup'
+        | 'restore';
     /** For cmd 'backup' */
     backup?: BackupRequest;
+    /** For cmd 'restore' (since agent 0.8.0) */
+    restore?: RestoreRequest;
     /** For cmd 'diagnose': the code of the deviation and what it is about */
     diagnose?: { code: string; subject?: string };
     /** For cmd 'unit' */
@@ -851,6 +855,38 @@ export interface BackupManifest {
     plainSize: number;
     /** When the archive was made (ms) */
     ts: number;
+}
+
+/**
+ * Command 'restore' (since agent 0.8.0): one fleet backup of this asset back onto its device, also after a device
+ * swap. The agent downloads the encrypted file from the presigned address, checks size and SHA-256, decrypts it
+ * (BACKUP_MAGIC, AAD with the id) and makes a local backup of the state as it is now, to go back to. Then a
+ * script in a systemd unit of its own stops ioBroker and runs `iobroker restore`: the configuration (objects,
+ * states, files, iobroker.json) comes from the backup, the installed software stays (node_modules is put back
+ * after the restore), the settings of the instance bee stay as they are now (token, consents of the owner).
+ * Adapters of the backup that are not installed are installed by js-controller at the start; afterwards the
+ * versions follow the profile again. Without all enabled instances running after the start, the script plays the
+ * local backup from before back.
+ *
+ * The agent answers running, goes down with ioBroker and answers done or error with the same ref after its
+ * restart.
+ */
+export interface RestoreRequest {
+    /** Id of the backup in the fleet (additional authenticated data of the encryption) */
+    id: string;
+    /** Key of the asset, base64 (32 bytes); the agent does not store it */
+    key: string;
+    /** Presigned GET address of the encrypted file */
+    url: string;
+    /** Size and SHA-256 of the encrypted file */
+    size: number;
+    sha256: string;
+    /** When the backup was made (ms), for the messages */
+    ts: number;
+    /** From its manifest: js-controller of the backup; another one than installed needs restore --force */
+    jsController?: string;
+    /** The address is valid until then (ms) */
+    expiresAt: number;
 }
 
 export interface BackupResult {

@@ -21,6 +21,27 @@ import { aptFailure, aptUpdateArgs, aptUpgradeArgs, hasAptGet, runApt } from './
 import { Monitor, monitorText, validRules } from './lib/monitor';
 import { backupPath, OWN_BACKUPS_KEEP, pruneOwnBackups, recentOffDeviceBackup } from './lib/backup';
 import { configHash, encryptBackup, runBackup, uploadParts, uploadUrlAllowed } from './lib/fleetBackup';
+import {
+    archiveHasObject,
+    decryptBackup,
+    downloadBackup,
+    freeBytes,
+    launchRestore,
+    MAX_SETTING_WRITES,
+    readRestoreStatus,
+    readRestoreVerdict,
+    restorable,
+    RESTORE_DIR,
+    RESTORE_FILE,
+    RESTORE_WAIT_SECONDS,
+    restoreFacts,
+    restoreRefusal,
+    restoreUnit,
+    sameSettings,
+    spaceNeeded,
+    writeRestoreVerdict,
+    type RestoreMarker,
+} from './lib/restore';
 import { consoleUser, findScript, MAX_SHELLS, startShell } from './lib/console';
 import {
     findGateway,
@@ -88,6 +109,7 @@ import {
     type McpReply,
     type McpRequest,
     type ReplyMessage,
+    type RestoreRequest,
     type ResultMessage,
     type StateMessage,
     type LanTarget,
@@ -224,6 +246,11 @@ class BeeAdapter extends utils.Adapter {
     private logUploading = false;
     /** The fleet backup runs (command backup) */
     private backupRunning = false;
+    /** A restore of a fleet backup was started and has no outcome yet (restore.json, command restore) */
+    private restoring: RestoreMarker | null = null;
+    private restoreFollowing = false;
+    /** A restore can run here: Linux, ioBroker as systemd service, systemd-run as root */
+    private canRestore = false;
     /** The repositories set in admin: read on start and when admin loads them again */
     private repos: RepoCatalog | undefined;
     private activeRepoKey = '';
@@ -264,6 +291,13 @@ class BeeAdapter extends utils.Adapter {
 
         const meta = await this.getForeignObjectAsync('system.meta.uuid');
         this.uuid = (meta?.native as { uuid?: string } | undefined)?.uuid || '';
+
+        // after `iobroker restore` this instance has the settings of the backup: those from before go back first
+        // (the token of this device, the consents of the owner), js-controller then restarts the instance
+        this.restoring = await readJson<RestoreMarker>(join(this.dataDir, RESTORE_FILE));
+        if (this.restoring && (await this.settingsBackAfterRestore(this.restoring))) {
+            return;
+        }
 
         // the stored identity, unless the settings carry another token than the one it came from
         // (js-controller keeps iobroker-data/bee.N when the instance is deleted)
@@ -315,6 +349,7 @@ class BeeAdapter extends utils.Adapter {
         });
         await this.jobs.load();
         await this.jobs.setHalt(!!this.control?.halt);
+        this.canRestore = restorable(await restoreFacts());
         // count error log lines of all instances (verification and heartbeat)
         await this.requireLog?.(true);
 
@@ -482,6 +517,8 @@ class BeeAdapter extends utils.Adapter {
         }
         // an adapter installed on request, e.g. the agent itself: the answer comes from the new process
         void this.waitAdapterCommand();
+        // a restore of a fleet backup: its outcome, after the restart of ioBroker
+        void this.followRestore();
     }
 
     private async onDesired(msg: DesiredMessage | null): Promise<void> {
@@ -542,6 +579,9 @@ class BeeAdapter extends utils.Adapter {
         } else if (msg.ref && msg.cmd === 'backup') {
             // takes minutes, the upload over a mobile connection longer: the other messages go on meanwhile
             void this.backupCommand(msg.ref, msg.by || 'Flottenverwaltung', msg.backup);
+        } else if (msg.ref && msg.cmd === 'restore') {
+            // the download takes minutes: the other messages go on meanwhile
+            void this.restoreCommand(msg.ref, msg.by || 'Flottenverwaltung', msg.restore);
         }
     }
 
@@ -852,6 +892,9 @@ class BeeAdapter extends utils.Adapter {
             if (this.backupRunning) {
                 throw new Error('Es läuft schon eine Sicherung');
             }
+            if (this.restoring) {
+                throw new Error('Es wird gerade eine Sicherung eingespielt');
+            }
             if (this.reconciling || this.jobs?.isActive() || this.adapterWaiting) {
                 throw new Error('Während eines Auftrags (Update) nicht möglich');
             }
@@ -958,6 +1001,248 @@ class BeeAdapter extends utils.Adapter {
         }
     }
 
+    /**
+     * Plays a fleet backup back (command restore, see RestoreRequest and lib/restore): download, check and decrypt,
+     * a backup of the state of now to go back to, then restore.sh, which stops ioBroker and this process with it.
+     * The outcome is answered after the restart (followRestore).
+     */
+    private async restoreCommand(ref: string, by: string, req: RestoreRequest | undefined): Promise<void> {
+        let mine = false;
+        const dir = join(this.dataDir, RESTORE_DIR);
+        const mb = (n: number): number => Math.round(n / 1024 / 1024);
+        try {
+            if (this.restoring) {
+                throw new Error('Es wird schon eine Sicherung eingespielt');
+            }
+            if (this.backupRunning) {
+                throw new Error('Es läuft gerade eine Sicherung');
+            }
+            if (this.reconciling || this.jobs?.isActive() || this.adapterWaiting) {
+                throw new Error('Während eines Auftrags (Update) nicht möglich');
+            }
+            if (this.commandRunning) {
+                throw new Error('Es läuft gerade ein Befehl');
+            }
+            this.commandRunning = mine = true;
+            const facts = await restoreFacts();
+            const hostObj = await this.getForeignObjectAsync(`system.host.${this.host}`);
+            const installed = String(hostObj?.common?.installedVersion || '');
+            const hosts = (await this.getObjectViewAsync('system', 'host', {})).rows.length;
+            const refusal = restoreRefusal(req, facts, installed, hosts);
+            if (refusal || !req || !facts.service) {
+                throw new Error(refusal || 'Anfrage fehlt');
+            }
+            await rm(dir, { recursive: true, force: true });
+            mkdirSync(dir, { recursive: true });
+            const free = await freeBytes(dir);
+            if (free !== null && free < spaceNeeded(req.size)) {
+                throw new Error(
+                    `Zu wenig Platz: ${mb(free)} MB frei, gebraucht werden etwa ${mb(spaceNeeded(req.size))} MB`,
+                );
+            }
+            const when = new Date(req.ts).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
+            this.log.warn(
+                `Fleet restore of the backup of ${new Date(req.ts).toISOString()} on request of ${by} (fleet management)`,
+            );
+            await this.reply(ref, 'running', `Sicherung vom ${when} wird geladen`);
+            const encrypted = join(dir, `${req.id}.bee`);
+            let shown = 0;
+            await downloadBackup(encrypted, req, {
+                onProgress: (done, total) => {
+                    const pct = Math.floor((done / total) * 10) * 10;
+                    if (pct > shown) {
+                        shown = pct;
+                        void this.reply(ref, 'running', `Laden ${pct} %`);
+                    }
+                },
+                stopped: () => this.unloading,
+                log: text => this.log.info(`Fleet restore: ${text}`),
+            });
+            await this.reply(ref, 'running', 'Sicherung wird entschlüsselt und geprüft');
+            const archive = join(dir, `${req.id}.tar.gz`);
+            await decryptBackup(encrypted, archive, Buffer.from(req.key, 'base64'), req.id);
+            await rm(encrypted, { force: true });
+            if ((await archiveHasObject(archive, `system.adapter.${this.namespace}`)) === false) {
+                throw new Error(
+                    `Die Sicherung hat keine Instanz ${this.namespace}: nach dem Einspielen liefe dieser Agent nicht mehr`,
+                );
+            }
+            await this.reply(ref, 'running', 'Der Stand von jetzt wird gesichert, um zurückgehen zu können');
+            const rollback = await runBackup(
+                join(utils.controllerDir, 'iobroker.js'),
+                join(utils.controllerDir, '..', '..'),
+            );
+            await this.keepOwnBackup(rollback, Date.now());
+            await this.savePersisted();
+            const marker: RestoreMarker = {
+                ref,
+                by,
+                id: req.id,
+                ts: req.ts,
+                archive,
+                rollback,
+                unit: restoreUnit(),
+                startedAt: Date.now(),
+                native: { ...(this.config as unknown as Record<string, unknown>) },
+            };
+            await writeJsonAtomic(join(this.dataDir, RESTORE_FILE), marker);
+            this.restoring = marker;
+            const force = !!req.jsController && req.jsController !== installed;
+            await this.reply(
+                ref,
+                'running',
+                `Sicherung vom ${when} wird eingespielt: ioBroker stoppt dafür und ist einige Minuten nicht erreichbar${
+                    force ? ` (Sicherung von js-controller ${req.jsController}, installiert ist ${installed})` : ''
+                }`,
+            );
+            await launchRestore({
+                dir: this.dataDir,
+                iobrokerDir: join(utils.controllerDir, '..', '..'),
+                archive,
+                rollback,
+                service: facts.service,
+                unit: marker.unit,
+                waitSeconds: RESTORE_WAIT_SECONDS,
+                force,
+                user: os.userInfo().username,
+                node: process.execPath,
+            });
+            // the script stops ioBroker, and this process with it, in a moment
+        } catch (e) {
+            this.log.warn(`Fleet restore failed: ${e.message}`);
+            if (this.restoring?.ref === ref) {
+                this.restoring = null;
+                await rm(join(this.dataDir, RESTORE_FILE), { force: true }).catch(() => {});
+            }
+            await rm(dir, { recursive: true, force: true }).catch(() => {});
+            await this.reply(ref, 'error', String(e.message).slice(0, 500));
+        } finally {
+            if (mine) {
+                this.commandRunning = false;
+            }
+        }
+    }
+
+    /**
+     * After `iobroker restore` the instance has the settings of the backup: those from before the restore are written
+     * back (the token of this device, the consents of the owner). js-controller restarts the instance for them; until
+     * then nothing else starts.
+     *
+     * @param m the restore
+     * @returns true if the instance restarts (or must not go on with the settings of the backup)
+     */
+    private async settingsBackAfterRestore(m: RestoreMarker): Promise<boolean> {
+        if (sameSettings(m.native, this.config as unknown as Record<string, unknown>)) {
+            return false;
+        }
+        const writes = (m.writes ?? 0) + 1;
+        if (writes > MAX_SETTING_WRITES) {
+            this.log.error('Fleet restore: the settings of this instance are overwritten again and again');
+            await writeRestoreVerdict(
+                this.dataDir,
+                false,
+                'Die Einstellungen von bee werden nach dem Einspielen immer wieder überschrieben',
+            );
+            return true;
+        }
+        const id = `system.adapter.${this.namespace}`;
+        try {
+            const obj = await this.getForeignObjectAsync(id);
+            if (!obj) {
+                throw new Error(`${id} fehlt`);
+            }
+            // encrypted as js-controller decrypts them for this instance
+            const native: Record<string, unknown> = { ...m.native };
+            for (const key of (obj as { encryptedNative?: string[] }).encryptedNative ?? []) {
+                const value = native[key];
+                if (typeof value === 'string' && value) {
+                    native[key] = this.encrypt(value);
+                }
+            }
+            m.writes = writes;
+            await writeJsonAtomic(join(this.dataDir, RESTORE_FILE), m);
+            this.log.warn(
+                'Fleet restore: the settings of this instance from before the restore are written back, it restarts',
+            );
+            obj.native = native;
+            await this.setForeignObjectAsync(id, obj);
+        } catch (e) {
+            this.log.error(`Fleet restore: settings not written back: ${e.message}`);
+            await writeRestoreVerdict(
+                this.dataDir,
+                false,
+                `Die Einstellungen von bee ließen sich nicht zurückschreiben: ${e.message}`,
+            );
+            return true;
+        }
+        // js-controller restarts the instance for its new settings; in case it does not
+        this.timeouts.push(this.setTimeout(() => this.restart(), 60_000));
+        return true;
+    }
+
+    /**
+     * After the restart: follows restore.sh to its outcome, gives the verdict once this agent runs with its settings
+     * and reaches the fleet management, and answers the command
+     */
+    private async followRestore(): Promise<void> {
+        if (!this.restoring || this.restoreFollowing) {
+            return;
+        }
+        this.restoreFollowing = true;
+        try {
+            while (this.restoring && !this.unloading) {
+                const m = this.restoring;
+                const status = await readRestoreStatus(this.dataDir);
+                const when = new Date(m.ts).toLocaleString('de-DE', { dateStyle: 'short', timeStyle: 'short' });
+                if (status?.state === 'ok') {
+                    await this.restoreDone(m, 'done', `Sicherung vom ${when} eingespielt`);
+                } else if (status?.state === 'restored') {
+                    await this.restoreDone(m, 'error', `${status.detail}; der Stand von vorher ist wieder eingespielt`);
+                } else if (status?.state === 'failed') {
+                    await this.restoreDone(m, 'error', status.detail || 'Einspielen fehlgeschlagen');
+                } else if (Date.now() - m.startedAt > 120_000 && !(await unitActive(m.unit))) {
+                    // running, waiting or nothing, and the unit is gone: a power loss, killed
+                    await this.restoreDone(
+                        m,
+                        'error',
+                        'Das Skript zum Einspielen endete ohne Ergebnis: restore.log im Datenordner von bee ansehen',
+                    );
+                } else if (status?.state === 'waiting') {
+                    if (this.transport?.connected && !(await readRestoreVerdict(this.dataDir))) {
+                        this.log.info('Fleet restore: the agent runs with its settings and is connected');
+                        await writeRestoreVerdict(this.dataDir, true);
+                    }
+                }
+                if (this.restoring) {
+                    await wait(5000, undefined, { ref: false });
+                }
+            }
+        } catch (e) {
+            this.log.warn(`Fleet restore: ${e.message}`);
+        } finally {
+            this.restoreFollowing = false;
+        }
+    }
+
+    private async restoreDone(m: RestoreMarker, state: 'done' | 'error', message: string): Promise<void> {
+        let text = message;
+        if (state === 'done') {
+            const down = (await this.instancesOf()).filter(i => !i.alive).map(i => i.id);
+            if (down.length) {
+                text += `; noch nicht gestartet: ${down.slice(0, 10).join(', ')}${down.length > 10 ? ' …' : ''} (fehlende Adapter installiert js-controller selbst)`;
+            }
+            this.log.info(`Fleet restore: ${text}`);
+        } else {
+            this.log.warn(`Fleet restore: ${text}`);
+        }
+        await this.reply(m.ref, state, text.slice(0, 1000));
+        this.restoring = null;
+        await rm(join(this.dataDir, RESTORE_FILE), { force: true });
+        await rm(join(this.dataDir, RESTORE_DIR), { recursive: true, force: true });
+        await this.sendInventory(true);
+        void this.reconcile();
+    }
+
     private async logFetchCommand(ref: string, by: string, req: JobMessage['logFetch'], host?: string): Promise<void> {
         let mine = false;
         try {
@@ -1009,6 +1294,10 @@ class BeeAdapter extends utils.Adapter {
         const by = msg.by || 'Flottenverwaltung';
         if (this.reconciling || this.jobs?.isActive()) {
             await this.reply(ref, 'error', 'Während eines Auftrags (Update) nicht möglich');
+            return;
+        }
+        if (this.restoring) {
+            await this.reply(ref, 'error', 'Es wird gerade eine Sicherung eingespielt');
             return;
         }
         if (this.commandRunning || (await adapterCommandState(adapterCommandPaths(this.dataDir))) === null) {
@@ -1904,6 +2193,7 @@ class BeeAdapter extends utils.Adapter {
             'repoUpdate',
             'visProjects',
             'backup',
+            ...(this.canRestore ? (['restore'] as const) : []),
         ];
         if (withHosts) {
             try {
@@ -2241,7 +2531,8 @@ class BeeAdapter extends utils.Adapter {
             !this.jobs ||
             this.jobs.isActive() ||
             this.adapterWaiting ||
-            this.backupRunning
+            this.backupRunning ||
+            this.restoring
         ) {
             return;
         }

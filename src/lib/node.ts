@@ -138,7 +138,7 @@ export function readEngines(cwd: string, names: string[]): Record<string, { vers
     return result;
 }
 
-function run(cmd: string, args: string[], timeout = 15_000): Promise<{ ok: boolean; out: string; err: string }> {
+export function run(cmd: string, args: string[], timeout = 15_000): Promise<{ ok: boolean; out: string; err: string }> {
     return new Promise(resolve => {
         execFile(cmd, args, { timeout, windowsHide: true }, (error, stdout, stderr) =>
             resolve({ ok: !error, out: String(stdout).trim(), err: String(stderr).trim() || error?.message || '' }),
@@ -149,7 +149,7 @@ function run(cmd: string, args: string[], timeout = 15_000): Promise<{ ok: boole
 const isRoot = (): boolean => process.getuid?.() === 0;
 
 /** Root runs systemd-run itself, everybody else with sudo -n */
-function asRoot(args: string[]): [string, string[]] {
+export function asRoot(args: string[]): [string, string[]] {
     return isRoot() ? [args[0], args.slice(1)] : ['sudo', ['-n', ...args]];
 }
 
