@@ -147,7 +147,7 @@ npm test          # unit tests of planner, preflight and diff
     ### **WORK IN PROGRESS**
 -->
 
-### **WORK IN PROGRESS**
+### 0.8.0 (2026-11-28)
 
 - Restore of a fleet backup from the portal, also onto a new device after a swap: download, check and decrypt on the device, a backup of the state of now, `iobroker restore` in a systemd unit of its own with the installed software kept, the settings of bee kept, and back to the state before if the agent does not come back
 
