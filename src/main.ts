@@ -20,6 +20,7 @@ import { aiAccess, aiUserId, AiAccessManager, type McpClient } from './lib/ai';
 import { aptFailure, aptUpdateArgs, aptUpgradeArgs, hasAptGet, runApt } from './lib/apt';
 import { Monitor, monitorText, validRules } from './lib/monitor';
 import { backupPath, OWN_BACKUPS_KEEP, pruneOwnBackups, recentOffDeviceBackup } from './lib/backup';
+import { configHash, encryptBackup, runBackup, uploadParts, uploadUrlAllowed } from './lib/fleetBackup';
 import { consoleUser, findScript, MAX_SHELLS, startShell } from './lib/console';
 import {
     findGateway,
@@ -74,6 +75,8 @@ import {
     PROTOCOL_VERSION,
     type AccessKind,
     type AgentCommand,
+    type BackupRequest,
+    type BackupResult,
     type ControlMessage,
     type DesiredMessage,
     type EnrollResponse,
@@ -175,6 +178,8 @@ interface Persisted {
     lastBackup: Inventory['backup']['lastLocal'];
     /** Backups the agent made itself before jobs, oldest first; it keeps OWN_BACKUPS_KEEP of them */
     ownBackups?: string[];
+    /** The last fleet backup uploaded or confirmed unchanged (ms): counts as a backup outside the device */
+    fleetBackupOk?: number;
     notified: Record<string, number>;
 }
 
@@ -217,6 +222,8 @@ class BeeAdapter extends utils.Adapter {
     /** AI access (command 'mcp') */
     private ai: AiAccessManager | null = null;
     private logUploading = false;
+    /** The fleet backup runs (command backup) */
+    private backupRunning = false;
     /** The repositories set in admin: read on start and when admin loads them again */
     private repos: RepoCatalog | undefined;
     private activeRepoKey = '';
@@ -532,6 +539,9 @@ class BeeAdapter extends utils.Adapter {
         } else if (msg.ref && msg.cmd === 'mcp') {
             // the AI waits for it; independent of jobs and other commands
             void this.mcpCommand(msg.ref, msg.mcp);
+        } else if (msg.ref && msg.cmd === 'backup') {
+            // takes minutes, the upload over a mobile connection longer: the other messages go on meanwhile
+            void this.backupCommand(msg.ref, msg.by || 'Flottenverwaltung', msg.backup);
         }
     }
 
@@ -591,6 +601,7 @@ class BeeAdapter extends utils.Adapter {
         message?: string,
         files?: ReplyMessage['files'],
         mcp?: McpReply,
+        backup?: BackupResult,
     ): Promise<void> {
         const msg: ReplyMessage = {
             v: PROTOCOL_VERSION,
@@ -600,6 +611,7 @@ class BeeAdapter extends utils.Adapter {
             ...(message ? { message } : {}),
             ...(files ? { files } : {}),
             ...(mcp ? { mcp } : {}),
+            ...(backup ? { backup } : {}),
         };
         await this.transport?.publish('reply', msg);
     }
@@ -820,6 +832,130 @@ class BeeAdapter extends utils.Adapter {
             throw new Error(`Keine Antwort von ${host}`);
         }
         return { name: entry.name, data: logFileData(answer) };
+    }
+
+    /**
+     * The fleet backup (command backup): `iobroker backup` (kept as one of the own backups), the hash of the
+     * configuration; unchanged since the newest backup in the fleet, a daily run only says so. Otherwise the archive
+     * is encrypted with the key of the asset (which the agent does not keep) and uploaded part by part straight into
+     * the storage of the fleet. Not during a job or another command: a job does not start meanwhile.
+     *
+     * @param ref reference of the command
+     * @param by who asked (or Zeitplan)
+     * @param req the request of the server
+     */
+    private async backupCommand(ref: string, by: string, req: BackupRequest | undefined): Promise<void> {
+        let mine = false;
+        let encrypted = '';
+        let configured: string | undefined;
+        try {
+            if (this.backupRunning) {
+                throw new Error('Es läuft schon eine Sicherung');
+            }
+            if (this.reconciling || this.jobs?.isActive() || this.adapterWaiting) {
+                throw new Error('Während eines Auftrags (Update) nicht möglich');
+            }
+            if (this.commandRunning) {
+                throw new Error('Es läuft gerade ein Befehl');
+            }
+            const key = typeof req?.key === 'string' ? Buffer.from(req.key, 'base64') : Buffer.alloc(0);
+            if (
+                !req ||
+                typeof req.id !== 'string' ||
+                !/^bak_[\w-]{1,40}$/.test(req.id) ||
+                key.length !== 32 ||
+                !Number.isInteger(req.partSize) ||
+                req.partSize < 5 * 1024 * 1024 ||
+                !Array.isArray(req.parts) ||
+                !req.parts.length ||
+                !req.parts.every(u => typeof u === 'string' && uploadUrlAllowed(u)) ||
+                typeof req.expiresAt !== 'number' ||
+                req.expiresAt < Date.now()
+            ) {
+                throw new Error('Unvollständige oder ungültige Anfrage');
+            }
+            this.backupRunning = mine = true;
+            this.log.info(`Fleet backup (${req.reason}) on request of ${by}`);
+            await this.reply(ref, 'running', 'Sicherung wird erstellt');
+            const archive = await runBackup(
+                join(utils.controllerDir, 'iobroker.js'),
+                join(utils.controllerDir, '..', '..'),
+            );
+            const made = Date.now();
+            await this.keepOwnBackup(archive, made);
+            await this.savePersisted();
+            await this.reply(ref, 'running', 'Konfiguration wird verglichen');
+            configured = await configHash(archive);
+            if (req.reason === 'scheduled' && req.unchangedHash === configured) {
+                this.persisted.fleetBackupOk = Date.now();
+                await this.savePersisted();
+                this.log.info(
+                    'Fleet backup: the configuration is unchanged since the last backup in the fleet, nothing uploaded',
+                );
+                await this.reply(ref, 'done', 'unverändert', undefined, undefined, {
+                    configHash: configured,
+                    unchanged: true,
+                });
+                return;
+            }
+            encrypted = join(this.dataDir, `${req.id}.bee`);
+            const { size, sha256 } = await encryptBackup(archive, encrypted, key, req.id);
+            if (Math.ceil(size / req.partSize) > req.parts.length) {
+                const mb = Math.round(size / 1024 / 1024);
+                this.log.warn(`Fleet backup: ${mb} MB is more than the storage takes, not uploaded`);
+                await this.reply(ref, 'error', `Sicherung zu groß (${mb} MB)`, undefined, undefined, {
+                    configHash: configured,
+                    tooLarge: size,
+                });
+                return;
+            }
+            const etags = await uploadParts(encrypted, size, req, {
+                onPart: (done, total) => void this.reply(ref, 'running', `Hochladen ${done} von ${total}`),
+                stopped: () => this.unloading,
+                log: text => this.log.info(`Fleet backup: ${text}`),
+            });
+            const inv = await this.inventory(false);
+            const plainSize = (await stat(archive)).size;
+            this.persisted.fleetBackupOk = Date.now();
+            await this.savePersisted();
+            this.log.info(
+                `Fleet backup uploaded: ${basename(archive)}, ${Math.round(size / 1024 / 1024)} MB in ${etags.length} parts`,
+            );
+            await this.reply(ref, 'done', 'hochgeladen', undefined, undefined, {
+                configHash: configured,
+                size,
+                sha256,
+                etags,
+                manifest: {
+                    uuid: this.uuid,
+                    hostname: inv.hostname,
+                    jsController: inv.software.jsController,
+                    node: inv.software.node,
+                    adapters: Object.fromEntries(Object.entries(inv.software.adapters).map(([n, a]) => [n, a.version])),
+                    agentVersion: this.version || '',
+                    file: basename(archive),
+                    plainSize,
+                    ts: made,
+                },
+            });
+        } catch (e) {
+            this.log.warn(`Fleet backup failed: ${e.message}`);
+            await this.reply(
+                ref,
+                'error',
+                String(e.message).slice(0, 500),
+                undefined,
+                undefined,
+                configured ? { configHash: configured } : undefined,
+            );
+        } finally {
+            if (mine) {
+                this.backupRunning = false;
+            }
+            if (encrypted) {
+                await rm(encrypted, { force: true }).catch(() => {});
+            }
+        }
     }
 
     private async logFetchCommand(ref: string, by: string, req: JobMessage['logFetch'], host?: string): Promise<void> {
@@ -1762,7 +1898,13 @@ class BeeAdapter extends utils.Adapter {
         if (inv.remoteAccess.includes('lan') || inv.remoteAccess.includes('knx')) {
             inv.lan = lanInfo(this.config);
         }
-        inv.commands = [...supportedCommands(inv.software.jsController), 'hosts', 'repoUpdate', 'visProjects'];
+        inv.commands = [
+            ...supportedCommands(inv.software.jsController),
+            'hosts',
+            'repoUpdate',
+            'visProjects',
+            'backup',
+        ];
         if (withHosts) {
             try {
                 inv.hosts = await this.collectOtherHosts();
@@ -2091,9 +2233,16 @@ class BeeAdapter extends utils.Adapter {
         this.persisted.lastBackup = { ts, file, size };
     }
 
-    /** Converges on the desired state if possible. Never runs two jobs at once. */
+    /** Converges on the desired state if possible. Never runs two jobs at once, nor one during the fleet backup. */
     private async reconcile(): Promise<void> {
-        if (this.reconciling || this.unloading || !this.jobs || this.jobs.isActive() || this.adapterWaiting) {
+        if (
+            this.reconciling ||
+            this.unloading ||
+            !this.jobs ||
+            this.jobs.isActive() ||
+            this.adapterWaiting ||
+            this.backupRunning
+        ) {
             return;
         }
         this.reconciling = true;
@@ -2231,7 +2380,9 @@ class BeeAdapter extends utils.Adapter {
         const changed = new Set(plan.map(s => s.adapter));
         const names = ['js-controller', ...Object.keys(inv.software.adapters).filter(n => !changed.has(n))];
         return [
-            ...nodeBlockers(await nodeFacts(recentOffDeviceBackup(inv.backup))),
+            ...nodeBlockers(
+                await nodeFacts(recentOffDeviceBackup(inv.backup, Date.now(), this.persisted.fleetBackupOk)),
+            ),
             ...engineConflicts(Number(target), readEngines(join(utils.controllerDir, '..', '..'), names)),
         ];
     }

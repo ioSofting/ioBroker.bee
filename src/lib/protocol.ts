@@ -572,7 +572,8 @@ export type InstanceAction = 'start' | 'stop' | 'restart';
 /**
  * Commands from the asset detail an agent may understand (Inventory.commands). hosts: the agent reports the other
  * hosts of the system (Inventory.hosts) and carries out commands there (JobMessage.host). controller: js-controller
- * can upgrade itself (ioBroker.bee from 0.5.0, Linux, js-controller 5 or newer).
+ * can upgrade itself (ioBroker.bee from 0.5.0, Linux, js-controller 5 or newer). backup: the fleet backup
+ * (ioBroker.bee from 0.7.0, JobMessage.backup).
  */
 export type AgentCommand =
     | 'instance'
@@ -590,7 +591,8 @@ export type AgentCommand =
     | 'agentUpdate'
     | 'diagnose'
     | 'unit'
-    | 'controller';
+    | 'controller'
+    | 'backup';
 
 /**
  * Command 'software' (since agent 0.2.7): removeAdapter removes an adapter with all its instances (not the agent,
@@ -704,6 +706,8 @@ export interface JobMessage {
      * controller: upgrade js-controller, as admin does it: js-controller starts its upgrade manager, which stops
      * ioBroker, installs the version with npm and starts ioBroker again (ioBroker.bee from 0.5.0). The agent answers
      * "running" once js-controller took the order; the outcome is the version in the next inventory of that host.
+     * backup: the fleet backup, see BackupRequest (ioBroker.bee from 0.7.0); the agent answers "running" with the
+     * progress, then "done" or "error" with ReplyMessage.backup. Not during a job or another command.
      */
     cmd:
         | 'resync'
@@ -724,7 +728,10 @@ export interface JobMessage {
         | 'agentUpdate'
         | 'diagnose'
         | 'unit'
-        | 'controller';
+        | 'controller'
+        | 'backup';
+    /** For cmd 'backup' */
+    backup?: BackupRequest;
     /** For cmd 'diagnose': the code of the deviation and what it is about */
     diagnose?: { code: string; subject?: string };
     /** For cmd 'unit' */
@@ -787,6 +794,77 @@ export interface ReplyMessage {
     text?: string;
     /** For cmd 'mcp' */
     mcp?: McpReply;
+    /** For cmd 'backup', with done and with an error about the size */
+    backup?: BackupResult;
+}
+
+/**
+ * Why the fleet backup runs: scheduled (once a day, uploaded only if the configuration changed), manual (Jetzt sichern,
+ * always uploaded), change (right before an update of the platform, always uploaded)
+ */
+export type BackupReason = 'scheduled' | 'manual' | 'change';
+
+/**
+ * The fleet backup (cmd 'backup'): the agent makes `iobroker backup`, keeps it as one of its own backups, encrypts it
+ * and puts it in parts straight into the object storage of the fleet, with the presigned addresses of this request
+ * (HTTP PUT of each part, the ETag of the answer back to the server). The server never sees the data on the way up.
+ *
+ * Encrypted file: BACKUP_MAGIC (8 bytes), IV (12 bytes), the archive encrypted with AES-256-GCM, the tag (16 bytes);
+ * additional authenticated data: magic, IV and the id of the backup, so a file cannot pass for another backup.
+ */
+export interface BackupRequest {
+    /** Id of the backup in the fleet */
+    id: string;
+    reason: BackupReason;
+    /**
+     * Only with scheduled: the configuration hash of the newest backup in the fleet. If the configuration still has
+     * it, the agent uploads nothing and answers done with BackupResult.unchanged
+     */
+    unchangedHash?: string;
+    /** Key of the asset for AES-256-GCM, base64 (32 bytes); the agent does not store it */
+    key: string;
+    /** Bytes per part; the last part is smaller */
+    partSize: number;
+    /** Presigned PUT addresses of the parts 1..n: a backup larger than n * partSize is refused (BackupResult.tooLarge) */
+    parts: string[];
+    /** The addresses are valid until then (ms) */
+    expiresAt: number;
+}
+
+export const BACKUP_MAGIC = 'BEEBAK01';
+/** Magic and IV before the encrypted archive, the tag after it */
+export const BACKUP_HEADER_BYTES = 20;
+export const BACKUP_TAG_BYTES = 16;
+
+/** What a backup holds, next to it in the fleet */
+export interface BackupManifest {
+    uuid: string;
+    hostname: string;
+    jsController: string;
+    node: string;
+    /** Adapters of the host of the agent with their versions */
+    adapters: Record<string, string>;
+    agentVersion: string;
+    /** File name of the archive on the device, e.g. "2026_11_20-02_41_00_backupiobroker.tar.gz" */
+    file: string;
+    /** Size of the archive before encryption */
+    plainSize: number;
+    /** When the archive was made (ms) */
+    ts: number;
+}
+
+export interface BackupResult {
+    /** Hash of the configuration in the archive: objects, files and config.json, without states and caches */
+    configHash: string;
+    /** As BackupRequest.unchangedHash: nothing uploaded */
+    unchanged?: boolean;
+    /** Uploaded: size and SHA-256 of the encrypted file, the ETags of the parts in their order */
+    size?: number;
+    sha256?: string;
+    etags?: string[];
+    manifest?: BackupManifest;
+    /** Not uploaded, larger than the parts allow: the size of the encrypted file */
+    tooLarge?: number;
 }
 
 /**

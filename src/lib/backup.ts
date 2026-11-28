@@ -157,18 +157,23 @@ export function mainBackitup(list: ioBroker.InstanceObject[]): ioBroker.Instance
 }
 
 /**
- * A backup outside the device recent enough for an update of the platform (Node.js). Without BackItUp information
- * (it could not be read) the switched-on target counts, as before agent 0.2.11.
+ * A backup outside the device recent enough for an update of the platform (Node.js): a current fleet backup, or
+ * BackItUp. Without BackItUp information (it could not be read) the switched-on target counts, as before agent 0.2.11.
  *
  * @param backup inventory part backup
  * @param backup.offDevice a target outside the device is switched on
  * @param backup.backitup BackItUp, see BackitupInfo
  * @param now current time
+ * @param fleetOk the last fleet backup uploaded or confirmed unchanged (since 0.7.0): as recent as a daily one
  */
 export function recentOffDeviceBackup(
     backup: { offDevice: boolean; backitup?: BackitupInfo | null },
     now = Date.now(),
+    fleetOk?: number | null,
 ): boolean {
+    if (typeof fleetOk === 'number' && now - fleetOk <= backupMaxAgeDays({ everyDays: 1 }) * DAY) {
+        return true;
+    }
     const b = backup.backitup;
     if (b === undefined) {
         return backup.offDevice;
