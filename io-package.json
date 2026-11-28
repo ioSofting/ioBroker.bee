@@ -1,8 +1,21 @@
 {
     "common": {
         "name": "bee",
-        "version": "0.6.0",
+        "version": "0.7.0",
         "news": {
+            "0.7.0": {
+                "en": "Fleet backup: once a day iobroker backup, encrypted on the device and uploaded straight into the storage of the fleet management, only when the configuration changed; a current fleet backup counts as backup outside the device for the Node.js update",
+                "de": "Flottensicherung: einmal am Tag iobroker backup, auf dem Gerät verschlüsselt und direkt in den Speicher der Flottenverwaltung hochgeladen, nur wenn sich die Konfiguration geändert hat; eine aktuelle Flottensicherung zählt beim Node.js-Update als Sicherung außerhalb des Geräts",
+                "ru": "Резервное копирование парка: раз в день iobroker backup, шифруется на устройстве и загружается прямо в хранилище системы управления парком, только если конфигурация изменилась; актуальная резервная копия парка считается копией вне устройства при обновлении Node.js",
+                "pt": "Backup da frota: uma vez por dia iobroker backup, criptografado no dispositivo e enviado diretamente para o armazenamento da gestão de frota, somente quando a configuração mudou; um backup da frota atual conta como backup fora do dispositivo para a atualização do Node.js",
+                "nl": "Vlootback-up: eenmaal per dag iobroker backup, op het apparaat versleuteld en direct naar de opslag van het vlootbeheer geüpload, alleen als de configuratie is gewijzigd; een actuele vlootback-up telt bij de Node.js-update als back-up buiten het apparaat",
+                "fr": "Sauvegarde de flotte : une fois par jour iobroker backup, chiffrée sur l'appareil et téléversée directement dans le stockage de la gestion de flotte, uniquement si la configuration a changé ; une sauvegarde de flotte récente compte comme sauvegarde hors de l'appareil pour la mise à jour de Node.js",
+                "it": "Backup della flotta: una volta al giorno iobroker backup, cifrato sul dispositivo e caricato direttamente nello spazio di archiviazione della gestione della flotta, solo se la configurazione è cambiata; un backup della flotta recente vale come backup fuori dal dispositivo per l'aggiornamento di Node.js",
+                "es": "Copia de seguridad de flota: una vez al día iobroker backup, cifrada en el dispositivo y subida directamente al almacenamiento de la gestión de flota, solo si la configuración ha cambiado; una copia de flota reciente cuenta como copia fuera del dispositivo para la actualización de Node.js",
+                "pl": "Kopia zapasowa floty: raz dziennie iobroker backup, szyfrowana na urządzeniu i przesyłana bezpośrednio do magazynu zarządzania flotą, tylko gdy konfiguracja się zmieniła; aktualna kopia floty liczy się przy aktualizacji Node.js jako kopia poza urządzeniem",
+                "uk": "Резервне копіювання парку: раз на день iobroker backup, шифрується на пристрої та завантажується прямо в сховище системи керування парком, лише якщо конфігурація змінилася; актуальна резервна копія парку вважається копією поза пристроєм під час оновлення Node.js",
+                "zh-cn": "设备群备份：每天一次 iobroker backup，在设备上加密并直接上传到设备群管理的存储中，仅在配置发生变化时上传；最新的设备群备份在 Node.js 更新时视为设备之外的备份"
+            },
             "0.6.0": {
                 "en": "Web interfaces in the network: a table of name and IP:port in the tab Remote access; the fleet management opens each device by its name in the browser, through the tunnel, and only the addresses of this table (private addresses or this system)",
                 "de": "Weboberflächen im Netz: eine Tabelle mit Name und IP:Port im Reiter Fernzugriff; die Flottenverwaltung öffnet jedes Gerät über seinen Namen im Browser, durch den Tunnel, und nur die Adressen dieser Tabelle (private Adressen oder dieses System)",

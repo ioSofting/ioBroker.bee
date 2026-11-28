@@ -139,6 +139,10 @@ npm test          # unit tests of planner, preflight and diff
     ### **WORK IN PROGRESS**
 -->
 
+### 0.7.0 (2026-11-28)
+
+- Fleet backup: once a day `iobroker backup`, encrypted on the device and uploaded straight into the storage of the fleet management, only when the configuration changed (hash of objects, `iobroker.json` and files, without states); a current fleet backup counts as backup outside the device for the Node.js update
+
 ### 0.6.0 (2026-11-27)
 
 - Web interfaces in the network: a table of name and `IP:port` in the tab *Remote access*; the fleet management opens each device by its name in the browser, through the tunnel, and only the addresses of this table (private addresses or this system)
