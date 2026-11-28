@@ -187,6 +187,55 @@ export function recentOffDeviceBackup(
     );
 }
 
+/** A fleet backup this young is the state right before an update of Node.js */
+export const CHANGE_BACKUP_FRESH = 60 * 60_000;
+/** Without a backup this long after the request, the server did not start one */
+export const CHANGE_BACKUP_WAIT = 10 * 60_000;
+/** A request this old is from another try (another night): the agent asks again */
+export const CHANGE_BACKUP_ASK_AGAIN = 3 * 60 * 60_000;
+
+/**
+ * The backup right before an update of Node.js, with the fleet backup on (DesiredMessage.fleetBackup): go (there is
+ * one of right now), ask the server for one (ResultMessage.wantsBackup), wait for it, or go on without it (none came,
+ * or it failed): then the rule for a backup outside the device holds as before.
+ */
+export type ChangeBackup = { step: 'go' } | { step: 'ask' } | { step: 'wait' } | { step: 'without'; why: string };
+
+/**
+ * What the job does about the fleet backup before Node.js
+ *
+ * @param now current time
+ * @param s what the agent knows
+ * @param s.okAt the last fleet backup uploaded or confirmed unchanged
+ * @param s.askedAt when the agent asked for one
+ * @param s.failed the last fleet backup that failed, and why
+ * @param s.failed.ts when it failed
+ * @param s.failed.message why
+ */
+export function changeBackup(
+    now: number,
+    s: { okAt?: number; askedAt?: number; failed?: { ts: number; message: string } },
+): ChangeBackup {
+    if (s.okAt !== undefined && now - s.okAt < CHANGE_BACKUP_FRESH) {
+        return { step: 'go' };
+    }
+    if (
+        s.askedAt === undefined ||
+        now - s.askedAt > CHANGE_BACKUP_ASK_AGAIN ||
+        // the one it asked for came, but the job did not start in time (window, conditions)
+        (s.okAt !== undefined && s.okAt >= s.askedAt)
+    ) {
+        return { step: 'ask' };
+    }
+    if (s.failed && s.failed.ts >= s.askedAt) {
+        return { step: 'without', why: `fehlgeschlagen: ${s.failed.message}` };
+    }
+    if (now - s.askedAt > CHANGE_BACKUP_WAIT) {
+        return { step: 'without', why: 'die Flottenverwaltung hat keine gestartet' };
+    }
+    return { step: 'wait' };
+}
+
 /** The agent keeps this many of the backups it made itself before jobs; older ones it deletes */
 export const OWN_BACKUPS_KEEP = 3;
 

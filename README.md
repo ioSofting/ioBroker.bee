@@ -31,6 +31,8 @@ Afterwards the runner continues with the adapters. A failed adapter later rolls 
 
 Preflight blocks with a reason unless all of this holds: Linux, ioBroker runs as a systemd service, sudo without password for `systemd-run` (not with `--hardened`), Node.js is `/usr/bin/node` of the package `nodejs` from NodeSource, architecture amd64 or arm64, `nodejs` not on hold, a recent backup outside the device (a fleet backup of the last 2 days, or BackItUp not older than its interval and a day), and no installed package (js-controller, adapters that the job does not change) excludes the new line in `engines.node`.
 
+With the fleet backup on (`fleetBackup` in the desired state, since 0.9.0) the job first asks for a fleet backup of right now: once preflight passed, it reports *waiting* with `wantsBackup`, the fleet management sends the command `backup` (reason change), and the job starts after the upload. A fleet backup of the last hour does too. While it may still come, no other backup is needed; without one in 10 minutes, or if it fails, the rule above holds.
+
 Limits: a power loss while the script works leaves the system as far as the script got; the agent then reports *blocked* and `node-update.log` tells where it stopped.
 
 ### Behaviour without server
@@ -146,6 +148,10 @@ npm test          # unit tests of planner, preflight and diff
     Placeholder for the next version (at the beginning of the line):
     ### **WORK IN PROGRESS**
 -->
+
+### **WORK IN PROGRESS**
+
+- With the fleet backup on, an update of Node.js asks the fleet management for a fleet backup right before it and starts after the upload; without one, the rule for a recent backup outside the device holds as before
 
 ### 0.8.0 (2026-11-28)
 

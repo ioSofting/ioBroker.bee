@@ -1,6 +1,17 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { backitupInfo, backupPath, cronDays, mainBackitup, pruneOwnBackups, recentOffDeviceBackup } from '../src/lib/backup';
+import {
+    backitupInfo,
+    backupPath,
+    CHANGE_BACKUP_ASK_AGAIN,
+    CHANGE_BACKUP_FRESH,
+    CHANGE_BACKUP_WAIT,
+    changeBackup,
+    cronDays,
+    mainBackitup,
+    pruneOwnBackups,
+    recentOffDeviceBackup,
+} from '../src/lib/backup';
 
 const DAY = 24 * 3600_000;
 const NOW = Date.UTC(2026, 10, 11, 20, 0);
@@ -155,5 +166,41 @@ describe('own backups before jobs', () => {
         // something that is no archive of iobroker backup is forgotten, never deleted
         const strange = pruneOwnBackups(['/etc/passwd', file(2), file(3)], file(4));
         assert.deepEqual(strange, { keep: [file(2), file(3), file(4)], remove: [] });
+    });
+});
+
+describe('the fleet backup right before an update of Node.js', () => {
+    const MIN = 60_000;
+
+    it('asks once, then waits for it', () => {
+        assert.deepEqual(changeBackup(NOW, {}), { step: 'ask' });
+        assert.deepEqual(changeBackup(NOW, { okAt: NOW - DAY }), { step: 'ask' }, 'the daily one of yesterday is not of right now');
+        assert.deepEqual(changeBackup(NOW, { askedAt: NOW - MIN }), { step: 'wait' });
+    });
+
+    it('goes once one of right now is there, also one that ran anyway', () => {
+        assert.deepEqual(changeBackup(NOW, { askedAt: NOW - 5 * MIN, okAt: NOW - MIN }), { step: 'go' });
+        assert.deepEqual(changeBackup(NOW, { okAt: NOW - CHANGE_BACKUP_FRESH + MIN }), { step: 'go' });
+    });
+
+    it('without it, if it failed or the server started none', () => {
+        const failed = changeBackup(NOW, { askedAt: NOW - 5 * MIN, failed: { ts: NOW - 2 * MIN, message: 'zu groß (400 MB)' } });
+        assert.deepEqual(failed, { step: 'without', why: 'fehlgeschlagen: zu groß (400 MB)' });
+        assert.deepEqual(
+            changeBackup(NOW, { askedAt: NOW - 5 * MIN, failed: { ts: NOW - 30 * MIN, message: 'alt' } }),
+            { step: 'wait' },
+            'a failure from before the request does not count',
+        );
+        const none = changeBackup(NOW, { askedAt: NOW - CHANGE_BACKUP_WAIT - MIN });
+        assert.equal(none.step, 'without');
+    });
+
+    it('asks again when the request is old, or the backup came but the job did not start in time', () => {
+        assert.deepEqual(changeBackup(NOW, { askedAt: NOW - CHANGE_BACKUP_ASK_AGAIN - MIN }), { step: 'ask' });
+        assert.deepEqual(
+            changeBackup(NOW, { askedAt: NOW - 2 * 3600_000, okAt: NOW - 90 * MIN }),
+            { step: 'ask' },
+            'it came, but the window closed',
+        );
     });
 });

@@ -671,6 +671,12 @@ export interface DesiredMessage {
     /** Incremented by the server to retry a blocked job for the same profile */
     retry: number;
     rollout?: { id: string; ring: number } | null;
+    /**
+     * The fleet backup is on for this asset and has a storage (server from 28.11.2026, otherwise missing): before it
+     * updates Node.js the agent asks for a fleet backup with reason change (ResultMessage.wantsBackup) and starts the
+     * job once it is uploaded (ioBroker.bee from 0.9.0)
+     */
+    fleetBackup?: boolean;
 }
 
 export interface ControlMessage {
@@ -804,7 +810,8 @@ export interface ReplyMessage {
 
 /**
  * Why the fleet backup runs: scheduled (once a day, uploaded only if the configuration changed), manual (Jetzt sichern,
- * always uploaded), change (right before an update of the platform, always uploaded)
+ * always uploaded), change (right before an update of the platform, always uploaded: the server sends the command
+ * controller only after it, and a job that updates Node.js asks for it with ResultMessage.wantsBackup)
  */
 export type BackupReason = 'scheduled' | 'manual' | 'change';
 
@@ -1066,6 +1073,12 @@ export interface ResultMessage {
     state: JobState;
     detail?: string;
     steps?: JobStep[];
+    /**
+     * With state waiting (ioBroker.bee from 0.9.0, with DesiredMessage.fleetBackup): the job updates Node.js and waits
+     * for a fleet backup right before it; the server starts one (command backup, reason change). Without one in 10
+     * minutes, or if it fails, the agent goes on with the rule for a backup outside the device as before.
+     */
+    wantsBackup?: boolean;
 }
 
 export interface EnrollRequest {

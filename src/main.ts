@@ -19,7 +19,14 @@ import {
 import { aiAccess, aiUserId, AiAccessManager, type McpClient } from './lib/ai';
 import { aptFailure, aptUpdateArgs, aptUpgradeArgs, hasAptGet, runApt } from './lib/apt';
 import { Monitor, monitorText, validRules } from './lib/monitor';
-import { backupPath, OWN_BACKUPS_KEEP, pruneOwnBackups, recentOffDeviceBackup } from './lib/backup';
+import {
+    backupPath,
+    changeBackup,
+    OWN_BACKUPS_KEEP,
+    pruneOwnBackups,
+    recentOffDeviceBackup,
+    type ChangeBackup,
+} from './lib/backup';
 import { configHash, encryptBackup, runBackup, uploadParts, uploadUrlAllowed } from './lib/fleetBackup';
 import {
     archiveHasObject,
@@ -202,6 +209,10 @@ interface Persisted {
     ownBackups?: string[];
     /** The last fleet backup uploaded or confirmed unchanged (ms): counts as a backup outside the device */
     fleetBackupOk?: number;
+    /** The last fleet backup that failed */
+    fleetBackupFailed?: { ts: number; message: string };
+    /** A job that updates Node.js asked for a fleet backup right before it (ResultMessage.wantsBackup) */
+    changeBackupAsked?: number;
     notified: Record<string, number>;
 }
 
@@ -888,6 +899,10 @@ class BeeAdapter extends utils.Adapter {
         let mine = false;
         let encrypted = '';
         let configured: string | undefined;
+        // the job that asked for it (before Node.js) ends its check right after the request
+        for (let i = 0; i < 100 && this.reconciling; i++) {
+            await new Promise(r => setTimeout(r, 300));
+        }
         try {
             if (this.backupRunning) {
                 throw new Error('Es läuft schon eine Sicherung');
@@ -946,6 +961,8 @@ class BeeAdapter extends utils.Adapter {
             if (Math.ceil(size / req.partSize) > req.parts.length) {
                 const mb = Math.round(size / 1024 / 1024);
                 this.log.warn(`Fleet backup: ${mb} MB is more than the storage takes, not uploaded`);
+                this.persisted.fleetBackupFailed = { ts: Date.now(), message: `zu groß (${mb} MB)` };
+                await this.savePersisted();
                 await this.reply(ref, 'error', `Sicherung zu groß (${mb} MB)`, undefined, undefined, {
                     configHash: configured,
                     tooLarge: size,
@@ -983,6 +1000,10 @@ class BeeAdapter extends utils.Adapter {
             });
         } catch (e) {
             this.log.warn(`Fleet backup failed: ${e.message}`);
+            if (mine) {
+                this.persisted.fleetBackupFailed = { ts: Date.now(), message: String(e.message).slice(0, 200) };
+                await this.savePersisted().catch(() => {});
+            }
             await this.reply(
                 ref,
                 'error',
@@ -994,6 +1015,8 @@ class BeeAdapter extends utils.Adapter {
         } finally {
             if (mine) {
                 this.backupRunning = false;
+                // a job waited for it (before Node.js), or did not start meanwhile
+                this.timeouts.push(this.setTimeout(() => void this.reconcile(), 1000));
             }
             if (encrypted) {
                 await rm(encrypted, { force: true }).catch(() => {});
@@ -2435,7 +2458,12 @@ class BeeAdapter extends utils.Adapter {
 
     // ------------------------------------------------------------------ reconciliation
 
-    private async report(state: JobState, detail: string, steps?: JobFile['steps']): Promise<void> {
+    private async report(
+        state: JobState,
+        detail: string,
+        steps?: JobFile['steps'],
+        wantsBackup = false,
+    ): Promise<void> {
         const d = this.desired;
         if (!d?.profile) {
             return;
@@ -2449,6 +2477,7 @@ class BeeAdapter extends utils.Adapter {
             state,
             detail,
             steps,
+            ...(wantsBackup ? { wantsBackup: true } : {}),
         };
         this.persisted.lastResult = msg;
         await this.savePersisted();
@@ -2602,6 +2631,15 @@ class BeeAdapter extends utils.Adapter {
         // drift after an earlier success (e.g. manual change): converge again
         delete this.persisted.results[key];
         const nodeTarget = plan.find(s => s.action === 'node')?.to ?? undefined;
+        // before Node.js a fleet backup of right now, if the fleet backup is on
+        const change =
+            nodeTarget && d.fleetBackup
+                ? changeBackup(Date.now(), {
+                      okAt: this.persisted.fleetBackupOk,
+                      askedAt: this.persisted.changeBackupAsked,
+                      failed: this.persisted.fleetBackupFailed,
+                  })
+                : undefined;
 
         const pf = await preflight({
             now: new Date(),
@@ -2622,7 +2660,7 @@ class BeeAdapter extends utils.Adapter {
                 nodeMajor: nodeTarget ? Number(nodeTarget) : undefined,
             }),
             nodeErrors: nodeTarget
-                ? { target: nodeTarget, errors: await this.nodeErrors(nodeTarget, inv, plan) }
+                ? { target: nodeTarget, errors: await this.nodeErrors(nodeTarget, inv, plan, change) }
                 : undefined,
         });
         if (!pf.ok) {
@@ -2634,6 +2672,27 @@ class BeeAdapter extends utils.Adapter {
                 await this.report('waiting', pf.reason, plan);
             }
             return;
+        }
+        if (change?.step === 'ask' || change?.step === 'wait') {
+            const reason = `Wartet auf die Sicherung vor dem Eingriff (Node.js ${nodeTarget})`;
+            if (change.step === 'ask') {
+                this.persisted.changeBackupAsked = Date.now();
+                await this.savePersisted();
+                this.log.info(
+                    `Job ${d.profile.name}: asks for a fleet backup before the update of Node.js to ${nodeTarget}`,
+                );
+                this.lastWaitReason = reason;
+                await this.report('waiting', reason, plan, true);
+            } else if (reason !== this.lastWaitReason) {
+                this.lastWaitReason = reason;
+                await this.report('waiting', reason, plan);
+            }
+            return;
+        }
+        if (change?.step === 'without') {
+            this.log.warn(
+                `Job ${d.profile.name}: no fleet backup right before Node.js (${change.why}); a recent backup outside the device counts`,
+            );
         }
         // packages of the server for single assets: loaded before anything changes
         const files: Record<string, string> = {};
@@ -2666,14 +2725,21 @@ class BeeAdapter extends utils.Adapter {
      * @param target major line
      * @param inv inventory
      * @param plan steps of the job
+     * @param change the fleet backup right before it (with the fleet backup on): while it may still come, no other
+     * backup is needed
      */
-    private async nodeErrors(target: string, inv: Inventory, plan: JobStep[]): Promise<string[]> {
+    private async nodeErrors(
+        target: string,
+        inv: Inventory,
+        plan: JobStep[],
+        change?: ChangeBackup,
+    ): Promise<string[]> {
         const changed = new Set(plan.map(s => s.adapter));
         const names = ['js-controller', ...Object.keys(inv.software.adapters).filter(n => !changed.has(n))];
+        const recent = recentOffDeviceBackup(inv.backup, Date.now(), this.persisted.fleetBackupOk);
         return [
-            ...nodeBlockers(
-                await nodeFacts(recentOffDeviceBackup(inv.backup, Date.now(), this.persisted.fleetBackupOk)),
-            ),
+            ...nodeBlockers(await nodeFacts(recent || (!!change && change.step !== 'without'))),
+            ...(change?.step === 'without' && !recent ? [`Sicherung vor dem Eingriff ${change.why}`] : []),
             ...engineConflicts(Number(target), readEngines(join(utils.controllerDir, '..', '..'), names)),
         ];
     }
