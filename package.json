@@ -45,7 +45,7 @@
     "@iobroker/adapter-core": "^3.4.3",
     "@iobroker/mcp-server": "^1.10.0",
     "mqtt": "^5.16.0",
-    "semver": "^7.8.5",
+    "semver": "^7.8.6",
     "ws": "^8.22.2"
   },
   "devDependencies": {
