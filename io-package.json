@@ -1,8 +1,21 @@
 {
     "common": {
         "name": "bee",
-        "version": "0.9.0",
+        "version": "0.10.0",
         "news": {
+            "0.10.0": {
+                "en": "The heartbeat reports the use of the CPU: all cores together, the mean since the heartbeat before",
+                "de": "Der Heartbeat meldet die Auslastung der CPU: alle Kerne zusammen, Mittel seit dem Heartbeat davor",
+                "ru": "Heartbeat сообщает загрузку процессора: все ядра вместе, среднее значение с предыдущего heartbeat",
+                "pt": "O heartbeat informa o uso da CPU: todos os núcleos juntos, a média desde o heartbeat anterior",
+                "nl": "De heartbeat meldt het gebruik van de CPU: alle kernen samen, het gemiddelde sinds de vorige heartbeat",
+                "fr": "Le heartbeat indique l'utilisation du CPU : tous les cœurs ensemble, la moyenne depuis le heartbeat précédent",
+                "it": "L'heartbeat riporta l'utilizzo della CPU: tutti i core insieme, la media dall'heartbeat precedente",
+                "es": "El heartbeat informa del uso de la CPU: todos los núcleos juntos, la media desde el heartbeat anterior",
+                "pl": "Heartbeat zgłasza wykorzystanie procesora: wszystkie rdzenie razem, średnia od poprzedniego heartbeatu",
+                "uk": "Heartbeat повідомляє завантаження процесора: усі ядра разом, середнє значення з попереднього heartbeat",
+                "zh-cn": "心跳会报告 CPU 使用率：所有核心合计，自上一次心跳以来的平均值"
+            },
             "0.9.0": {
                 "en": "With the fleet backup on, an update of Node.js asks the fleet management for a fleet backup right before it and starts after the upload; without one, the rule for a recent backup outside the device holds as before",
                 "de": "Mit eingeschalteter Flottensicherung bittet ein Update von Node.js die Flottenverwaltung unmittelbar vorher um eine Flottensicherung und beginnt nach dem Hochladen; ohne sie gilt wie bisher die Regel für eine aktuelle Sicherung außerhalb des Geräts",

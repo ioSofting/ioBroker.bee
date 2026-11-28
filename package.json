@@ -1,6 +1,6 @@
 {
   "name": "iobroker.bee",
-  "version": "0.9.0",
+  "version": "0.10.0",
   "description": "Fleet agent for ioBroker: reports inventory to a beekeeper server and converges the system to the desired version profile",
   "author": {
     "name": "ioSofting GmbH",

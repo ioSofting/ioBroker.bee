@@ -149,7 +149,7 @@ npm test          # unit tests of planner, preflight and diff
     ### **WORK IN PROGRESS**
 -->
 
-### **WORK IN PROGRESS**
+### 0.10.0 (2026-11-28)
 
 - The heartbeat reports the use of the CPU: all cores together, the mean since the heartbeat before
 
