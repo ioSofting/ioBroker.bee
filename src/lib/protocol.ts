@@ -60,6 +60,11 @@ export interface StateMessage {
     agentVersion?: string;
     uptime?: number;
     load?: number;
+    /**
+     * Use of the CPU in percent of all cores together: the mean since the previous heartbeat, at the first one after
+     * a start over one second (ioBroker.bee from 0.10.0)
+     */
+    cpu?: number;
     memFree?: number;
     diskFree?: number;
     temperature?: number;

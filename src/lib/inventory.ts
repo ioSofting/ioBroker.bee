@@ -60,6 +60,45 @@ export async function diskInfo(path: string): Promise<{ total: number; free: num
     }
 }
 
+/** CPU times of all cores together (ms) and when they were read */
+export interface CpuTimes {
+    ts: number;
+    busy: number;
+    total: number;
+}
+
+/**
+ * The CPU times now, for the use between two readings
+ *
+ * @param cpus os.cpus()
+ * @param now current time
+ */
+export function cpuTimes(cpus: os.CpuInfo[] = os.cpus(), now = Date.now()): CpuTimes {
+    let busy = 0;
+    let total = 0;
+    for (const { times: t } of cpus) {
+        const all = t.user + t.nice + t.sys + t.idle + t.irq;
+        total += all;
+        busy += all - t.idle;
+    }
+    return { ts: now, busy, total };
+}
+
+/**
+ * Use of the CPU between two readings in percent of all cores together, one decimal; null without time between them
+ *
+ * @param from the reading before
+ * @param to the reading now
+ */
+export function cpuPercent(from: CpuTimes, to: CpuTimes): number | null {
+    const total = to.total - from.total;
+    if (!(total > 0)) {
+        return null;
+    }
+    const share = Math.min(1, Math.max(0, (to.busy - from.busy) / total));
+    return Math.round(share * 1000) / 10;
+}
+
 export async function cpuTemperature(): Promise<number | null> {
     const t = await readText('/sys/class/thermal/thermal_zone0/temp');
     return t ? Math.round(parseInt(t, 10) / 100) / 10 : null;

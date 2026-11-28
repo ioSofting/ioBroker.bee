@@ -75,8 +75,11 @@ import {
 } from './lib/hosts';
 import {
     collectInventory,
+    cpuPercent,
     cpuTemperature,
+    cpuTimes,
     describeInstance,
+    type CpuTimes,
     diskInfo,
     installedVersions,
     packageVersion,
@@ -257,6 +260,8 @@ class BeeAdapter extends utils.Adapter {
     private logUploading = false;
     /** The fleet backup runs (command backup) */
     private backupRunning = false;
+    /** The CPU times at the previous heartbeat */
+    private cpuMark: CpuTimes | null = null;
     /** A restore of a fleet backup was started and has no outcome yet (restore.json, command restore) */
     private restoring: RestoreMarker | null = null;
     private restoreFollowing = false;
@@ -2393,6 +2398,7 @@ class BeeAdapter extends utils.Adapter {
             agentVersion: this.version,
             uptime: Math.round(os.uptime()),
             load: Math.round(os.loadavg()[0] * 100) / 100,
+            cpu: (await this.cpuSinceHeartbeat()) ?? undefined,
             memFree: os.freemem(),
             diskFree: disk?.free,
             temperature: (await cpuTemperature()) ?? undefined,
@@ -2403,6 +2409,18 @@ class BeeAdapter extends utils.Adapter {
         };
         this.errorsSinceHeartbeat = 0;
         await this.transport?.publish('state', msg);
+    }
+
+    /** Use of the CPU since the previous heartbeat; at the first one, or right after one, over a second */
+    private async cpuSinceHeartbeat(): Promise<number | null> {
+        let from = this.cpuMark;
+        if (!from || Date.now() - from.ts < 10_000) {
+            from = cpuTimes();
+            await new Promise(r => setTimeout(r, 1000));
+        }
+        const to = cpuTimes();
+        this.cpuMark = to;
+        return cpuPercent(from, to);
     }
 
     private onLog(msg: ioBroker.LogMessage): void {
