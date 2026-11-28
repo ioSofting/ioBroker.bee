@@ -149,7 +149,7 @@ npm test          # unit tests of planner, preflight and diff
     ### **WORK IN PROGRESS**
 -->
 
-### **WORK IN PROGRESS**
+### 0.9.0 (2026-11-28)
 
 - With the fleet backup on, an update of Node.js asks the fleet management for a fleet backup right before it and starts after the upload; without one, the rule for a recent backup outside the device holds as before
 

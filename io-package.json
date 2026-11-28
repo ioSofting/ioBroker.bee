@@ -1,8 +1,21 @@
 {
     "common": {
         "name": "bee",
-        "version": "0.8.0",
+        "version": "0.9.0",
         "news": {
+            "0.9.0": {
+                "en": "With the fleet backup on, an update of Node.js asks the fleet management for a fleet backup right before it and starts after the upload; without one, the rule for a recent backup outside the device holds as before",
+                "de": "Mit eingeschalteter Flottensicherung bittet ein Update von Node.js die Flottenverwaltung unmittelbar vorher um eine Flottensicherung und beginnt nach dem Hochladen; ohne sie gilt wie bisher die Regel für eine aktuelle Sicherung außerhalb des Geräts",
+                "ru": "При включённом резервном копировании парка обновление Node.js непосредственно перед началом запрашивает у системы управления парком резервную копию и начинается после её загрузки; без неё, как и прежде, действует правило актуальной резервной копии вне устройства",
+                "pt": "Com o backup da frota ativado, uma atualização do Node.js solicita à gestão de frota um backup imediatamente antes e começa após o envio; sem ele, vale como antes a regra de um backup recente fora do dispositivo",
+                "nl": "Met de vlootback-up ingeschakeld vraagt een update van Node.js het vlootbeheer vlak ervoor om een vlootback-up en begint na het uploaden; zonder back-up geldt zoals voorheen de regel voor een recente back-up buiten het apparaat",
+                "fr": "Avec la sauvegarde de flotte activée, une mise à jour de Node.js demande à la gestion de flotte une sauvegarde juste avant et commence après le téléversement ; sans elle, la règle d'une sauvegarde récente hors de l'appareil s'applique comme avant",
+                "it": "Con il backup della flotta attivo, un aggiornamento di Node.js chiede alla gestione della flotta un backup subito prima e inizia dopo il caricamento; senza di esso vale come prima la regola di un backup recente fuori dal dispositivo",
+                "es": "Con la copia de seguridad de flota activada, una actualización de Node.js pide a la gestión de flota una copia justo antes y empieza tras subirla; sin ella, rige como antes la regla de una copia reciente fuera del dispositivo",
+                "pl": "Przy włączonej kopii zapasowej floty aktualizacja Node.js tuż przed rozpoczęciem prosi zarządzanie flotą o kopię i zaczyna się po jej przesłaniu; bez niej obowiązuje jak dotąd zasada aktualnej kopii poza urządzeniem",
+                "uk": "За увімкненого резервного копіювання парку оновлення Node.js безпосередньо перед початком запитує в системи керування парком резервну копію і починається після її завантаження; без неї, як і раніше, діє правило актуальної резервної копії поза пристроєм",
+                "zh-cn": "开启设备群备份后，Node.js 更新会在开始前请求设备群管理立即进行一次备份，上传完成后再开始；若没有该备份，则仍按原规则要求设备之外有近期备份"
+            },
             "0.8.0": {
                 "en": "Restore of a fleet backup from the portal, also onto a new device after a swap: download, check and decrypt on the device, a backup of the state of now, iobroker restore in a systemd unit of its own with the installed software and the settings of bee kept, and back to the state before if the agent does not come back",
                 "de": "Einspielen einer Flottensicherung aus dem Portal, auch auf ein neues Gerät nach einem Tausch: Laden, Prüfen und Entschlüsseln auf dem Gerät, eine Sicherung des Stands von jetzt, iobroker restore in einer eigenen systemd-Unit, die installierte Software und die Einstellungen von bee bleiben, und zurück zum Stand von vorher, wenn der Agent nicht wiederkommt",
